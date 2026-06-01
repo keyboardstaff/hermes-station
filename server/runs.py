@@ -488,6 +488,7 @@ async def _run_to_completion(
                     conversation_history=(
                         result.get("messages") or [] if isinstance(result, dict) else []
                     ),
+                    profile=handle.profile,
                 )
         finally:
             # Unregister AFTER broadcast — wakes agent threads still blocked on event.wait().
@@ -672,6 +673,13 @@ def _build_agent(
             "timestamp": time.time(),
         }))
 
+    # persist this run's sessions to the *active profile's*
+    # own state.db, not the default home's. A SessionDB captures its path at
+    # construction, so the HERMES_HOME override can't redirect an already-built
+    # one — select the right DB explicitly, mirroring the history-load path in
+    # _run_to_completion. None (default/unset profile) → the shared singleton.
+    profile_home = resolve_profile_home(handle.profile)
+
     agent = AIAgent(
         model=resolved_model,
         **runtime_kwargs,
@@ -685,7 +693,7 @@ def _build_agent(
         tool_start_callback=_on_tool_start,
         tool_complete_callback=_on_tool_complete,
         reasoning_callback=_on_reasoning,
-        session_db=db(),
+        session_db=db() if profile_home is None else db_for_home(profile_home),
         fallback_model=fallback_model,
         reasoning_config=reasoning_config,
     )
@@ -715,6 +723,7 @@ def _maybe_auto_title(
     user_message: str,
     assistant_response: str,
     conversation_history: list[dict[str, Any]],
+    profile: str | None = None,
 ) -> None:
     """Fire-and-forget LLM title generation; upstream guards make this cheap to call every time."""
     try:
@@ -723,9 +732,12 @@ def _maybe_auto_title(
         logger.debug("[hms.runs] title_generator unavailable", exc_info=True)
         return
 
+    # write the generated title to the active profile's state.db, matching
+    # where _build_agent persisted the session — not the default home.
+    profile_home = resolve_profile_home(profile)
     try:
         maybe_auto_title(
-            db(),
+            db() if profile_home is None else db_for_home(profile_home),
             session_id,
             user_message,
             assistant_response,

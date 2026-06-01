@@ -43,7 +43,6 @@ export default function SessionsFilters() {
         alignItems: "center",
         gap: 'var(--hms-space-3)',
         padding: "8px 16px",
-        borderBottom: "1px solid var(--hms-border)",
         flexShrink: 0,
         flexWrap: "wrap",
       }}

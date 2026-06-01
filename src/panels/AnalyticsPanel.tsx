@@ -122,16 +122,18 @@ export default function AnalyticsPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <PageTopBar
         title={t.nav.analytics}
-        actions={
-          <TimeRangeSelector
-            value={days}
-            onChange={setDays}
-            labels={{
-              7:  ac?.range7d  ?? "7d",
-              30: ac?.range30d ?? "30d",
-              90: ac?.range90d ?? "90d",
-            }}
-          />
+        context={
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <TimeRangeSelector
+              value={days}
+              onChange={setDays}
+              labels={{
+                7:  ac?.range7d  ?? "7d",
+                30: ac?.range30d ?? "30d",
+                90: ac?.range90d ?? "90d",
+              }}
+            />
+          </div>
         }
       />
       <div style={{ flex: 1, overflow: "auto", padding: 'var(--hms-space-6)' }}>

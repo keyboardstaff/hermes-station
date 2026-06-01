@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
+import IconButton from "@/components/ui/IconButton";
 import { api } from "@/lib/api";
 import Button from "@/components/ui/Button";
 import { useChatStore } from "@/store/chat";
@@ -151,13 +152,9 @@ export default function GroupPanel() {
         title={t.nav.group}
         subtitle={g?.subtitle ?? "Multi-session collaboration — parent → child hierarchies"}
         actions={
-          <button
-            onClick={() => sessionsQuery.refetch()}
-            title={g?.refresh ?? "Refresh"}
-            style={iconBtn}
-          >
-            <RefreshCw size={12} />
-          </button>
+          <IconButton title={g?.refresh ?? "Refresh"} onClick={() => sessionsQuery.refetch()}>
+            <RefreshCw size={14} />
+          </IconButton>
         }
       />
       <div
@@ -404,17 +401,4 @@ function SessionTree({
     </div>
   );
 }
-
-const iconBtn: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 28,
-  height: 28,
-  borderRadius: 6,
-  border: "1px solid var(--hms-border)",
-  background: "transparent",
-  color: "var(--hms-text-muted)",
-  cursor: "pointer",
-};
 

@@ -9,12 +9,21 @@ import type { ReactNode, CSSProperties } from "react";
  * actions areas, and an optional full-width `context` row beneath the bar
  * (for filters, tabs, breadcrumbs — anything a page needs its own line for).
  *
- * Layout:
+ * Layout (the header row is ALWAYS `--hms-header-h` with
+ * its own border, so every page's title bar lines up at the same height
+ * whether or not it has a `context` row; the optional context row sits below
+ * as a distinct band):
  *   ┌───────────────────────────────────────────────┐
- *   │ [leading] title · subtitle      …      actions │  ← header row (header-h)
+ *   │ [leading] title · subtitle      …      actions │  ← header row (header-h, bordered)
  *   ├───────────────────────────────────────────────┤
- *   │ context (optional, full width)                 │
+ *   │ context (optional: filters / tabs / breadcrumb)│  ← second band, bordered
  *   └───────────────────────────────────────────────┘
+ *
+ * Convention (see docs/UI_CONVENTIONS.md):
+ *   • `actions`  = page-level *actions* — primary (`<Button variant="primary">`),
+ *     batch (export / delete), and a trailing `<IconButton>` refresh.
+ *   • `context`  = *view controls* — filters, tabs, board/time selectors,
+ *     breadcrumbs. Not actions.
  *
  * Panels render `<PageTopBar/>` then a flex-1 scroll body below it.
  */
@@ -43,9 +52,9 @@ export default function PageTopBar({
           display: "flex",
           alignItems: "center",
           gap: "var(--hms-space-2)",
-          minHeight: "var(--hms-header-h, 48px)",
+          height: "var(--hms-header-h, 48px)",
           padding: "0 var(--hms-space-4)",
-          borderBottom: context ? "none" : "1px solid var(--hms-border)",
+          borderBottom: "1px solid var(--hms-border)",
         }}
       >
         {leading}
@@ -83,7 +92,7 @@ export default function PageTopBar({
         )}
       </div>
       {context && (
-        <div style={{ borderBottom: "1px solid var(--hms-border)", padding: "var(--hms-space-2) var(--hms-space-4)" }}>
+        <div style={{ padding: "var(--hms-space-2) var(--hms-space-4)" }}>
           {context}
         </div>
       )}

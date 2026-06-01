@@ -40,6 +40,7 @@ def _make_fake_shim(captured_callbacks: dict[str, Any]) -> MagicMock:
                 "tool_start_callback",
                 "tool_complete_callback",
                 "reasoning_callback",
+                "session_db",
             ):
                 captured_callbacks[key] = kwargs.get(key)
 
@@ -140,6 +141,83 @@ def test_on_delta_multiple_texts_accumulate() -> None:
     assert events.count("message.delta") == 3
     deltas = [p["delta"] for _, p in fake_ws.calls]
     assert deltas == ["chunk1", "chunk2", "chunk3"]
+
+
+# _build_agent + _maybe_auto_title: profile-scoped session DB
+
+
+def _build_with_profile(
+    profile: str | None, *, home: object | None
+) -> tuple[Any, object, object, Any]:
+    """Build an agent under a fake shim and return the ``session_db`` it handed
+    to ``AIAgent``. ``home`` is what ``resolve_profile_home`` yields for this
+    run (``None`` → default home → the shared singleton)."""
+    from server.runs import RunHandle, _build_agent
+
+    captured: dict[str, Any] = {}
+    fake_shim = _make_fake_shim(captured)
+    handle = RunHandle(
+        run_id="run-prof",
+        session_id="sess-prof",
+        status="running",
+        created_at=0.0,
+        profile=profile,
+    )
+    default_db, profile_db = object(), object()
+    with (
+        patch("server.runs.shim", fake_shim),
+        patch("server.runs.get_ws_manager", return_value=_FakeWSManager()),
+        patch("server.runs.resolve_profile_home", return_value=home),
+        patch("server.runs.db", return_value=default_db),
+        patch("server.runs.db_for_home", return_value=profile_db) as m_home,
+    ):
+        _build_agent(handle=handle, reasoning_effort=None, loop=asyncio.new_event_loop())
+    return captured.get("session_db"), default_db, profile_db, m_home
+
+
+def test_build_agent_named_profile_persists_to_profile_db() -> None:
+    # A named profile must read/write its OWN state.db, not the default home's.
+    home = object()  # stand-in for the profile's resolved HERMES_HOME
+    session_db, _default_db, profile_db, m_home = _build_with_profile("creative", home=home)
+    assert session_db is profile_db
+    m_home.assert_called_once_with(home)
+
+
+def test_build_agent_default_profile_uses_default_db() -> None:
+    session_db, default_db, _profile_db, m_home = _build_with_profile(None, home=None)
+    assert session_db is default_db
+    m_home.assert_not_called()
+
+
+def test_auto_title_named_profile_writes_to_profile_db(monkeypatch) -> None:
+    """The auto-title write follows the run's profile too (else titles land in
+    the default DB while the session lives in the profile's)."""
+    import sys
+    import types
+
+    from server.runs import _maybe_auto_title
+
+    captured: dict[str, Any] = {}
+    fake_mod = types.ModuleType("agent.title_generator")
+    fake_mod.maybe_auto_title = lambda session_db, *a, **k: captured.__setitem__("db", session_db)
+    monkeypatch.setitem(sys.modules, "agent", types.ModuleType("agent"))
+    monkeypatch.setitem(sys.modules, "agent.title_generator", fake_mod)
+
+    home = object()
+    default_db, profile_db = object(), object()
+    monkeypatch.setattr("server.runs.resolve_profile_home", lambda p: home)
+    monkeypatch.setattr("server.runs.db", lambda: default_db)
+    monkeypatch.setattr("server.runs.db_for_home", lambda h: profile_db)
+
+    _maybe_auto_title(
+        agent=MagicMock(),
+        session_id="s",
+        user_message="u",
+        assistant_response="a",
+        conversation_history=[],
+        profile="creative",
+    )
+    assert captured["db"] is profile_db
 
 
 # _run_to_completion: history loading

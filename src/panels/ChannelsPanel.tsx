@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
+import IconButton from "@/components/ui/IconButton";
 import CapabilityGate from "@/components/ui/CapabilityGate";
 import ChannelCard, { type PlatformRuntime } from "@/components/channels/ChannelCard";
 import { useDiscoverPlatforms } from "@/store/discovery";
@@ -76,16 +77,15 @@ export default function ChannelsPanel() {
             : ch?.platforms ?? "platforms"
         }
         actions={
-          <button
+          <IconButton
+            title={ch?.refresh ?? "Refresh"}
             onClick={() => {
               void platformsQuery.refetch();
               void statusQuery.refetch();
             }}
-            title={ch?.refresh ?? "Refresh"}
-            style={iconBtn}
           >
-            <RefreshCw size={12} />
-          </button>
+            <RefreshCw size={14} />
+          </IconButton>
         }
       />
       <div
@@ -229,16 +229,3 @@ export default function ChannelsPanel() {
     </CapabilityGate>
   );
 }
-
-const iconBtn: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 28,
-  height: 28,
-  borderRadius: 6,
-  border: "1px solid var(--hms-border)",
-  background: "transparent",
-  color: "var(--hms-text-muted)",
-  cursor: "pointer",
-};

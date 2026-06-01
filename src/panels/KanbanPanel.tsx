@@ -87,6 +87,15 @@ export default function KanbanPanel() {
         title={t.nav.kanban}
         actions={
           <>
+            <Button size="sm" variant="primary" onClick={onNewBoard}><Plus size={12} />{k?.newBoard ?? "New board"}</Button>
+            <Button size="sm" onClick={() => nudge.mutate()} disabled={nudge.isPending}>
+              <Zap size={12} />{k?.nudge ?? "Nudge dispatcher"}
+            </Button>
+            <IconButton title={k?.refresh ?? "Refresh"} onClick={() => tasksQuery.refetch()}><RefreshCw size={14} /></IconButton>
+          </>
+        }
+        context={
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-3)", flexWrap: "wrap" }}>
             <select
               value={board ?? ""}
               onChange={(e) => setBoard(e.target.value)}
@@ -99,15 +108,6 @@ export default function KanbanPanel() {
                 return <option key={slug} value={slug}>{(b.display_name as string) || slug}</option>;
               })}
             </select>
-            <Button size="sm" onClick={onNewBoard}><Plus size={12} />{k?.newBoard ?? "New board"}</Button>
-            <Button size="sm" onClick={() => nudge.mutate()} disabled={nudge.isPending}>
-              <Zap size={12} />{k?.nudge ?? "Nudge dispatcher"}
-            </Button>
-            <IconButton title={k?.refresh ?? "Refresh"} onClick={() => tasksQuery.refetch()}><RefreshCw size={14} /></IconButton>
-          </>
-        }
-        context={
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-3)", flexWrap: "wrap" }}>
             <SearchInput size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={k?.searchPlaceholder ?? "Filter cards…"} style={{ flex: "0 1 220px" }} />
             <select value={tenant} onChange={(e) => setTenant(e.target.value)} style={selectStyle} aria-label={k?.tenant ?? "Tenant"}>
               <option value="all">{k?.allTenants ?? "All tenants"}</option>

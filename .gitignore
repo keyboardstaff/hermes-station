@@ -11,7 +11,7 @@ dist/
 .env.*.local
 
 # Logs
-logs/
+/logs/
 *.log
 
 # TypeScript incremental build info

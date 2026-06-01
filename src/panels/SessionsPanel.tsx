@@ -229,7 +229,6 @@ export default function SessionsPanel() {
                     className="hms-sidebar-row"
                     data-active={preview === s.session_id}
                     style={{
-                      borderBottom: "1px solid var(--hms-border)",
                       cursor: "pointer",
                     }}
                   >

@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
+import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
 import { useCronJobs, type CronJob } from "@/hooks/useCron";
 import CronJobDetail from "@/components/cron/CronJobDetail";
 import CronCreateDialog from "@/components/cron/CronCreateDialog";
@@ -196,22 +198,12 @@ export default function CronPanel() {
         title={t.nav.cron}
         actions={
           <>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              title="Refresh"
-              style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 4, borderRadius: 4, display: "flex", alignItems: "center" }}
-            >
+            <Button size="sm" variant="primary" onClick={openBlank}>
+              <Plus size={13} />{c?.newJob ?? "New job"}
+            </Button>
+            <IconButton title="Refresh" onClick={() => refetch()}>
               <RefreshCw size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={openBlank}
-              style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", background: "var(--hms-accent)", color: "#fff", border: "none", borderRadius: 6, fontSize: "var(--hms-text-xs)", fontWeight: 500, cursor: "pointer", flexShrink: 0 }}
-            >
-              <Plus size={13} />
-              {c?.newJob ?? "New job"}
-            </button>
+            </IconButton>
           </>
         }
         context={

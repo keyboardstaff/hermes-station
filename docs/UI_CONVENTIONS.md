@@ -114,6 +114,28 @@ restyle scrollbars per-component. Monaco's chrome is tuned to match (see
 dense rows, 14–16px for toolbar/header actions. Give icon-only controls an
 `aria-label`.
 
+## 8. Page headers ([`PageTopBar`](../src/components/layout/PageTopBar.tsx))
+
+Every routed panel's header is [`<PageTopBar>`](../src/components/layout/PageTopBar.tsx).
+It has a **fixed-height title bar** (`--hms-header-h`, always bordered, so the
+title line is at the same height on every page — owner review D22) and an
+optional **`context` band** below it.
+
+- **`title` / `subtitle`** — the page name; subtitle is a muted one-liner.
+- **`actions`** (header right) — page-level *actions*, built from §1 primitives:
+  - a primary action first (`<Button size="sm" variant="primary">`, e.g.
+    "New board"),
+  - batch actions next (export / delete, plain or `danger` `<Button>`),
+  - a trailing `<IconButton>` refresh last.
+  - Do **not** hand-roll `<button>` here, and do **not** put view controls here.
+- **`context`** (second band) — *view controls*: search ([`<SearchInput>`](../src/components/ui/SearchInput.tsx)),
+  filters, tabs, breadcrumbs, and **selectors** (board / time-range / tenant).
+  A selector changes *what you're looking at*, so it belongs here, not in
+  `actions`.
+
+Rule of thumb: if it performs an action, it's `actions`; if it changes the
+view, it's `context`.
+
 ---
 
 ## Migration (opportunistic, not a big-bang)

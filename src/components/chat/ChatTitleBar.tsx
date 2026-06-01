@@ -7,6 +7,7 @@ import { useActiveSessionTitle } from "@/hooks/useActiveSessionTitle";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SessionSummary } from "@/lib/hermes-types";
 import PageTopBar from "@/components/layout/PageTopBar";
+import IconButton from "@/components/ui/IconButton";
 
 async function exportSession(sessionId: string, format: "json" | "markdown") {
   const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`);
@@ -120,28 +121,26 @@ export default function ChatTitleBar({
       actions={
         <>
           {/* Workspace context panel toggle */}
-          <button
-            type="button"
+          <IconButton
+            active={workspacesOpen}
             onClick={onToggleWorkspaces}
             aria-label={t.nav.workspacesDrawer}
             aria-pressed={workspacesOpen}
-            style={iconBtnStyle(workspacesOpen)}
           >
             <PanelRight size={16} />
-          </button>
+          </IconButton>
 
           {/* Export / actions menu */}
           {activeSessionId && (
             <div style={{ position: "relative" }} ref={menuRef}>
-              <button
-                type="button"
+              <IconButton
+                active={menuOpen}
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={t.nav.exportSession}
                 aria-expanded={menuOpen}
-                style={iconBtnStyle(menuOpen)}
               >
                 <MoreHorizontal size={16} />
-              </button>
+              </IconButton>
 
               {menuOpen && (
                 <div
@@ -206,20 +205,4 @@ export default function ChatTitleBar({
       }
     />
   );
-}
-
-function iconBtnStyle(active: boolean): React.CSSProperties {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 32,
-    height: 32,
-    border: "none",
-    borderRadius: 6,
-    background: active ? "var(--hms-surface-hover)" : "transparent",
-    color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
-    cursor: "pointer",
-    flexShrink: 0,
-  };
 }
