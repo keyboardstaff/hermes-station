@@ -45,6 +45,34 @@ def test_resolve_missing_dir_is_none(monkeypatch, tmp_path: Path):
     assert profile_run.resolve_profile_home("ghost") is None
 
 
+# ── active_profile_name / active_profile_home ──
+
+
+def test_active_profile_name_nondefault(monkeypatch):
+    monkeypatch.setattr(shim.profiles, "get_active", lambda: "creative")
+    assert profile_run.active_profile_name() == "creative"
+
+
+def test_active_profile_name_default_or_blank_is_none(monkeypatch):
+    monkeypatch.setattr(shim.profiles, "get_active", lambda: "default")
+    assert profile_run.active_profile_name() is None
+    monkeypatch.setattr(shim.profiles, "get_active", lambda: "  ")
+    assert profile_run.active_profile_name() is None
+
+
+def test_active_profile_name_no_getter(monkeypatch):
+    monkeypatch.setattr(shim.profiles, "get_active", None)
+    assert profile_run.active_profile_name() is None
+
+
+def test_active_profile_home_resolves(monkeypatch, tmp_path: Path):
+    home = tmp_path / "profiles" / "creative"
+    home.mkdir(parents=True)
+    monkeypatch.setattr(shim.profiles, "get_active", lambda: "creative")
+    monkeypatch.setattr(shim.profiles, "get_profile_dir", lambda name: tmp_path / "profiles" / name)
+    assert profile_run.active_profile_home() == home.resolve()
+
+
 # ── profile_home_override (context manager) ──────────────────────────
 
 

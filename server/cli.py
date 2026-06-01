@@ -71,6 +71,15 @@ def _run_with_reload(bind: dict[str, Any]) -> None:
 
     def _spawn() -> subprocess.Popen[Any]:
         env = os.environ.copy()
+        # Run the dev backend under the active profile's HERMES_HOME, else
+        # upstream warns it's falling back to ~/.hermes and writes to the wrong
+        # profile. The dev socket stays pinned via HMS_DEV_SOCK below, so this
+        # only moves the *data* home — not where Vite proxies.
+        if "HERMES_HOME" not in env:
+            from server.lib.profile_run import active_profile_home
+            _home = active_profile_home()
+            if _home is not None:
+                env["HERMES_HOME"] = str(_home)
         if "path" in bind:
             env["HMS_DEV_SOCK"] = bind["path"]
             env.pop("HMS_PORT", None)

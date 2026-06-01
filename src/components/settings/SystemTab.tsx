@@ -187,7 +187,8 @@ function DiagnosticsSection() {
             paddingTop: 8,
             lineHeight: 1.7,
           }}>
-            {flags.upstream_version && <div>hermes-agent: <code>{flags.upstream_version}</code></div>}
+            {flags.station_version && <div>Hermes Station: <code>{flags.station_version}</code></div>}
+            {flags.upstream_version && <div>Hermes Agent: <code>{flags.upstream_version}</code></div>}
             {flags.python_version && <div>Python: <code>{flags.python_version}</code></div>}
             {flags.os_name && <div>OS: <code>{flags.os_name}</code></div>}
           </div>

@@ -11,7 +11,7 @@ import time
 import uuid
 from pathlib import Path
 
-from aiohttp import web
+from aiohttp import BodyPartReader, web
 
 from server.lib import config_reader
 from server.lib.route_helpers import SESSION_ID_RE
@@ -113,6 +113,10 @@ async def handle_upload(request: web.Request) -> web.Response:
         part = await reader.next()
         if part is None:
             break
+        # reader.next() yields BodyPartReader | MultipartReader; Station only
+        # sends flat parts, so skip (and narrow away) any nested multipart group.
+        if not isinstance(part, BodyPartReader):
+            continue
         part_name = getattr(part, "name", None)
         if part_name == "session_id":
             raw_sid = await part.read(decode=True)
@@ -239,7 +243,7 @@ async def handle_session_attachments(request: web.Request) -> web.Response:
 
 
 @router.get(r"/api/upload/{upload_id}/{name}")
-async def handle_download(request: web.Request) -> web.Response:
+async def handle_download(request: web.Request) -> web.StreamResponse:
     upload_id = request.match_info["upload_id"]
     name = request.match_info["name"]
     if not _SAFE_NAME_RE.match(upload_id) or not _SAFE_NAME_RE.match(name):

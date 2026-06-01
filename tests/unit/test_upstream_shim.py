@@ -58,6 +58,7 @@ def test_capability_flags_defaults_to_all_false() -> None:
             assert value is False, f"{name} default should be False"
     # Version is None / strings empty.
     assert f.upstream_version is None
+    assert f.station_version is None
     assert f.python_version == ""
     assert f.os_name == ""
 
@@ -73,6 +74,9 @@ def test_probe_populates_env_fields() -> None:
     shim.probe(force=True)
     assert shim.flags.python_version  # eg "3.11.7"
     assert shim.flags.os_name in ("Linux", "Darwin", "Windows")
+    # Station's own version comes from its installed dist metadata (the test env
+    # always installs hermes-station editable), surfaced in /settings → System.
+    assert shim.flags.station_version
 
 
 def test_probe_is_idempotent_without_force() -> None:

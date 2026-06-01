@@ -223,3 +223,47 @@ async def test_gateway_restart_409_when_unclassified_failure(app_server) -> None
                 body = await r.json()
     assert body["ok"] is False
     assert body["reason"] == "weird_new_state"
+
+
+# restart spawner threads the active profile
+
+
+def test_restart_spawner_passes_active_profile(quiet_hms_env, monkeypatch) -> None:
+    import server.lifecycle as lifecycle
+
+    captured: dict = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = argv
+            captured["env"] = kwargs.get("env", {})
+            self.pid = 4321
+
+    monkeypatch.setattr("subprocess.Popen", _FakePopen)
+    monkeypatch.setattr("server.lib.upstream_paths.hermes_executable", lambda: "hermes")
+    monkeypatch.setattr("server.lib.profile_run.active_profile_name", lambda: "creative")
+
+    out = lifecycle.spawn_hermes_gateway_restart()
+    assert out["ok"] is True
+    # Restart comes up under the active profile, not ~/.hermes.
+    assert captured["argv"] == ["hermes", "-p", "creative", "gateway", "restart"]
+    # -p wins: no stale HERMES_HOME inherited into the child.
+    assert "HERMES_HOME" not in captured["env"]
+
+
+def test_restart_spawner_default_profile_is_plain(quiet_hms_env, monkeypatch) -> None:
+    import server.lifecycle as lifecycle
+
+    captured: dict = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = argv
+            self.pid = 1
+
+    monkeypatch.setattr("subprocess.Popen", _FakePopen)
+    monkeypatch.setattr("server.lib.upstream_paths.hermes_executable", lambda: "hermes")
+    monkeypatch.setattr("server.lib.profile_run.active_profile_name", lambda: None)
+
+    lifecycle.spawn_hermes_gateway_restart()
+    assert captured["argv"] == ["hermes", "gateway", "restart"]

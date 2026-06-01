@@ -74,10 +74,22 @@ def spawn_hermes_gateway_restart() -> dict[str, Any]:
     # exe may be a single path or a space-separated python -m fallback.
     import shlex
     prefix = shlex.split(exe) if " " in exe else [exe]
-    argv = [*prefix, "gateway", "restart"]
+    # Restart under the active profile so the gateway comes back up on the right
+    # HERMES_HOME (mirrors spawn_profile_gateway's -p). Without this, upstream
+    # warns "HERMES_HOME unset but active profile is X" and writes to ~/.hermes.
+    # Default / unset profile → plain `gateway restart` (unchanged).
+    from server.lib.profile_run import active_profile_name
+    active = active_profile_name()
+    if active:
+        argv = [*prefix, "-p", active, "gateway", "restart"]
+    else:
+        argv = [*prefix, "gateway", "restart"]
 
     env = dict(os.environ)
     env.setdefault("HERMES_NONINTERACTIVE", "1")
+    if active:
+        # -p sets HERMES_HOME from argv; drop any inherited override so it wins.
+        env.pop("HERMES_HOME", None)
     try:
         log_handle = log_path.open("ab")
     except OSError:

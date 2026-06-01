@@ -76,6 +76,7 @@ class CapabilityFlags:
     skills_hf_tap: bool = False
 
     upstream_version: str | None = None
+    station_version: str | None = None
     python_version: str = ""
     os_name: str = ""
 
@@ -565,6 +566,7 @@ class Shim:
         f.python_version = sys.version.split()[0]
         f.os_name = _plat.system()
         f.upstream_version = _detect_upstream_version()
+        f.station_version = _detect_station_version()
 
         self._probed = True
         return self.flags
@@ -603,6 +605,15 @@ def _detect_upstream_version() -> str | None:
     try:
         from hermes_constants import __version__  # type: ignore[import-not-found]
         return str(__version__)
+    except Exception:
+        return None
+
+
+def _detect_station_version() -> str | None:
+    """Hermes Station's own package version (pyproject ``[project].version``)."""
+    try:
+        import importlib.metadata as md
+        return md.version("hermes-station")
     except Exception:
         return None
 

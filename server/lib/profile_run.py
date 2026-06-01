@@ -54,6 +54,31 @@ def resolve_profile_home(profile: str | None) -> Path | None:
     return home if home.is_dir() else None
 
 
+def active_profile_name() -> str | None:
+    """The sticky active profile name, or ``None`` for default/unset/unavailable.
+
+    This is the profile the gateway resolves as its ``HERMES_HOME`` on its next
+    restart (``~/.hermes/active_profile``). The dev/restart spawners read it so
+    a relaunch comes up under the right home instead of silently falling back to
+    ``~/.hermes`` — upstream's "HERMES_HOME unset but active profile is X" warning,
+    which means any data the process writes lands in the wrong profile.
+    """
+    getter = shim.profiles.get_active
+    if getter is None:
+        return None
+    try:
+        name = (getter() or "").strip()
+    except Exception:
+        logger.warning("[hms.profile_run] get_active_profile failed", exc_info=True)
+        return None
+    return name if name and name != "default" else None
+
+
+def active_profile_home() -> Path | None:
+    """Resolved ``HERMES_HOME`` of the sticky active profile; ``None`` for default."""
+    return resolve_profile_home(active_profile_name())
+
+
 @contextmanager
 def profile_home_override(profile: str | None) -> Iterator[Path | None]:
     """Temporarily point ``get_hermes_home()`` at ``profile``'s home.
@@ -101,4 +126,9 @@ def profile_home_override(profile: str | None) -> Iterator[Path | None]:
                 os.environ[k] = v
 
 
-__all__ = ["resolve_profile_home", "profile_home_override"]
+__all__ = [
+    "resolve_profile_home",
+    "profile_home_override",
+    "active_profile_name",
+    "active_profile_home",
+]

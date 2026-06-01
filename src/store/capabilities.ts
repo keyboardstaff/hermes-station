@@ -32,6 +32,7 @@ export interface CapabilityFlags {
   skills_hf_tap?: boolean;
 
   // Environment
+  station_version?: string | null;
   upstream_version?: string | null;
   python_version?: string;
   os_name?: string;

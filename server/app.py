@@ -126,7 +126,8 @@ def _attach_spa(app) -> None:
             or path.startswith("/ws/")
         )
 
-    async def _serve_index(_request: web.Request) -> web.Response:
+    async def _serve_index(_request: web.Request) -> web.StreamResponse:
+        # FileResponse is a StreamResponse, not a (buffered) Response.
         return web.FileResponse(index_path)
 
     @web.middleware
