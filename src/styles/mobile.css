@@ -1,0 +1,100 @@
+/*
+ * Mobile layout primitives.
+ *
+ * Style tokens + the slide-in drawer animation, kept in CSS instead of
+ * styled inline objects because:
+ *   - they need to interact with `env(safe-area-inset-bottom)`
+ *   - the drawer transform should run on the compositor (transform +
+ *     transition can't easily be expressed in inline style without
+ *     racing the React re-render)
+ *
+ * The component tree (DesktopShell / MobileShell) decides which
+ * blocks apply; we don't gate via @media here.
+ */
+
+:root {
+  --hms-mobile-header-height: 48px;
+  --hms-mobile-touch-target: 44px;
+  /* env() falls back to 0px on browsers without notches — safe to use
+   * unconditionally inside the layout calc. */
+  --hms-safe-top: env(safe-area-inset-top, 0px);
+  --hms-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Updated by useVisualViewport — defaults to 0 so the var is always set. */
+  --hms-keyboard-h: 0px;
+}
+
+/* Mobile shell — applied to <div class="hms-mobile-shell"> in MobileShell. */
+.hms-mobile-shell {
+  display: flex;
+  flex-direction: column;
+  /* 100dvh dodges the iOS "URL bar appears/disappears" 100vh bug. */
+  height: 100dvh;
+  background-color: var(--hms-bg);
+  overflow: hidden;
+}
+
+/* Floating header — fixed-position so the slide-in drawer can overlap
+ * it; floated content sits below via padding-top. */
+.hms-mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--hms-mobile-header-height) + var(--hms-safe-top));
+  padding-top: var(--hms-safe-top);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 8px;
+  background-color: var(--hms-surface);
+  border-bottom: 1px solid var(--hms-border);
+  z-index: 30;
+  /* Lets the title middle-align reliably regardless of left/right
+   * icon group widths. */
+  gap: 8px;
+}
+
+.hms-mobile-header > .hms-mobile-header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hms-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hms-mobile-header > button {
+  width: var(--hms-mobile-touch-target);
+  height: var(--hms-mobile-touch-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--hms-text);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.hms-mobile-header > button:active {
+  background: var(--hms-hover-bg);
+}
+
+/* Main scroll region — sits beneath the fixed header. We use
+ * flex:1 so the bottom edge is pushed up when the soft keyboard
+ * raises the visual viewport. */
+.hms-mobile-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-top: calc(var(--hms-mobile-header-height) + var(--hms-safe-top));
+  /* Composer is `position: fixed` so it doesn't contribute to layout
+   * height — leave enough bottom space so the last bit of content
+   * isn't hidden behind it (the chat composer is ~80px). Routes that
+   * have no composer (Settings, Analytics, …) still see this padding;
+   * 16px is unobtrusive. */
+  padding-bottom: calc(var(--hms-safe-bottom) + var(--hms-keyboard-h));
+  position: relative;
+}

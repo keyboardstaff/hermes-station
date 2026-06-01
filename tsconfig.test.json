@@ -1,0 +1,9 @@
+{
+  // Typecheck config for the test suite. The base tsconfig only includes
+  // `src`, so without this the IDE (and CI) had no project covering `tests/`
+  // — `@/...` imports failed to resolve and every selector param showed as
+  // implicit-any. This inherits the base compilerOptions (incl. the `@/*`
+  // path alias) and widens the program to the tests.
+  "extends": "./tsconfig.json",
+  "include": ["src", "tests"]
+}

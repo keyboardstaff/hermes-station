@@ -1,0 +1,394 @@
+"""Unit tests for server/runs.py — delta callback events and history loading."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+# Shared helpers
+
+
+class _FakeWSManager:
+    """Captures every ``broadcast_threadsafe`` / ``broadcast`` call."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def broadcast_threadsafe(self, channel: str, payload: dict[str, Any]) -> None:
+        self.calls.append((channel, payload))
+
+    async def broadcast(self, channel: str, payload: dict[str, Any]) -> None:
+        self.calls.append((channel, payload))
+
+    def events(self) -> list[str]:
+        return [p.get("event", "") for _, p in self.calls]
+
+
+def _make_fake_shim(captured_callbacks: dict[str, Any]) -> MagicMock:
+    class FakeAIAgent:
+        session_prompt_tokens: int = 0
+        session_completion_tokens: int = 0
+        session_total_tokens: int = 0
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            for key in (
+                "stream_delta_callback",
+                "tool_start_callback",
+                "tool_complete_callback",
+                "reasoning_callback",
+            ):
+                captured_callbacks[key] = kwargs.get(key)
+
+        def run_conversation(self, **kwargs: Any) -> dict[str, Any]:
+            return {"final_response": "", "messages": []}
+
+    shim = MagicMock()
+    shim.gateway.GatewayRunner = MagicMock()          # must not be None
+    shim.gateway.load_gateway_config = MagicMock(return_value={})
+    shim.gateway.resolve_gateway_model = MagicMock(return_value="test-model")
+    shim.gateway.resolve_runtime_agent_kwargs = MagicMock(return_value={})
+    shim.gateway.get_platform_tools = MagicMock(return_value=[])
+    shim.gateway.load_reasoning_config = None          # optional
+    shim.gateway.load_fallback_model = None            # optional
+    shim.run_agent.AIAgent = FakeAIAgent
+    shim.run_agent.parse_reasoning_effort = None       # optional
+    return shim
+
+
+def _make_delta_callback(
+    run_id: str = "run-xyz",
+) -> tuple[Any, _FakeWSManager]:
+    from server.runs import _build_agent
+
+    captured: dict[str, Any] = {}
+    fake_ws = _FakeWSManager()
+    fake_shim = _make_fake_shim(captured)
+
+    from server.runs import RunHandle
+    handle = RunHandle(
+        run_id=run_id,
+        session_id="sess-abc",
+        status="running",
+        created_at=0.0,
+    )
+
+    with (
+        patch("server.runs.shim", fake_shim),
+        patch("server.runs.get_ws_manager", return_value=fake_ws),
+        patch("server.runs.db"),  # called inside AIAgent init kwargs
+    ):
+        _build_agent(
+            handle=handle,
+            reasoning_effort=None,
+            loop=asyncio.new_event_loop(),
+        )
+
+    cb = captured.get("stream_delta_callback")
+    assert cb is not None, "stream_delta_callback was not passed to AIAgent"
+    return cb, fake_ws
+
+
+# _on_delta tests
+
+
+def test_on_delta_none_broadcasts_stream_reset() -> None:
+    cb, fake_ws = _make_delta_callback("run-r1")
+    cb(None)
+    assert "stream.reset" in fake_ws.events()
+
+
+def test_on_delta_stream_reset_includes_run_id() -> None:
+    cb, fake_ws = _make_delta_callback("run-check")
+    cb(None)
+    reset_frames = [p for _, p in fake_ws.calls if p.get("event") == "stream.reset"]
+    assert len(reset_frames) == 1
+    assert reset_frames[0]["run_id"] == "run-check"
+
+
+def test_on_delta_empty_string_is_dropped() -> None:
+    cb, fake_ws = _make_delta_callback("run-r2")
+    cb("")
+    assert len(fake_ws.calls) == 0, "expected no broadcast for empty delta"
+
+
+def test_on_delta_text_broadcasts_message_delta() -> None:
+    cb, fake_ws = _make_delta_callback("run-r3")
+    cb("hello world")
+    assert len(fake_ws.calls) == 1
+    _channel, payload = fake_ws.calls[0]
+    assert payload["event"] == "message.delta"
+    assert payload["delta"] == "hello world"
+    assert payload["run_id"] == "run-r3"
+
+
+def test_on_delta_none_does_not_broadcast_message_delta() -> None:
+    cb, fake_ws = _make_delta_callback("run-r4")
+    cb(None)
+    assert "message.delta" not in fake_ws.events()
+
+
+def test_on_delta_multiple_texts_accumulate() -> None:
+    cb, fake_ws = _make_delta_callback("run-r5")
+    cb("chunk1")
+    cb("chunk2")
+    cb("chunk3")
+    events = fake_ws.events()
+    assert events.count("message.delta") == 3
+    deltas = [p["delta"] for _, p in fake_ws.calls]
+    assert deltas == ["chunk1", "chunk2", "chunk3"]
+
+
+# _run_to_completion: history loading
+
+
+@pytest.mark.asyncio
+async def test_history_loaded_from_db_when_not_provided(
+    quiet_hms_env,
+) -> None:
+    """When ``conversation_history=[]``, history is fetched from the session DB."""
+    from server.runs import RunHandle, _run_to_completion
+
+    session_id = "sess-hist"
+    run_id = "run-hist"
+    stored_history = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "hello"},
+    ]
+
+    mock_session_db = MagicMock()
+    mock_session_db.get_messages_as_conversation.return_value = stored_history
+
+    captured_history: list[dict[str, Any]] = []
+
+    class FakeAIAgentWithHistoryCapture:
+        session_prompt_tokens: int = 0
+        session_completion_tokens: int = 0
+        session_total_tokens: int = 0
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def run_conversation(self, **kwargs: Any) -> dict[str, Any]:
+            captured_history.extend(kwargs.get("conversation_history", []))
+            return {"final_response": "ok", "messages": []}
+
+    captured_cbs: dict[str, Any] = {}
+    fake_shim = _make_fake_shim(captured_cbs)
+    fake_shim.run_agent.AIAgent = FakeAIAgentWithHistoryCapture
+
+    fake_ws = _FakeWSManager()
+
+    mock_registry = AsyncMock()
+    mock_registry.remove = AsyncMock()
+
+    mock_bridge = MagicMock()
+    mock_bridge.register = MagicMock()
+    mock_bridge.unregister = MagicMock()
+    mock_bridge.bind_session_key = MagicMock(return_value=None)
+    mock_bridge.unbind_session_key = MagicMock()
+
+    handle = RunHandle(
+        run_id=run_id,
+        session_id=session_id,
+        status="queued",
+        created_at=time.time(),
+        model=None,
+    )
+
+    loop = asyncio.get_event_loop()
+    with (
+        patch("server.runs.shim", fake_shim),
+        patch("server.runs.get_ws_manager", return_value=fake_ws),
+        patch("server.runs.db", return_value=mock_session_db),
+        patch("server.runs.get_registry", return_value=mock_registry),
+        patch("server.runs.get_approval_bridge", return_value=mock_bridge),
+        patch("server.runs._maybe_auto_title"),
+        # These tests assert raw history handling; the workspace preface is
+        # exercised separately, so suppress it (also avoids creating ~/workspace).
+        patch("server.runs._workspace_context_history", return_value=[]),
+    ):
+        await _run_to_completion(
+            handle=handle,
+            input_data="hello",
+            reasoning_effort=None,
+            conversation_history=[],
+            sem=asyncio.Semaphore(1),
+            loop=loop,
+        )
+
+    mock_session_db.get_messages_as_conversation.assert_called_once_with(session_id)
+    assert captured_history == stored_history
+
+
+@pytest.mark.asyncio
+async def test_history_not_fetched_when_provided(
+    quiet_hms_env,
+) -> None:
+    """When a non-empty ``conversation_history`` is supplied, the DB is not queried."""
+    from server.runs import RunHandle, _run_to_completion
+
+    session_id = "sess-skip"
+    run_id = "run-skip"
+    prefilled = [{"role": "user", "content": "pre-existing"}]
+
+    mock_session_db = MagicMock()
+    mock_session_db.get_messages_as_conversation.return_value = []
+
+    class FakeAIAgentNoDb:
+        session_prompt_tokens: int = 0
+        session_completion_tokens: int = 0
+        session_total_tokens: int = 0
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def run_conversation(self, **kwargs: Any) -> dict[str, Any]:
+            return {"final_response": "ok", "messages": []}
+
+    captured_cbs: dict[str, Any] = {}
+    fake_shim = _make_fake_shim(captured_cbs)
+    fake_shim.run_agent.AIAgent = FakeAIAgentNoDb
+
+    fake_ws = _FakeWSManager()
+    mock_registry = AsyncMock()
+    mock_registry.remove = AsyncMock()
+    mock_bridge = MagicMock()
+    mock_bridge.register = MagicMock()
+    mock_bridge.unregister = MagicMock()
+    mock_bridge.bind_session_key = MagicMock(return_value=None)
+    mock_bridge.unbind_session_key = MagicMock()
+
+    handle = RunHandle(
+        run_id=run_id,
+        session_id=session_id,
+        status="queued",
+        created_at=time.time(),
+        model=None,
+    )
+
+    loop = asyncio.get_event_loop()
+    with (
+        patch("server.runs.shim", fake_shim),
+        patch("server.runs.get_ws_manager", return_value=fake_ws),
+        patch("server.runs.db", return_value=mock_session_db),
+        patch("server.runs.get_registry", return_value=mock_registry),
+        patch("server.runs.get_approval_bridge", return_value=mock_bridge),
+        patch("server.runs._maybe_auto_title"),
+        # These tests assert raw history handling; the workspace preface is
+        # exercised separately, so suppress it (also avoids creating ~/workspace).
+        patch("server.runs._workspace_context_history", return_value=[]),
+    ):
+        await _run_to_completion(
+            handle=handle,
+            input_data="hello",
+            reasoning_effort=None,
+            conversation_history=prefilled,  # already provided
+            sem=asyncio.Semaphore(1),
+            loop=loop,
+        )
+
+    mock_session_db.get_messages_as_conversation.assert_not_called()
+
+
+# ── Per-run frame seq + replay ring ───────────────────────────────────
+
+
+def _new_handle(run_id: str = "run-seq"):
+    from server.runs import RunHandle
+    return RunHandle(run_id=run_id, session_id="sess", status="running", created_at=time.time())
+
+
+def test_stamp_assigns_monotonic_seq_and_buffers() -> None:
+    h = _new_handle()
+    f1 = h.stamp({"event": "message.delta", "delta": "a"})
+    f2 = h.stamp({"event": "message.delta", "delta": "b"})
+    f3 = h.stamp({"event": "run.completed"})
+    assert [f1["seq"], f2["seq"], f3["seq"]] == [1, 2, 3]
+    # All buffered in order.
+    assert [f["seq"] for f in h.ring] == [1, 2, 3]
+
+
+def test_replay_since_returns_only_newer_frames() -> None:
+    h = _new_handle()
+    for ch in "abc":
+        h.stamp({"event": "message.delta", "delta": ch})
+    # Client saw up to seq=2 → only the third frame should replay.
+    replayed = h.replay_since(2)
+    assert [f["seq"] for f in replayed] == [3]
+    # last_seq=0 (fresh re-subscribe) replays everything still buffered.
+    assert [f["seq"] for f in h.replay_since(0)] == [1, 2, 3]
+
+
+def test_ring_is_bounded() -> None:
+    from server.runs import RUN_RING_MAX
+    h = _new_handle()
+    for _ in range(RUN_RING_MAX + 50):
+        h.stamp({"event": "message.delta"})
+    assert len(h.ring) == RUN_RING_MAX
+    # seq keeps climbing past the buffer cap; oldest frames are evicted.
+    assert h.seq == RUN_RING_MAX + 50
+    assert h.ring[0]["seq"] == 51
+
+
+# ── Shared terminal-frame contract across run paths ───────────────────
+# These guard D1 (contract unification) + D2 (status vocabulary). The slash
+# path is patched at _build_hms_event so it runs without the agent venv.
+
+
+@pytest.mark.asyncio
+async def test_slash_run_success_emits_completed_with_session_id(quiet_hms_env) -> None:
+    from server import runs as runs_mod
+    from server.runs import start_slash_run
+
+    runs_mod.reset_for_test()
+    fake_ws = _FakeWSManager()
+    adapter = MagicMock()
+    adapter._message_handler = AsyncMock(return_value="pong")
+
+    with (
+        patch("server.runs.get_ws_manager", return_value=fake_ws),
+        patch("server.runs._build_hms_event", return_value=object()),
+    ):
+        handle = await start_slash_run(adapter=adapter, text="/help", session_id="sess-1")
+        await handle.task
+
+    assert handle.status == "completed"
+    events = fake_ws.events()
+    assert "message.delta" in events
+    assert "run.completed" in events
+    completed = next(p for _, p in fake_ws.calls if p.get("event") == "run.completed")
+    # Terminal frame carries session_id (shared _terminal_frame contract).
+    assert completed["session_id"] == "sess-1"
+    assert completed["output"] == "pong"
+    # Every frame is seq-stamped via the shared stamp/_terminal_frame path.
+    assert all("seq" in p for _, p in fake_ws.calls)
+
+
+@pytest.mark.asyncio
+async def test_slash_run_failure_uses_failed_not_error(quiet_hms_env) -> None:
+    """Regression for D2: the slash path must emit the canonical ``failed``
+    status, not the legacy ``error`` spelling that diverged from the AIAgent
+    path."""
+    from server import runs as runs_mod
+    from server.runs import start_slash_run
+
+    runs_mod.reset_for_test()
+    fake_ws = _FakeWSManager()
+    adapter = MagicMock()
+    adapter._message_handler = AsyncMock(side_effect=RuntimeError("boom"))
+
+    with (
+        patch("server.runs.get_ws_manager", return_value=fake_ws),
+        patch("server.runs._build_hms_event", return_value=object()),
+    ):
+        handle = await start_slash_run(adapter=adapter, text="/broken", session_id="sess-2")
+        await handle.task
+
+    assert handle.status == "failed"  # NOT "error"
+    failed = next(p for _, p in fake_ws.calls if p.get("event") == "run.failed")
+    assert failed["session_id"] == "sess-2"
+    assert "boom" in failed["error"]

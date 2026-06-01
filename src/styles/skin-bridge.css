@@ -1,0 +1,53 @@
+/*
+ * Skins — accent overlay on top of the Light/Dark theme.
+ *
+ * Each `[data-skin="<name>"]` block overrides ONLY:
+ *   - `--hms-accent`           — primary brand colour
+ *   - `--hms-surface`          — base bg tinted toward the accent
+ *   - `--hms-selected-bg`      — selection background (uses the accent)
+ *
+ * It deliberately leaves `--hms-bg` / `--hms-text` / `--hms-text-muted`
+ * alone so the Theme axis (light / dark / system) keeps full control of
+ * contrast. The matrix this produces is (3 themes × 6 skins) all
+ * guaranteed-readable.
+ *
+ * Naming + palette mirror upstream's _BUILTIN_DASHBOARD_THEMES.
+ */
+
+:root[data-skin="default"] {
+  /* intentionally empty — preserves theme.css native palette (Hermes Teal) */
+}
+
+/* ── Midnight — deep blue-violet ─────────────────────────────────────── */
+:root[data-skin="midnight"]                       { --hms-accent: #7c3aed; --hms-surface: color-mix(in srgb, #a78bfa 4%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #a78bfa 10%, transparent); }
+:root[data-theme="dark"][data-skin="midnight"]    { --hms-accent: #a78bfa; --hms-surface: color-mix(in srgb, #a78bfa 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #a78bfa 14%, transparent); }
+
+/* ── Ember — warm crimson + bronze ───────────────────────────────────── */
+:root[data-skin="ember"]                          { --hms-accent: #ea580c; --hms-surface: color-mix(in srgb, #f97316 4%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #f97316 10%, transparent); }
+:root[data-theme="dark"][data-skin="ember"]       { --hms-accent: #f97316; --hms-surface: color-mix(in srgb, #f97316 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #f97316 14%, transparent); }
+
+/* ── Mono — clean grayscale ──────────────────────────────────────────── */
+:root[data-skin="mono"]                           { --hms-accent: #3f3f3f; --hms-surface: color-mix(in srgb, #3f3f3f 3%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #3f3f3f 10%, transparent); }
+:root[data-theme="dark"][data-skin="mono"]        { --hms-accent: #d8d8d8; --hms-surface: color-mix(in srgb, #d8d8d8 5%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #d8d8d8 12%, transparent); }
+
+/* ── Cyberpunk — neon green on black ─────────────────────────────────── */
+:root[data-skin="cyberpunk"]                      { --hms-accent: #059669; --hms-surface: color-mix(in srgb, #00ff88 3%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #00ff88 10%, transparent); }
+:root[data-theme="dark"][data-skin="cyberpunk"]   { --hms-accent: #00ff88; --hms-surface: color-mix(in srgb, #00ff88 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #00ff88 14%, transparent); }
+
+/* ── Rosé — soft pink + warm ivory ───────────────────────────────────── */
+:root[data-skin="rose"]                           { --hms-accent: #db2777; --hms-surface: color-mix(in srgb, #ec4899 4%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #ec4899 10%, transparent); }
+:root[data-theme="dark"][data-skin="rose"]        { --hms-accent: #ec4899; --hms-surface: color-mix(in srgb, #ec4899 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #ec4899 14%, transparent); }
+
+/*
+ * Font size — root rem cascade.
+ *
+ * The station UI sizes type with rem units throughout; setting
+ * :root font-size scales every label, button, panel and editor pane
+ * together. ``--hms-font-scale`` is exposed for the rare pixel-sized
+ * widget that needs a hand-tuned multiplier (none today).
+ */
+:root                              { font-size: 16px; --hms-font-scale: 1; }
+:root[data-font-size="small"]      { font-size: 14px; --hms-font-scale: 0.875; }
+:root[data-font-size="default"]    { font-size: 16px; --hms-font-scale: 1; }
+:root[data-font-size="large"]      { font-size: 18px; --hms-font-scale: 1.125; }
+:root[data-font-size="extra-large"]{ font-size: 20px; --hms-font-scale: 1.25; }

@@ -1,0 +1,107 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hermes-station"
+version = "0.1.0.dev1"
+description = "Hermes Station — framework-level web client for hermes-agent's gateway"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "keyboardstaff and Hermes Station contributors", email = "keyboardstaff@gmail.com" }
+]
+
+# Runtime dependencies. We intentionally do NOT depend on `hermes-agent`
+# as a package — the plugin is meant to be loaded by an existing
+# hermes-agent install (via its plugin discovery), so we import gateway
+# / hermes_cli / tools / run_agent from the host process at runtime.
+dependencies = [
+    "aiohttp>=3.10",
+    "argon2-cffi>=23.1",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.380",
+    "ruff>=0.6",
+    "pytest>=8.0",
+    "pytest-aiohttp>=1.0",
+    "watchdog>=4.0",     # used by `python -m server dev --reload`
+]
+
+# `hms` console script —薄包装层调用 hermes_cli.gateway 的生命周期 helpers.
+# Lives in server.cli.main.
+[project.scripts]
+hms = "server.cli:main"
+
+[tool.hatch.build]
+# Include only the Python source — the React SPA is built by `pnpm build`
+# into ./dist and shipped as a sibling artifact (the plugin discovery uses
+# the file tree on disk, so dist/ is referenced at runtime, not packaged).
+include = [
+    "server/**/*.py",
+    "plugin.yaml",
+    "README.md",
+]
+
+[tool.pyright]
+pythonVersion = "3.11"
+include = ["server"]
+# Pyright runs in our CI separately from the host hermes-agent venv. The
+# host imports (gateway.*, hermes_cli.*, tools.*) are only resolved at
+# runtime so we mark them as missing-but-OK to avoid false positives.
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+strictParameterNoneValue = true
+strictListInference = true
+strictDictionaryInference = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["server"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = [
+    "S101",  # assert used — we use asserts in dev paths
+    "S603",  # subprocess call (gateway lifecycle relies on subprocess)
+    "S607",  # partial executable path (we call `hermes` / `launchctl` by name)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Sync pathlib reads inside async log-tail handlers (local disk, O(KB))
+# + write_eof on already-closed transport (S110).
+"server/routes/logs.py" = ["ASYNC240", "S110"]
+# WS pump's send queue overflow / close handlers: failures here MUST NOT
+# propagate into the AIAgent callbacks.
+"server/ws.py" = ["S110"]
+# runs.py interrupt cleanup is best-effort.
+"server/runs.py" = ["S110"]
+# app.py on_cleanup swallows CancelledError on task shutdown by design.
+"server/app.py" = ["S110"]
+# upstream_paths.py / upstream_shim.py best-effort symlink resolution
+# and migration probes — failures fall through to documented defaults.
+"server/lib/upstream_paths.py" = ["S110"]
+"server/lib/upstream_shim.py" = ["S110"]
+# Tests: bind-all-interfaces / hardcoded passwords / /tmp paths /
+# lambda fixtures / semicolons in dict literals — all par for the
+# course in test fixtures.
+"tests/**/*.py" = [
+    "S101",   # asserts (it's a test)
+    "S104",   # bind 0.0.0.0
+    "S105", "S106", "S107",  # hardcoded "passwords" / tokens in fixtures
+    "S108",   # /tmp paths
+    "S110",   # try/except/pass cleanup
+    "ASYNC109",
+    "E501",
+    "E702",   # multi-statement lines in compact fixture data
+    "E731",   # lambda-as-fake-callable in monkeypatch arg
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

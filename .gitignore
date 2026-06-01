@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# tsc emit safety-net (noEmit is set, but guard against an old local tsconfig).
+# Don't ignore *.d.ts — src/vite-env.d.ts is a real source file.
+src/**/*.js
+src/**/*.js.map
+
+# Editor / OS
+.DS_Store
+.vscode/settings.json
+.claude/settings.local.json
+.claude/launch.json
+
+# Vite cache
+.vite/
+
+# Playwright E2E (browsers cached globally; these are run artifacts)
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Python cache & tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Python virtualenv (local editor support; gateway uses ~/.hermes/hermes-agent/venv)
+venv/

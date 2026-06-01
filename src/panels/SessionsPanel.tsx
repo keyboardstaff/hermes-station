@@ -1,0 +1,408 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Download, Trash2, X, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import Button from "@/components/ui/Button";
+import { formatSessionTitle } from "@/lib/session-title";
+import { useSessionsFilters } from "@/store/filters";
+import { useChatStore } from "@/store/chat";
+import { useI18n } from "@/i18n";
+import SessionsFilters from "@/components/sessions/SessionsFilters";
+import PageTopBar from "@/components/layout/PageTopBar";
+import { ChatThread } from "@/components/chat/ChatThread";
+import type { ChatMessage, SessionSummary } from "@/lib/hermes-types";
+import { api } from "@/lib/api";
+
+import type { MessageRow } from "@/lib/session-messages";
+import { historyToChatMessages } from "@/lib/session-messages";
+
+function relativeTime(ts?: number): string {
+  if (!ts) return "";
+  const diff = Date.now() / 1000 - ts;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  if (diff < 86400 * 7) return `${Math.round(diff / 86400)}d ago`;
+  return new Date(ts * 1000).toLocaleDateString();
+}
+
+async function exportSessions(ids: string[], format: "json" | "markdown") {
+  const results = await Promise.all(
+    ids.map((id) =>
+      api
+        // Export needs the whole transcript; pass the max limit the
+        // backend accepts so we don't silently truncate large sessions.
+        .get<{ messages?: MessageRow[] }>(
+          `/api/sessions/${encodeURIComponent(id)}/messages?limit=5000`,
+        )
+        .catch(() => ({ messages: [] }))
+        .then((d) => ({ id, messages: d.messages ?? [] }))
+    )
+  );
+
+  let content: string;
+  let filename: string;
+  if (format === "json") {
+    content = JSON.stringify(results, null, 2);
+    filename = `sessions-export.json`;
+  } else {
+    content = results
+      .map(({ id, messages }) =>
+        `# Session: ${id}\n\n` +
+        (messages as MessageRow[]).map((m) => `**${m.role}**: ${m.content}`).join("\n\n---\n\n")
+      )
+      .join("\n\n====\n\n");
+    filename = `sessions-export.md`;
+  }
+
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const PAGE_SIZE = 50;
+
+export default function SessionsPanel() {
+  const { t } = useI18n();
+  const { debouncedSearch, sourceFilter, page, setPage } = useSessionsFilters();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [preview, setPreview] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch ALL sessions once, do client-side filter/search/pagination
+  const { data: allData, isLoading } = useQuery<{ sessions: SessionSummary[] }>({
+    queryKey: ["sessions-table-all"],
+    queryFn: () => api.get<{ sessions: SessionSummary[] }>("/api/sessions?limit=1000"),
+    staleTime: 10_000,
+  });
+
+  // Fetch preview messages. The previous swallow-non-2xx-as-empty code
+  // path masked failures behind a "Loading… then empty" drawer. The
+  // ``api`` wrapper throws ``ApiError`` for us, react-query surfaces
+  // it as ``previewError``, and the drawer renders a clear message.
+  const {
+    data: previewData,
+    isLoading: previewLoading,
+    error: previewError,
+  } = useQuery<{ messages: MessageRow[] }>({
+    queryKey: ["session-preview", preview],
+    queryFn: () =>
+      preview
+        ? api.get<{ messages: MessageRow[] }>(
+            `/api/sessions/${encodeURIComponent(preview)}/messages?limit=100`,
+          )
+        : Promise.resolve({ messages: [] }),
+    enabled: !!preview,
+    retry: 1,
+  });
+
+  const { mutate: deleteSelected, isPending: deleting } = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // ``api.json`` attaches the CSRF header automatically, so this
+      // matches the wrapper conventions instead of re-implementing
+      // ``X-HMS-CSRF: 1`` inline at the call site.
+      await Promise.all(
+        ids.map((id) =>
+          api.json<unknown>(
+            `/api/dashboard/sessions/${encodeURIComponent(id)}`,
+            "DELETE",
+          ),
+        ),
+      );
+    },
+    onSuccess: () => {
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
+    },
+  });
+
+  const allSessions = allData?.sessions ?? [];
+
+  // Client-side filter (search + source)
+  const filteredSessions = allSessions.filter((s) => {
+    if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      const title = formatSessionTitle(s.title).toLowerCase();
+      const model = (s.model ?? "").toLowerCase();
+      const src = (s.source ?? "").toLowerCase();
+      return title.includes(q) || model.includes(q) || src.includes(q);
+    }
+    return true;
+  });
+
+  const total = filteredSessions.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Filter/search shrinkage can leave `page` past the end → empty table that
+  // looks like "no sessions". Clamp back to the last valid page.
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(totalPages - 1);
+  }, [totalPages, page, setPage]);
+  const sessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === sessions.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(sessions.map((s) => s.session_id)));
+    }
+  };
+
+  const noneSelected = selected.size === 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <PageTopBar
+        title={t.nav.sessions}
+        subtitle={
+          `${sourceFilter === "all" ? "ALL SOURCES" : sourceFilter.toUpperCase()} · ${total} items` +
+          (selected.size > 0 ? ` · ${selected.size} selected` : "")
+        }
+        actions={
+          <>
+            <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "json")}>
+              <Download size={12} /> JSON
+            </Button>
+            <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "markdown")}>
+              <Download size={12} /> Markdown
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={noneSelected || deleting}
+              onClick={() => {
+                if (confirm(`Delete ${selected.size} session(s)?`)) deleteSelected(Array.from(selected));
+              }}
+            >
+              <Trash2 size={12} /> Delete
+            </Button>
+          </>
+        }
+        context={<SessionsFilters />}
+      />
+
+      {/* Body. Position relative so the preview drawer can be absolute
+          and overlay 50% of the area without re-flowing the table. */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", minWidth: 0, position: "relative" }}>
+        <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+          {isLoading && (
+            <div style={{ padding: 'var(--hms-space-6)', fontSize: 'var(--hms-text-sm)', color: "var(--hms-text-muted)" }}>Loading...</div>
+          )}
+          {!isLoading && sessions.length === 0 && (
+            <div style={{ padding: 'var(--hms-space-6)', fontSize: 'var(--hms-text-sm)', color: "var(--hms-text-muted)" }}>No sessions found.</div>
+          )}
+          {!isLoading && sessions.length > 0 && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 'var(--hms-text-sm)'}}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--hms-border)", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)', fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <th style={{ padding: "8px 12px", textAlign: "left", width: 32 }}>
+                    <input
+                      type="checkbox"
+                      checked={selected.size === sessions.length && sessions.length > 0}
+                      onChange={toggleAll}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </th>
+                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Title</th>
+                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Source</th>
+                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Model</th>
+                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr
+                    key={s.session_id}
+                    onClick={() => setPreview(preview === s.session_id ? null : s.session_id)}
+                    className="hms-sidebar-row"
+                    data-active={preview === s.session_id}
+                    style={{
+                      borderBottom: "1px solid var(--hms-border)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <td style={{ padding: "9px 12px" }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(s.session_id)}
+                        onChange={() => toggleSelect(s.session_id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </td>
+                    <td style={{ padding: "9px 12px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {formatSessionTitle(s.title)}
+                    </td>
+                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 'var(--hms-text-xs)'}}>
+                      {s.source ?? "—"}
+                    </td>
+                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {s.model ?? "—"}
+                    </td>
+                    <td style={{ padding: "9px 12px", textAlign: "right", color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
+                      {relativeTime(s.updated_at ?? s.started_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Preview drawer — overlay (not flex sibling), 50% width,
+            click-outside dismisses. Renders history through
+            ``historyToChatMessages`` + the shared ``ChatThread`` (same
+            lazy ``ChatBubble`` as /chat) so Markdown + ToolCallCard
+            render identically. */}
+        {preview && (
+          <PreviewDrawer
+            sessionId={preview}
+            title={formatSessionTitle(sessions.find((s) => s.session_id === preview)?.title)}
+            onClose={() => setPreview(null)}
+            messages={previewData?.messages}
+            loading={previewLoading}
+            error={previewError}
+          />
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ padding: "8px 16px", borderTop: "1px solid var(--hms-border)", display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
+          <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+            <ChevronLeft size={13} />
+          </Button>
+          <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
+            Page {page + 1} / {totalPages}
+          </span>
+          <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
+            <ChevronRight size={13} />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function PreviewDrawer({
+  sessionId, title, onClose, messages, loading, error,
+}: {
+  sessionId: string;
+  title: string;
+  onClose: () => void;
+  messages: MessageRow[] | undefined;
+  loading: boolean;
+  error: Error | null;
+}) {
+  const navigate = useNavigate();
+  const setActiveSession = useChatStore((s) => s.setActiveSession);
+  const chatMessages = useMemo<ChatMessage[]>(
+    () => historyToChatMessages(messages ?? []),
+    [messages]
+  );
+
+  // Jump this session into the live /chat view — same path as the Sidebar
+  // Recents pick: set the active session, then navigate; ChatPanel's load
+  // effect keys off ``activeSessionId`` and pulls the history.
+  const openInChat = () => {
+    setActiveSession(sessionId);
+    navigate("/chat");
+  };
+
+  // Close on Esc — matches the X button affordance.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <>
+      {/* Click-outside backdrop. Transparent so the table behind stays
+          fully visible; the drawer itself sits on top. */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute", inset: 0,
+          zIndex: 1,
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      />
+      <div
+        // ``key`` forces a fresh node when sessionId changes, so the
+        // slide-in animation re-runs.
+        key={sessionId}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: 0, right: 0, bottom: 0,
+          width: "50%",
+          minWidth: 360,
+          maxWidth: "50%",
+          background: "var(--hms-bg)",
+          borderLeft: "1px solid var(--hms-border)",
+          boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          zIndex: 2,
+          animation: "hms-drawer-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+        }}
+      >
+        <div style={{
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--hms-border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+        }}>
+          <span style={{
+            flex: 1, minWidth: 0,
+            fontSize: 'var(--hms-text-sm)', fontWeight: 600,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>{title}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexShrink: 0, marginLeft: 'var(--hms-space-2)' }}>
+            <button
+              onClick={openInChat}
+              title="Open in chat"
+              aria-label="Open in chat"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2, display: "flex" }}
+            >
+              <MessageSquare size={14} />
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close preview"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2, display: "flex" }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+        <ChatThread
+          messages={chatMessages}
+          loading={loading}
+          error={error}
+          labels={{
+            loading: "Loading messages...",
+            empty: "This session has no messages.",
+            error: "Could not load messages",
+          }}
+          style={{ flex: 1, padding: "12px 14px", gap: 'var(--hms-space-3)' }}
+        />
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,580 @@
+@import "tailwindcss";
+
+/* ── Layout variables ─────────────────────────────────────────────────────── */
+:root {
+  /* Legacy SidePanel compatibility variables until all consumers
+     stop using the global side slot. */
+  --hms-nav-width: 48px;
+  --hms-sidebar-width: 280px;
+  --hms-sidebar-collapsed: 0px;
+  --hms-header-height: 48px;
+  --hms-transition: 200ms ease;
+
+  /* Unified Sidebar dimensions: 280 expanded, 56 collapsed. */
+  --hms-sidebar-expanded-w: 280px;
+  --hms-sidebar-collapsed-w: 56px;
+  --hms-header-h: 48px;
+
+  /* Derived semantic colours — resolve lazily against the active skin/theme
+     accent, so they track every skin without per-skin duplication. Replace
+     the inline rgba(accent) tints / #94a3b8 greys / ad-hoc shadows. */
+  --hms-accent-weak:   color-mix(in srgb, var(--hms-accent) 12%, transparent);
+  --hms-accent-text:   var(--hms-accent);
+  /* Text/icon colour on a filled accent surface (saturated accents → white). */
+  --hms-on-accent:     #ffffff;
+  --hms-success-weak:  color-mix(in srgb, var(--hms-success) 14%, transparent);
+  --hms-warning-weak:  color-mix(in srgb, var(--hms-warning) 14%, transparent);
+  --hms-error-weak:    color-mix(in srgb, var(--hms-error) 14%, transparent);
+  /* Neutral grey for inactive / unattributed states (theme-agnostic). */
+  --hms-muted:         #94a3b8;
+  /* Elevation */
+  --hms-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.22);
+  --hms-shadow-drawer:  -4px 0 24px rgba(0, 0, 0, 0.12);
+  --hms-shadow-card:    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Light theme ──────────────────────────────────────────────────────────── */
+[data-theme="light"],
+:root {
+  --hms-bg: #ffffff;
+  --hms-surface: #f9f9f9;
+  --hms-border: rgba(0, 0, 0, 0.06);
+  --hms-text: #0d0d0d;
+  --hms-text-muted: rgba(0, 0, 0, 0.45);
+  --hms-hover-bg: rgba(0, 0, 0, 0.04);
+  --hms-selected-bg: rgba(0, 0, 0, 0.06);
+
+  /* Semantic status colours */
+  --hms-success:      #22c55e;
+  --hms-success-text: #15803d;
+  --hms-warning:      #f59e0b;
+  --hms-warning-text: #92400e;
+  --hms-warning-bg:   #fef3c7;
+  --hms-error:        #ef4444;
+  --hms-error-text:   #b91c1c;
+  --hms-error-dark:   #991b1b;
+  --hms-error-bg:     #fee2e2;
+  --hms-info:         #3b82f6;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --hms-bg: #0d0d0d;
+  --hms-surface: #141414;
+  --hms-border: rgba(255, 255, 255, 0.06);
+  --hms-text: #f5f5f5;
+  --hms-text-muted: rgba(255, 255, 255, 0.45);
+  --hms-hover-bg: rgba(255, 255, 255, 0.07);
+  --hms-selected-bg: rgba(255, 255, 255, 0.05);
+
+  /* Semantic status colours — slightly brighter for dark backgrounds */
+  --hms-success:      #4ade80;
+  --hms-success-text: #86efac;
+  --hms-warning:      #fbbf24;
+  --hms-warning-text: #fde68a;
+  --hms-warning-bg:   rgba(251, 191, 36, 0.12);
+  --hms-error:        #f87171;
+  --hms-error-text:   #fca5a5;
+  --hms-error-dark:   #fca5a5;
+  --hms-error-bg:     rgba(248, 113, 113, 0.12);
+  --hms-info:         #60a5fa;
+}
+
+/* ── Popup picker panel (ModelPicker / ReasoningPicker) ───────────────────── */
+@keyframes hms-popup-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hms-popup-panel {
+  animation: hms-popup-up 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom left;
+}
+
+/* Collapsible model list inside picker — smooth transition without hard snap */
+.hms-picker-models {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    max-height 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    opacity 240ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 260ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: max-height, opacity, transform;
+}
+
+.hms-picker-models.expanded {
+  max-height: 12000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Base reset ───────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background-color: var(--hms-bg);
+  color: var(--hms-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Three-column layout ──────────────────────────────────────────────────── */
+.hms-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.hms-nav {
+  width: var(--hms-nav-width);
+  flex-shrink: 0;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: 8px;
+  gap: 2px;
+  /* Do NOT set overflow: hidden — tooltips (absolute) must escape the nav column */
+}
+
+.hms-sidebar {
+  width: var(--hms-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  overflow: hidden;
+  transition: width var(--hms-transition);
+}
+
+.hms-sidebar.collapsed,
+.hms-sidebar.hidden {
+  width: 0;
+  border-right: none;
+}
+
+.hms-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background-color: var(--hms-bg);
+  position: relative; /* anchor for floating CapabilityBadge */
+}
+
+/* ── New unified Sidebar (P2a) ────────────────────────────────────────────── */
+.hms-sidebar-root {
+  width: var(--hms-sidebar-expanded-w);
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  /* overflow stays visible — More / UserButton popovers anchor inside the
+     Sidebar and must escape its bounds. Internal scrollable regions
+     (e.g. SidebarRecents body) declare their own overflow. */
+  overflow: visible;
+  transition: width var(--hms-transition);
+}
+
+.hms-sidebar-root.collapsed {
+  width: var(--hms-sidebar-collapsed-w);
+}
+
+/* When dropped inside the mobile Drawer it stretches to the Drawer's
+   width — the Drawer already caps to 80vw / 360px. */
+.hms-sidebar-root.mobile {
+  width: 100%;
+  border-right: none;
+}
+
+/* ── Sidebar row — shared by Pinned / More / UserButton ───────────
+   Hover background lives in CSS so :hover wins over inline transparent.
+   Active state is signalled either by NavLink's auto-injected `.active`
+   class (Pinned routes) or by data-active="true" (More toggle when
+   open / UserButton when popover open). */
+.hms-sidebar-row {
+  background: transparent;
+  transition: background var(--hms-transition);
+}
+.hms-sidebar-row:hover {
+  background: var(--hms-hover-bg);
+}
+.hms-sidebar-row.active,
+.hms-sidebar-row[data-active="true"] {
+  background: var(--hms-selected-bg);
+}
+.hms-sidebar-row.active:hover,
+.hms-sidebar-row[data-active="true"]:hover {
+  /* Active rows are already highlighted; hover is a no-op to avoid a
+     second-level shade on top of the selected colour. */
+  background: var(--hms-selected-bg);
+}
+
+/* Centered content for pages that don't use SidePanel */
+.hms-main-centered > * {
+  max-width: 960px;
+  margin-inline: auto;
+  padding: 0;
+}
+
+/* ── Button utilities ─────────────────────────────────────────────────────── */
+/* Base reset shared by all .hms-btn-* sizes */
+.hms-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--hms-border);
+  background: transparent;
+  color: var(--hms-text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color var(--hms-transition), color var(--hms-transition), opacity var(--hms-transition);
+  white-space: nowrap;
+}
+
+.hms-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hms-btn:not(:disabled):hover {
+  background: var(--hms-hover-bg);
+}
+
+/* sm — badge, tag-like buttons, inline icon actions */
+.hms-btn-sm {
+  padding: 3px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* md — standard toolbar / row action buttons */
+.hms-btn-md {
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* lg — primary call-to-action, form submit */
+.hms-btn-lg {
+  padding: 8px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Variants */
+.hms-btn-primary {
+  background: var(--hms-text);
+  color: var(--hms-bg);
+  border-color: var(--hms-text);
+}
+
+.hms-btn-primary:not(:disabled):hover {
+  opacity: 0.85;
+  background: var(--hms-text);
+}
+
+.hms-btn-danger {
+  color: var(--hms-error-text);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.hms-btn-danger:not(:disabled):hover {
+  background: var(--hms-error-bg);
+}
+
+/* ── Card utilities ─────────────────────────────────────────────────────── */
+.hms-card-hoverable {
+  transition: border-color var(--hms-transition);
+}
+.hms-card-hoverable:hover {
+  border-color: var(--hms-text);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hms-border);
+  border-radius: 2px;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.hms-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Show the actions bar (fork + copy) only while hovering the message row.
+   The bar sits below the bubble in normal flow, aligned left/right by the
+   parent flex container, so no absolute positioning is needed. */
+.hms-msg-row .hms-msg-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.hms-msg-row:hover .hms-msg-actions {
+  opacity: 1;
+}
+/* Touch devices: always show actions since there's no hover. */
+@media (hover: none) and (pointer: coarse) {
+  .hms-msg-row .hms-msg-actions {
+    opacity: 1;
+  }
+}
+
+/* Slide-up entrance for the approval drawer, anchored at the composer edge. */
+@keyframes hms-drawer-up {
+  from {
+    transform: translateY(20%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.hms-approval-drawer {
+  animation: hms-drawer-up 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.98);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 200ms ease-in forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 200ms ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 200ms ease-in forwards;
+}
+
+@keyframes contentUp {
+  from {
+    opacity: 0.92;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-contentUp {
+  animation: contentUp 200ms ease-out forwards;
+}
+
+/* Session transition animations */
+@keyframes sessionFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sessionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sessionFadeOut {
+  animation: sessionFadeOut 200ms ease-in forwards;
+}
+
+.animate-sessionFadeIn {
+  animation: sessionFadeIn 300ms ease-out forwards;
+}
+
+@keyframes hms-drawer-in {
+  from { transform: translateX(8%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+/* Remove focus outline on recharts SVG elements */
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none !important;
+}
+
+/* ── Markdown prose (skill-md-content) ──────────────────────────── */
+.skill-md-content hr {
+  border: none;
+  border-top: 1px solid var(--hms-border);
+  margin: 1em 0;
+}
+.skill-md-content pre {
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+.skill-md-content code {
+  background: var(--hms-surface);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.875em;
+}
+.skill-md-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* ── Module switcher tabs (pill segmented control) ────────────────── */
+.hms-module-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  margin: 8px 8px 4px;
+  background: var(--hms-hover-bg);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.hms-module-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.hms-module-tabs .hms-module-tab {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  gap: 5px;
+  width: auto;
+  height: auto;
+  padding: 5px 6px;
+  border-radius: 7px;
+  font-size: var(--hms-text-sm);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+.hms-module-tab:hover,
+.hms-module-tabs .hms-module-tab:hover {
+  background: var(--hms-hover-bg);
+  color: var(--hms-text);
+}
+.hms-module-tab[aria-pressed="true"] {
+  background: var(--hms-selected-bg);
+  color: var(--hms-text);
+}
+.hms-module-tabs .hms-module-tab[aria-pressed="true"] {
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.hms-module-tab[aria-pressed="true"]:hover,
+.hms-module-tabs .hms-module-tab[aria-pressed="true"]:hover {
+  background: var(--hms-bg);
+}
+/* Larger touch targets on mobile */
+.hms-sidebar-root.mobile .hms-module-tabs {
+  margin: 4px 12px 8px;
+}
+.hms-sidebar-root.mobile .hms-module-tabs .hms-module-tab {
+  padding: 8px 6px;
+  gap: 6px;
+}
+
+/* Keyboard shortcut hint — fades in on parent :hover */
+.hms-shortcut-hint {
+  opacity: 0;
+  transition: opacity var(--hms-transition);
+  pointer-events: none;
+}
+.hms-sidebar-row:hover .hms-shortcut-hint {
+  opacity: 1;
+}

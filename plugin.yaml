@@ -1,0 +1,36 @@
+name: station
+label: Station
+kind: platform
+version: 0.1.0.dev1
+description: >
+  Hermes Station — a React-based unified management UI served from
+  an in-process aiohttp adapter. Exposes REST + WebSocket for chat,
+  sessions, memory, models, logs, approvals and gateway lifecycle.
+  1:1 reuses upstream tools/approval.py 4-choice approval flow and
+  hermes_cli/gateway.py lifecycle helpers.
+author: Hermes Station contributors (maintained by keyboardstaff)
+
+# Surfaced in `hermes config` UI / `hermes setup` wizard.
+requires_env: []
+
+optional_env:
+  - name: HMS_HOST
+    description: "Bind address (127.0.0.1 for local-only; 0.0.0.0 for LAN access — requires password)"
+    prompt: "Bind host"
+    password: false
+  - name: HMS_PORT
+    description: "Listen port (default: 1313)"
+    prompt: "Port"
+    password: false
+  - name: HMS_PASSWORD_HASH
+    description: "Argon2id hash for browser login (only when bind=0.0.0.0). Generate via the Settings UI."
+    prompt: "Password hash (argon2id)"
+    password: true
+  - name: HMS_SESSION_TTL
+    description: "Cookie session TTL in seconds (default: 86400)"
+    prompt: "Session TTL seconds"
+    password: false
+  - name: HMS_CORS_ORIGINS
+    description: "Comma-separated CORS origins for the React dev server (dev only, e.g. http://localhost:3131)"
+    prompt: "CORS origins"
+    password: false

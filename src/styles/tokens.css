@@ -1,0 +1,166 @@
+/*
+ * tokens.css — Hermes Station design token catalog.
+ *
+ * This file is the **single source of truth** for all non-color structural
+ * CSS variables.  Color semantics live in theme.css.
+ *
+ * Usage: every component references var(--hms-*) — no numeric literals in
+ * TSX / CSS other than CSS-variable definitions here.
+ *
+ * Maintained as the long-term structural token source for Hermes Station.
+ */
+
+:root {
+  /* ── Layout ─────────────────────────────────────────── */
+  --hms-sidebar-collapsed-w: 56px;
+  --hms-sidebar-expanded-w:  240px;
+  --hms-header-h:            48px;
+  --hms-mobile-drawer-w:     80vw;
+  --hms-mobile-drawer-max:   360px;
+  --hms-touch-target:        44px;
+  --hms-content-max-w:       960px;
+  --hms-content-max-w-wide:  1200px;
+  --hms-panel-list-w:        280px;
+  --hms-panel-list-min:      180px;
+  --hms-panel-list-max:      400px;
+
+  /* ── Spacing scale ──────────────────────────────────── */
+  --hms-space-0:  0;
+  --hms-space-1:  4px;
+  --hms-space-2:  8px;
+  --hms-space-3:  12px;
+  --hms-space-4:  16px;
+  --hms-space-5:  20px;
+  --hms-space-6:  24px;
+  --hms-space-8:  32px;
+  --hms-space-10: 40px;
+  --hms-space-12: 48px;
+
+  /* ── Radius ─────────────────────────────────────────── */
+  --hms-radius-sm:   4px;
+  --hms-radius-md:   6px;
+  --hms-radius-lg:   8px;
+  --hms-radius-xl:   12px;
+  --hms-radius-pill: 999px;
+
+  /* ── Font scale (data-font-size attribute switches) ─── */
+  /* Base value; skin-bridge.css overrides per [data-font-size] */
+  --hms-font-scale: 1;
+  --hms-text-xs:   calc(0.6875rem * var(--hms-font-scale)); /* 11px */
+  --hms-text-sm:   calc(0.8125rem * var(--hms-font-scale)); /* 13px */
+  --hms-text-base: calc(0.9375rem * var(--hms-font-scale)); /* 15px */
+  --hms-text-md:   calc(1rem      * var(--hms-font-scale)); /* 16px */
+  --hms-text-lg:   calc(1.125rem  * var(--hms-font-scale)); /* 18px */
+  --hms-text-xl:   calc(1.25rem   * var(--hms-font-scale)); /* 20px */
+  --hms-text-2xl:  calc(1.5rem    * var(--hms-font-scale)); /* 24px */
+  /* Dense-UI sizes not covered by scale above */
+  --hms-text-body:    calc(0.875rem  * var(--hms-font-scale)); /* 14px */
+  --hms-text-caption: calc(0.75rem   * var(--hms-font-scale)); /* 12px */
+
+  /* ── Font weights ───────────────────────────────────── */
+  --hms-fw-normal:   400;
+  --hms-fw-medium:   500;
+  --hms-fw-semibold: 600;
+  --hms-fw-bold:     700;
+
+  /* ── Line heights ───────────────────────────────────── */
+  --hms-lh-tight:   1.2;
+  --hms-lh-snug:    1.4;
+  --hms-lh-normal:  1.5;
+  --hms-lh-relaxed: 1.7;
+
+  /* ── Buttons ────────────────────────────────────────── */
+  --hms-btn-h-sm:    24px;
+  --hms-btn-px-sm:   8px;
+  --hms-btn-text-sm: var(--hms-text-xs);
+  --hms-btn-h-md:    32px;
+  --hms-btn-px-md:   12px;
+  --hms-btn-text-md: var(--hms-text-sm);
+  --hms-btn-h-lg:    40px;
+  --hms-btn-px-lg:   16px;
+  --hms-btn-text-lg: var(--hms-text-base);
+  --hms-btn-h-xl:    48px;
+  --hms-btn-px-xl:   24px;
+  --hms-btn-text-xl: var(--hms-text-md);
+  --hms-btn-radius:  var(--hms-radius-md);
+  --hms-btn-gap:     6px;
+
+  /* ── Inputs ─────────────────────────────────────────── */
+  --hms-input-h-sm:    28px;
+  --hms-input-h-md:    36px;
+  --hms-input-h-lg:    44px;
+  --hms-input-px:      12px;
+  --hms-input-radius:  var(--hms-radius-md);
+  --hms-input-border:  1px solid var(--hms-border);
+  --hms-input-bg:      var(--hms-surface);
+
+  /* ── Dialog / Modal ─────────────────────────────────── */
+  --hms-dialog-w-sm:      400px;
+  --hms-dialog-w-md:      560px;
+  --hms-dialog-w-lg:      720px;
+  --hms-dialog-w-xl:      960px;
+  --hms-dialog-radius:    var(--hms-radius-xl);
+  --hms-dialog-padding:   var(--hms-space-6);
+  --hms-dialog-backdrop:  rgba(0, 0, 0, 0.45);
+  --hms-dialog-shadow:    0 16px 48px rgba(0, 0, 0, 0.18);
+
+  /* ── Popover / Tooltip / Sheet ──────────────────────── */
+  --hms-popover-radius:    var(--hms-radius-lg);
+  --hms-popover-shadow:    0 4px 16px rgba(0, 0, 0, 0.12);
+  --hms-popover-padding:   var(--hms-space-3);
+  --hms-tooltip-px:        8px;
+  --hms-tooltip-py:        4px;
+  --hms-tooltip-text-size: var(--hms-text-xs);
+  --hms-sheet-w-sm:        280px;
+  --hms-sheet-w-md:        360px;
+
+  /* ── Card ───────────────────────────────────────────── */
+  --hms-card-radius:  var(--hms-radius-lg);
+  --hms-card-padding: var(--hms-space-4);
+
+  /* ── Badge ──────────────────────────────────────────── */
+  --hms-badge-h:      20px;
+  --hms-badge-px:     8px;
+  --hms-badge-radius: var(--hms-radius-sm);
+  --hms-badge-text:   var(--hms-text-xs);
+  --hms-badge-fw:     var(--hms-fw-medium);
+
+  /* ── Tab ────────────────────────────────────────────── */
+  --hms-tab-h:           36px;
+  --hms-tab-px:          12px;
+  --hms-tab-text:        var(--hms-text-sm);
+  --hms-tab-indicator-h: 2px;
+
+  /* ── Table ──────────────────────────────────────────── */
+  --hms-table-row-h-sm: 32px;
+  --hms-table-row-h-md: 40px;
+  --hms-table-row-h-lg: 48px;
+  --hms-table-cell-px:  12px;
+  --hms-table-text:     var(--hms-text-sm);
+
+  /* ── Animation / Motion ─────────────────────────────── */
+  --hms-duration-instant: 80ms;
+  --hms-duration-fast:    120ms;
+  --hms-duration-base:    200ms;
+  --hms-duration-slow:    320ms;
+  --hms-duration-slower:  480ms;
+  --hms-ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --hms-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --hms-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --hms-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --hms-transition:      var(--hms-duration-base) var(--hms-ease-standard);
+  --hms-transition-fast: var(--hms-duration-fast) var(--hms-ease-standard);
+
+  /* ── Z-index scale ──────────────────────────────────── */
+  --hms-z-sticky:  10;
+  --hms-z-header:  20;
+  --hms-z-drawer:  30;
+  --hms-z-popover: 40;
+  --hms-z-modal:   50;
+  --hms-z-toast:   60;
+
+  /* ── Safe area / Keyboard ───────────────────────────── */
+  --hms-safe-top:    env(safe-area-inset-top, 0px);
+  --hms-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --hms-keyboard-h:  0px; /* useVisualViewport writes this at runtime */
+}
