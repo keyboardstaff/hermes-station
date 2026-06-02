@@ -225,6 +225,28 @@ async def stop_run_route(request: web.Request) -> web.Response:
     return web.json_response({"ok": True})
 
 
+@router.get("/api/runs/active")
+async def list_active_runs(request: web.Request) -> web.Response:
+    """In-flight runs the SPA renders as 'in progress' Recents rows for sessions
+    not yet in state.db (upstream persists on completion). Display-only: once a
+    session lands in the DB — with its LLM-generated title — the client drops
+    the synthetic row by session_id. Registered before ``{run_id}`` so the
+    literal path wins over the dynamic one.
+    """
+    handles = await runs.get_registry().list_active()
+    return web.json_response({
+        "runs": [
+            {
+                "run_id": h.run_id,
+                "session_id": h.session_id,
+                "started_at": h.started_at or h.created_at,
+                "title": (h.user_input or "").strip()[:80],
+            }
+            for h in handles
+        ]
+    })
+
+
 @router.get("/api/runs/{run_id}")
 async def get_run_route(request: web.Request) -> web.Response:
     run_id = request.match_info["run_id"]

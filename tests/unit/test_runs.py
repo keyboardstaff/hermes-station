@@ -561,6 +561,50 @@ async def test_transcript_endpoint_returns_partial() -> None:
 
 
 @pytest.mark.asyncio
+async def test_active_runs_endpoint_lists_inflight_only() -> None:
+    import json
+
+    from aiohttp.test_utils import make_mocked_request
+    from server import runs
+    from server.routes.runs import list_active_runs
+
+    runs.reset_for_test()
+    try:
+        running = runs.RunHandle(
+            run_id="run_" + "a" * 32, session_id="s1", status="running",
+            created_at=1.0, user_input="hello world",
+        )
+        queued = runs.RunHandle(
+            run_id="run_" + "b" * 32, session_id="s2", status="queued", created_at=2.0,
+        )
+        done = runs.RunHandle(
+            run_id="run_" + "c" * 32, session_id="s3", status="completed", created_at=3.0,
+        )
+        for h in (running, queued, done):
+            await runs.get_registry().add(h)
+
+        resp = await list_active_runs(make_mocked_request("GET", "/api/runs/active"))
+        data = json.loads(resp.body)
+        assert {r["session_id"] for r in data["runs"]} == {"s1", "s2"}  # completed excluded
+        s1 = next(r for r in data["runs"] if r["session_id"] == "s1")
+        assert s1["title"] == "hello world"  # first user text → provisional title
+    finally:
+        runs.reset_for_test()
+
+
+@pytest.mark.asyncio
+async def test_active_runs_route_wins_over_run_id(quiet_hms_env) -> None:
+    """`/api/runs/active` must resolve to the literal handler, not the dynamic
+    `{run_id}` one (which would 400 on the non-matching id 'active')."""
+    from aiohttp.test_utils import make_mocked_request
+    from server.app import build_app
+
+    app = build_app(adapter=None)
+    match = await app.router.resolve(make_mocked_request("GET", "/api/runs/active"))
+    assert match.route.handler.__name__ == "list_active_runs"
+
+
+@pytest.mark.asyncio
 async def test_transcript_endpoint_404_for_unknown_run() -> None:
     from aiohttp.test_utils import make_mocked_request
     from server import runs

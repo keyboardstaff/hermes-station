@@ -159,6 +159,12 @@ class RunRegistry:
         async with self._lock:
             return self._runs.get(run_id)
 
+    async def list_active(self) -> list[RunHandle]:
+        """Runs still queued/running — the SPA surfaces these as in-progress
+        sidebar rows for sessions not yet persisted to state.db."""
+        async with self._lock:
+            return [r for r in self._runs.values() if r.status in ("queued", "running")]
+
     async def remove(self, run_id: str) -> None:
         async with self._lock:
             self._runs.pop(run_id, None)

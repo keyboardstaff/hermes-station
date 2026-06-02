@@ -16,6 +16,14 @@ function relativeTime(ts?: number): string {
   return new Date(ts * 1000).toLocaleDateString();
 }
 
+// In-flight run surfaced as an "in progress" Recents row (GET /api/runs/active).
+interface ActiveRun {
+  run_id: string;
+  session_id: string;
+  started_at: number;
+  title: string;
+}
+
 // Session context menu
 interface MenuState {
   sessionId: string;
@@ -378,13 +386,45 @@ export default function SessionRecents({
     refetchInterval: 30_000,
   });
 
+  // In-flight runs (in-memory registry) → display-only "in progress" rows for
+  // sessions not yet in state.db (upstream persists on completion). Fetched on
+  // mount so they survive a refresh, then polled for cross-tab runs. NOT merged
+  // into the sessions cache, so useActiveSessionTitle keeps reading the canonical
+  // DB rows — the LLM-generated title replaces the provisional one automatically
+  // once the real row lands in the DB list.
+  const { data: activeData } = useQuery<{ runs: ActiveRun[] }>({
+    queryKey: ["runs-active"],
+    queryFn: async () => {
+      const res = await fetch("/api/runs/active");
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    },
+    retry: false,
+    staleTime: 2_000,
+    refetchInterval: 5_000,
+  });
+  const activeRuns = activeData?.runs ?? [];
+
   // Title is derived directly from this `sessions-table-all` cache by
   // useActiveSessionTitle (single source of truth) — no store propagation needed.
 
   // "New conversation" lives in the ChatPanel header when activeSessionId is
-  // null; we deliberately do not render a placeholder row here. The top-right
+  // null; we deliberately do not render a placeholder row there. The top-right
   // `+` button is the one and only entry point to start a new session.
-  const sessions = data?.sessions ?? [];
+  const dbSessions = data?.sessions ?? [];
+  const dbSessionIds = new Set(dbSessions.map((s) => s.session_id));
+  const activeSessionIds = new Set(activeRuns.map((r) => r.session_id));
+  // Prepend in-flight sessions the DB doesn't have yet (newest → top); dropped
+  // automatically once the real row appears (its id enters dbSessionIds).
+  const inflightRows: SessionSummary[] = activeRuns
+    .filter((r) => !dbSessionIds.has(r.session_id))
+    .map((r) => ({
+      session_id: r.session_id,
+      title: r.title || undefined,
+      started_at: r.started_at,
+      updated_at: r.started_at,
+    }));
+  const sessions = [...inflightRows, ...dbSessions];
 
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
@@ -452,7 +492,7 @@ export default function SessionRecents({
                   key={s.session_id}
                   session={s}
                   isActive={activeSessionId === s.session_id}
-                  isRunning={!!runningBySession[s.session_id]}
+                  isRunning={activeSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
                   isRenaming={renamingId === s.session_id}
                   renameValue={renameValue}
                   shiftHeld={shiftHeld}
@@ -592,7 +632,7 @@ export default function SessionRecents({
             key={s.session_id}
             session={s}
             isActive={activeSessionId === s.session_id}
-            isRunning={!!runningBySession[s.session_id]}
+            isRunning={activeSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
             isRenaming={renamingId === s.session_id}
             renameValue={renameValue}
             shiftHeld={shiftHeld}
