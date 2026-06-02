@@ -51,6 +51,14 @@ def hms_data_dir() -> Path:
     return d
 
 
+def run_snapshots_dir() -> Path:
+    """Where in-flight chat turns are checkpointed so a crash can recover the
+    partial answer (the live accumulator dies with the process)."""
+    d = hms_data_dir() / "run-snapshots"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 @lru_cache(maxsize=1)
 def launchd_label() -> str:
     from hermes_cli.gateway import get_launchd_label  # type: ignore[import-not-found]

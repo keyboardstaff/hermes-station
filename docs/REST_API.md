@@ -66,6 +66,7 @@ Grouped to mirror `ARCHITECTURE.md` §2. `{…}` = path param; ⚠ = mutating
 | ⚠ POST | `/api/runs` | Start a run. Body: `input` (string \| content-parts), optional `session_id`, `model`, `provider`, `reasoning_effort`, `profile` (D17). Gateway-known slash text routes to the slash path. → `202 {run_id, session_id, status}`. |
 | GET | `/api/runs/{run_id}` | Run status snapshot (`queued/running/completed/failed/cancelled` + usage). |
 | GET | `/api/runs/{run_id}/transcript` | In-flight turn snapshot for re-attach (D27): `{status, seq, partial: {text, reasoning, tool_calls}}` — the durable accumulator the bounded replay ring may have evicted. `?since=<seq>` also returns buffered frames newer than seq. |
+| GET | `/api/sessions/{session_id}/interrupted` | Crash recovery (D27): `{run_id, updated_at, partial}` for a run that died mid-turn (gateway crash) — else `{partial: null}` (incl. when the run is still live in-process). SPA renders it as an *interrupted* bubble on load. |
 | ⚠ POST | `/api/runs/{run_id}/stop` | Cancel a run → `200 {ok}`. |
 
 **Chat — sessions + messages + search** ([`chat.py`](../server/routes/chat.py))

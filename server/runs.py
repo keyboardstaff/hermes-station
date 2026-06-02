@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from server.approvals import get_bridge as get_approval_bridge
-from server.lib import config_reader
+from server.lib import config_reader, run_snapshot
 from server.lib.profile_run import profile_home_override, resolve_profile_home
 from server.lib.state_db import db, db_for_home
 from server.lib.upstream_shim import shim
@@ -26,6 +26,30 @@ logger = logging.getLogger(__name__)
 # can't grow memory without limit — overflow is covered by the client's
 # reconcile-on-completion path.
 RUN_RING_MAX = 512
+
+# How often an in-flight turn is checkpointed to disk for crash recovery. The
+# live answer is in memory + replayable to a re-attaching client; this only has
+# to be coarse enough to bound what a hard crash loses (a few seconds of stream).
+SNAPSHOT_INTERVAL_S = 3.0
+
+
+async def _snapshot_loop(handle: RunHandle, loop: asyncio.AbstractEventLoop) -> None:
+    """Checkpoint the in-flight partial every few seconds so a gateway crash
+    can still recover the answer. Cancelled (and the sidecar deleted) the moment
+    the run reaches a terminal — a clean turn is durable in state.db by then."""
+    try:
+        while True:
+            await asyncio.sleep(SNAPSHOT_INTERVAL_S)
+            snap = handle.partial_snapshot()
+            if not (snap["text"] or snap["reasoning"] or snap["tool_calls"]):
+                continue
+            await loop.run_in_executor(
+                None, run_snapshot.write, handle.run_id, handle.session_id, snap,
+            )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.debug("[hms.runs] snapshot loop error", exc_info=True)
 
 
 @dataclass
@@ -376,6 +400,10 @@ async def _run_to_completion(
     async with sem:
         handle.status = "running"
         handle.started_at = time.time()
+        # A new turn supersedes any crashed-run sidecar left for this session by
+        # a previous gateway death — once we're producing fresh output, the old
+        # interrupted partial is stale.
+        await loop.run_in_executor(None, run_snapshot.delete_for_session, handle.session_id)
 
         # Profile re-scoping (owner review D17): a named profile points the run
         # at that profile's HERMES_HOME (config / .env / skills / memory) via
@@ -466,6 +494,9 @@ async def _run_to_completion(
                         logger.debug("[hms.runs] clear_session_vars failed", exc_info=True)
                 bridge.unbind_session_key(token)
 
+        # Checkpoint the in-flight turn to disk while it runs so a hard crash
+        # can recover the partial; cancelled + cleaned up in the finally below.
+        snapshot_task = asyncio.create_task(_snapshot_loop(handle, loop))
         try:
             result: Any = None
             run_exc: Exception | None = None
@@ -534,6 +565,13 @@ async def _run_to_completion(
                     profile=handle.profile,
                 )
         finally:
+            snapshot_task.cancel()
+            # Terminal reached → the answer is durable in state.db; drop the crash
+            # sidecar so it isn't mistaken for an orphan on the next restart.
+            try:
+                await loop.run_in_executor(None, run_snapshot.delete, handle.run_id)
+            except Exception:
+                logger.debug("[hms.runs] snapshot delete failed", exc_info=True)
             # Unregister AFTER broadcast — wakes agent threads still blocked on event.wait().
             bridge.unregister(handle.session_id)
             await get_registry().remove(handle.run_id)

@@ -127,6 +127,24 @@ export default function ChatPanel() {
         // reconcileSession preserves the in-flight turn's live bubbles when a run
         // is still active, so a mid-run refresh/switch-back doesn't wipe streaming.
         reconcileSession(chatMessages);
+        // Crash recovery: a run that died mid-turn (the gateway crashed before it
+        // could persist) leaves its partial answer in a sidecar — surface it as a
+        // trailing assistant bubble so the work isn't silently lost. The server
+        // returns null if the run is actually still live (resuming over the WS).
+        fetch(`/api/sessions/${encodeURIComponent(fetchingSessionId)}/interrupted`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: { run_id?: string; partial?: { text?: string } | null } | null) => {
+            if (!data || loadedSessionRef.current !== fetchingSessionId) return;
+            const text = data.partial?.text;
+            if (!text) return;
+            appendMessage({
+              id: `interrupted-${data.run_id ?? Date.now()}`,
+              role: "assistant",
+              content: `${text}\n\n_⚠️ Response interrupted — the gateway restarted mid-reply._`,
+              createdAt: Date.now(),
+            });
+          })
+          .catch(() => { /* best-effort */ });
       })
       .catch(() => {
         if (loadedSessionRef.current === fetchingSessionId) {

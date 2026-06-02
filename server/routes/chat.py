@@ -158,6 +158,31 @@ async def get_session_messages(request: web.Request) -> web.Response:
     return web.json_response({"messages": sliced, "total": total, "offset": offset})
 
 
+@router.get("/api/sessions/{session_id}/interrupted")
+async def get_session_interrupted(request: web.Request) -> web.Response:
+    """Crash recovery: the partial answer of a run that died mid-turn for this
+    session (the gateway crashed before persisting it), so the SPA can render it
+    as an *interrupted* message on load. ``{partial: null}`` when nothing to
+    recover. A run still active in this process is resuming over the WS, not
+    crashed — return null for those."""
+    sid = request.match_info["session_id"]
+    if not SESSION_ID_RE.match(sid):
+        return web.json_response({"error": "invalid_session_id"}, status=400)
+    from server import runs
+    from server.lib import run_snapshot
+    snap = await run_db(run_snapshot.orphan_for_session, sid)
+    if snap is None:
+        return web.json_response({"partial": None})
+    handle = await runs.get_registry().get(snap.get("run_id", ""))
+    if handle is not None:
+        return web.json_response({"partial": None})
+    return web.json_response({
+        "run_id": snap.get("run_id"),
+        "updated_at": snap.get("updated_at"),
+        "partial": snap.get("partial"),
+    })
+
+
 @router.get("/api/search")
 async def search_messages_route(request: web.Request) -> web.Response:
     q = (request.query.get("q") or "").strip()

@@ -192,6 +192,14 @@ async def _on_startup(app) -> None:
     except Exception:
         logger.exception("[hms.app] apply_active_workspace_cwd failed")
 
+    # Bound disk: drop crash-recovery sidecars older than a week (one not viewed
+    # by then is unlikely to matter). Surviving recent ones are surfaced on load.
+    try:
+        from server.lib import run_snapshot
+        run_snapshot.sweep(7 * 24 * 3600)
+    except Exception:
+        logger.debug("[hms.app] run-snapshot sweep failed", exc_info=True)
+
     app[CAPABILITY_TASK_KEY] = asyncio.create_task(capabilities.refresh_loop())
 
     from server.routes.plugins import _watcher_loop as _discover_watcher
