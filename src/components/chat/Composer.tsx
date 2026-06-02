@@ -134,14 +134,16 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   });
   const contextLength = ctxResp?.context_length ?? null;
 
-  // Pre-fill from a forked message handoff.
+  // Pre-fill from an edit / branch handoff. Reactive (not mount-only), so it
+  // also works when /chat is already open.
+  const composerDraft = useChatStore((s) => s.composerDraft);
   useEffect(() => {
-    const forked = sessionStorage.getItem("hms_fork_input");
-    if (forked) {
-      setValue(forked);
-      sessionStorage.removeItem("hms_fork_input");
+    if (composerDraft != null) {
+      setValue(composerDraft);
+      useChatStore.getState().setComposerDraft(null);
+      requestAnimationFrame(() => textRef.current?.focus());
     }
-  }, []);
+  }, [composerDraft]);
 
   useEffect(() => {
     if (!selectedModel && (modelDefault || firstModel)) {

@@ -32,6 +32,10 @@ export interface RunInput {
   /** Profile to run under. Re-scopes the in-process run to
    *  that profile's HERMES_HOME without a gateway restart. Omitted = default. */
   profile?: string;
+  /** Prior turns to seed a *branched* run (edit / regenerate / branch-from-a-
+   *  message). The run starts a fresh session, but the agent sees these as its
+   *  context. Shape matches upstream `get_messages_as_conversation`. */
+  conversation_history?: Array<{ role: string; content: string }>;
   metadata?: Record<string, unknown>;
 }
 

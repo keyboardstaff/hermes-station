@@ -48,6 +48,7 @@ export default function ChatPanel() {
   // WS approval.requested → pendingApproval; resolveApproval wakes the same run via WS.
   const { resolveApproval } = useApprovalBridge();
   const activeRunId = useChatStore((s) => s.activeRunId);
+  const pendingAutoSend = useChatStore((s) => s.pendingAutoSend);
   const loadedSessionRef = useRef<string | null>(null);
   const loadingSessionRef = useRef<string | null>(null);
   const prevSessionRef = useRef<string | null>(null);
@@ -178,6 +179,16 @@ export default function ChatPanel() {
         setHistoryPending(false);
       });
   }, [activeSessionId, appendMessage, reconcileSession, setHistoryPending]);
+
+  // One-click "regenerate": a branch action set pendingAutoSend + a null active
+  // session (so conversation_history seeds it); fire the send once it's in place.
+  useEffect(() => {
+    if (pendingAutoSend != null && activeSessionId === null) {
+      const text = pendingAutoSend;
+      useChatStore.getState().setPendingAutoSend(null);
+      void sendMessage(text);
+    }
+  }, [pendingAutoSend, activeSessionId, sendMessage]);
 
   if (!caps) {
     return <ChatUnavailable reason="Checking capabilities…" />;

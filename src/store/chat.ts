@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ChatMessage, MessageSegment, PendingApproval, ToolCall } from "@/lib/hermes-types";
+import type { BranchTurn } from "@/lib/branch";
 
 interface ChatState {
   activeSessionId: string | null;
@@ -34,6 +35,15 @@ interface ChatState {
    *  session is persisted with no title yet, so it never flashes "Untitled".
    *  In-memory only (a refresh re-derives in-flight titles from /api/runs/active). */
   provisionalTitles: Record<string, string>;
+  /** Transient (not persisted): prior turns seeding the NEXT run as a branch's
+   *  agent context. Set by edit / regenerate / branch; consumed by sendMessage. */
+  pendingBranchHistory: BranchTurn[] | null;
+  /** Transient: text to auto-send once into the next empty session — drives
+   *  one-click "regenerate". Consumed by ChatPanel. */
+  pendingAutoSend: string | null;
+  /** Transient: text to load into the Composer (edit / branch prefill).
+   *  Reactive — works even when /chat is already mounted. */
+  composerDraft: string | null;
 
   setActiveSession: (id: string | null) => void;
   /** Update id without clearing messages — used after first send creates a session. */
@@ -70,6 +80,9 @@ interface ChatState {
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
   setProvisionalTitle: (sessionId: string, title: string) => void;
+  setPendingBranchHistory: (h: BranchTurn[] | null) => void;
+  setPendingAutoSend: (t: string | null) => void;
+  setComposerDraft: (t: string | null) => void;
 }
 
 /** Deterministic id for a turn's assistant bubble — all streaming events
@@ -109,6 +122,9 @@ export const useChatStore = create<ChatState>()(
   lastUsage: null,
   pendingApproval: null,
   provisionalTitles: {},
+  pendingBranchHistory: null,
+  pendingAutoSend: null,
+  composerDraft: null,
 
   setActiveSession: (id) =>
     set((s) => {
@@ -129,6 +145,10 @@ export const useChatStore = create<ChatState>()(
         // isHistoryPending = true only when switching TO a real session;
         // new session (null) has nothing to load.
         isHistoryPending: id !== null,
+        // Drop any stale branch intent on a switch (a branch action sets these
+        // AFTER calling setActiveSession(null), so its own intent survives).
+        pendingBranchHistory: null,
+        pendingAutoSend: null,
       };
     }),
   updateActiveSessionId: (id) => set({ activeSessionId: id }),
@@ -370,6 +390,9 @@ export const useChatStore = create<ChatState>()(
       if (keys.length > 60) for (const k of keys.slice(0, keys.length - 60)) delete next[k];
       return { provisionalTitles: next };
     }),
+  setPendingBranchHistory: (h) => set({ pendingBranchHistory: h }),
+  setPendingAutoSend: (t) => set({ pendingAutoSend: t }),
+  setComposerDraft: (t) => set({ composerDraft: t }),
     }),
     {
       name: "hms-chat-prefs",

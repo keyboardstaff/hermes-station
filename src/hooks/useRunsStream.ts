@@ -413,6 +413,12 @@ export function useRunsStream() {
       // Omit "default" — that's the process home already.
       const activeProfile = queryClient.getQueryData<{ sticky?: string }>(["profile-active"])?.sticky;
 
+      // Branch context (edit / regenerate / branch from a message): seed this
+      // fresh run with prior turns as the agent's history. Consume-once, and
+      // only on a NEW session (a continued session already has its own history).
+      const branchHistory = useChatStore.getState().pendingBranchHistory;
+      if (branchHistory) useChatStore.getState().setPendingBranchHistory(null);
+
       const body: RunInput = {
         input: runInput,
         ...(currentSessionId ? { session_id: currentSessionId } : {}),
@@ -420,6 +426,8 @@ export function useRunsStream() {
         ...(selectedProvider ? { provider: selectedProvider } : {}),
         ...(reasoningEffort !== null && reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
         ...(activeProfile && activeProfile !== "default" ? { profile: activeProfile } : {}),
+        ...(!currentSessionId && branchHistory && branchHistory.length > 0
+          ? { conversation_history: branchHistory } : {}),
       };
 
       let runId: string;

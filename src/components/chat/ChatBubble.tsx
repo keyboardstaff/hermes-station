@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff, Volume2, Square } from "lucide-react";
+import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff, Volume2, Square, Pencil, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -13,6 +13,7 @@ import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { buildBranchHistory, precedingUserIndex, messagePlainText, type BranchTurn } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
 import type { ReactNode } from "react";
 
@@ -387,7 +388,15 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const showReasoning = useChatStore((s) => s.showReasoning);
+  const messages = useChatStore((s) => s.messages);
+  const setPendingBranchHistory = useChatStore((s) => s.setPendingBranchHistory);
+  const setPendingAutoSend = useChatStore((s) => s.setPendingAutoSend);
+  const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const tts = useTextToSpeech();
+  // Position in the live transcript — branch ops need it. -1 in the read-only
+  // /sessions preview (this bubble isn't the active chat), which hides them.
+  const idx = messages.findIndex((m) => m.id === msg.id);
+  const canBranch = idx >= 0;
 
   // Legacy kind=approval_notice from before the segment refactor.
   if (msg.kind === "approval_notice") {
@@ -408,12 +417,32 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleFork = () => {
-    sessionStorage.setItem("hms_fork_input", getMessageText());
-    setActiveSession(null);
+  // All message ops branch into a NEW session seeded with prior turns as the
+  // agent's context (state.db can't be truncated per-message). `draft` prefills
+  // the Composer; `autoSend` fires it once (one-click regenerate).
+  const startBranch = (history: BranchTurn[], draft: string, autoSend: boolean) => {
+    setActiveSession(null); // also clears any prior pending branch intent
+    setPendingBranchHistory(history.length > 0 ? history : null);
+    if (autoSend) setPendingAutoSend(draft);
+    else if (draft) setComposerDraft(draft);
     navigate("/chat");
+  };
+
+  // Branch from here: continue with everything up to & including this message.
+  const handleBranch = () => {
+    startBranch(buildBranchHistory(messages, idx + 1), "", false);
     setForked(true);
     setTimeout(() => setForked(false), 1500);
+  };
+
+  // Edit a user prompt: re-ask an edited version with the context before it.
+  const handleEdit = () => startBranch(buildBranchHistory(messages, idx), messagePlainText(msg), false);
+
+  // Regenerate an answer: re-ask the prompt that produced it (auto-send).
+  const handleRetry = () => {
+    const u = precedingUserIndex(messages, idx);
+    if (u < 0) return;
+    startBranch(buildBranchHistory(messages, u), messagePlainText(messages[u]), true);
   };
 
   const actionBtnStyle: React.CSSProperties = {
@@ -494,9 +523,21 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
       {/* Visibility driven by CSS hover on .hms-msg-row. */}
       {!msg.streaming && (
         <div className="hms-msg-actions" style={{ display: "flex", gap: 'var(--hms-space-1)' }}>
-          <button onClick={handleFork} title="Fork conversation" style={actionBtnStyle}>
-            {forked ? <Check size={12} /> : <GitFork size={12} />}
-          </button>
+          {canBranch && isUser && (
+            <button onClick={handleEdit} title="Edit & resend" style={actionBtnStyle}>
+              <Pencil size={12} />
+            </button>
+          )}
+          {canBranch && !isUser && (
+            <button onClick={handleRetry} title="Regenerate" style={actionBtnStyle}>
+              <RotateCcw size={12} />
+            </button>
+          )}
+          {canBranch && (
+            <button onClick={handleBranch} title="Branch from here" style={actionBtnStyle}>
+              {forked ? <Check size={12} /> : <GitFork size={12} />}
+            </button>
+          )}
           <button onClick={copyContent} title="Copy" style={actionBtnStyle}>
             {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
