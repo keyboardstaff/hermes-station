@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { formatSessionTitle } from "@/lib/session-title";
 import { useSessionsFilters } from "@/store/filters";
 import { useChatStore } from "@/store/chat";
+import { useLivePreview } from "@/hooks/useLivePreview";
 import { useI18n } from "@/i18n";
 import SessionsFilters from "@/components/sessions/SessionsFilters";
 import PageTopBar from "@/components/layout/PageTopBar";
@@ -316,9 +317,13 @@ function PreviewDrawer({
 }) {
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
+  // Live-mirror the in-flight turn (when this session is running) so the preview
+  // streams in real time like /chat — kept in local state, never the global chat
+  // store, so it can't cross-contaminate whatever session /chat owns.
+  const live = useLivePreview(sessionId);
   const chatMessages = useMemo<ChatMessage[]>(
-    () => historyToChatMessages(messages ?? []),
-    [messages]
+    () => [...historyToChatMessages(messages ?? []), ...live],
+    [messages, live]
   );
 
   // Jump this session into the live /chat view — same path as the Sidebar
