@@ -44,6 +44,13 @@ def state_db_path(home: Path | None = None) -> Path:
     return (home if home is not None else hermes_home()) / "state.db"
 
 
+def memory_store_path(home: Path | None = None) -> Path:
+    """``memory_store.db`` under ``home`` (default: current HERMES_HOME) — the
+    holographic memory provider's local fact store. Not cached: cheap, and it
+    varies by active profile."""
+    return (home if home is not None else hermes_home()) / "memory_store.db"
+
+
 @lru_cache(maxsize=1)
 def hms_data_dir() -> Path:
     d = hermes_home() / "station"

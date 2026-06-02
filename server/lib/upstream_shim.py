@@ -62,6 +62,7 @@ class CapabilityFlags:
     agent_importable: bool = False
     approval_4_choice: bool = False
     session_db: bool = False
+    memory_store: bool = False
     gateway_lifecycle: bool = False
     base_platform_adapter: bool = False
 
@@ -207,6 +208,17 @@ class _Approval:
 class _State:
     SessionDB: type | None = field(
         default_factory=lambda: _try_import("hermes_state", "SessionDB")
+    )
+
+
+@dataclass
+class _Memory:
+    # The holographic memory provider keeps a local, queryable fact store at
+    # $HERMES_HOME/memory_store.db (list_facts / remove_fact). It's the one
+    # memory provider with a local CRUD surface — the others (honcho, mem0,
+    # supermemory, …) are remote services managed outside Station.
+    MemoryStore: type | None = field(
+        default_factory=lambda: _try_import("plugins.memory.holographic.store", "MemoryStore")
     )
 
 
@@ -503,6 +515,7 @@ class Shim:
     gateway: _Gateway = field(default_factory=_Gateway)
     approval: _Approval = field(default_factory=_Approval)
     state: _State = field(default_factory=_State)
+    memory: _Memory = field(default_factory=_Memory)
     session_context: _SessionContext = field(default_factory=_SessionContext)
     models: _Models = field(default_factory=_Models)
     skills: _Skills = field(default_factory=_Skills)
@@ -531,6 +544,7 @@ class Shim:
         f.agent_importable = self.run_agent.AIAgent is not None
         f.approval_4_choice = self.approval.resolve is not None
         f.session_db = self.state.SessionDB is not None
+        f.memory_store = self.memory.MemoryStore is not None
         f.gateway_lifecycle = self.gateway.find_gateway_pids is not None
         f.base_platform_adapter = self.gateway.base_platform_adapter() is not None
 

@@ -10,6 +10,18 @@ export interface Translations {
     back: string;
   };
 
+  /** Structured-memory (data sovereignty) panel. */
+  memory: {
+    explainer: string;
+    unavailable: string;
+    unavailableHint: string;
+    empty: string;
+    delete: string;
+    confirmDelete: string;
+    retrieved: string;
+    trust: string;
+  };
+
   /** ⌘K command palette (search + navigate + actions). */
   palette: {
     placeholder: string;
@@ -34,6 +46,7 @@ export interface Translations {
     analytics: string;
     channels: string;
     logs: string;
+    memory: string;
     files: string;
     profile: string;
     settings: string;

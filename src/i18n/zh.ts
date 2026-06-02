@@ -9,6 +9,17 @@ export const zh: Translations = {
     back: "返回",
   },
 
+  memory: {
+    explainer: "Agent 从你的对话中记下的事实。审阅并删除任何不该保留的内容。",
+    unavailable: "本地记忆管理不可用",
+    unavailableHint: "仅 holographic 记忆 provider 支持;你当前的 provider 在别处存储记忆。",
+    empty: "暂无已存记忆。",
+    delete: "忘记",
+    confirmDelete: "忘记这条记忆?",
+    retrieved: "被使用",
+    trust: "可信度",
+  },
+
   palette: {
     placeholder: "搜索或执行命令…",
     actions: "操作",
@@ -32,6 +43,7 @@ export const zh: Translations = {
     analytics: "分析",
     channels: "频道",
     logs: "日志",
+    memory: "记忆",
     files: "文件",
     profile: "配置",
     settings: "设置",

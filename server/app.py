@@ -51,6 +51,7 @@ def build_app(*, adapter: StationAdapter | None = None):
         login,
         logs,
         mcp,
+        memory,
         password,
         plugins,
         preferences,
@@ -83,6 +84,7 @@ def build_app(*, adapter: StationAdapter | None = None):
     logs.attach(app)
     dashboard_proxy.attach(app)
     plugins.attach(app)
+    memory.attach(app)
     preferences.attach(app)
     upload.attach(app)
     models_route.attach(app)

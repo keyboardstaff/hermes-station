@@ -9,6 +9,17 @@ export const en: Translations = {
     back: "Back",
   },
 
+  memory: {
+    explainer: "Facts the agent has stored from your conversations. Review and remove anything it shouldn't keep.",
+    unavailable: "Local memory management isn't available",
+    unavailableHint: "It's supported with the holographic memory provider; your active provider stores memory elsewhere.",
+    empty: "No stored memories yet.",
+    delete: "Forget this",
+    confirmDelete: "Forget this memory?",
+    retrieved: "used",
+    trust: "trust",
+  },
+
   palette: {
     placeholder: "Search or run a command…",
     actions: "Actions",
@@ -32,6 +43,7 @@ export const en: Translations = {
     analytics: "Analytics",
     channels: "Channels",
     logs: "Logs",
+    memory: "Memory",
     files: "Files",
     profile: "Profile",
     settings: "Settings",
