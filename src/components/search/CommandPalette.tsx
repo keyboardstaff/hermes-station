@@ -45,6 +45,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
   const closeTimerRef = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const debouncedQuery = useDebouncedValue(query, 400);
 
   // Animate out, then unmount (mirrors ShortcutsPanel). Guarded so a second
@@ -59,6 +60,26 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   useEffect(() => () => {
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
   }, []);
+
+  // ⌘K toggles closed (AppShell opens; the palette closes itself, animated) and
+  // Escape closes — at the document level so it works regardless of focus.
+  useEffect(() => {
+    const onDocKey = (e: KeyboardEvent) => {
+      if (((e.metaKey || e.ctrlKey) && e.key === "k") || e.key === "Escape") {
+        e.preventDefault();
+        requestClose();
+      }
+    };
+    document.addEventListener("keydown", onDocKey);
+    return () => document.removeEventListener("keydown", onDocKey);
+  }, [requestClose]);
+
+  // Keep the keyboard-selected row in view (auto-follow scroll at top/bottom).
+  useEffect(() => {
+    listRef.current
+      ?.querySelector(`[data-row-idx="${selectedIdx}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedIdx]);
 
   // App actions — closures over the live store/router (the ROUTES-derived nav
   // commands are the pure part, in lib/commands.ts).
@@ -127,7 +148,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
     if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, rows.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)); }
     else if (e.key === "Enter") { rows[selectedIdx]?.onSelect(); }
-    else if (e.key === "Escape") { requestClose(); }
+    // Escape handled by the document listener above (works without input focus).
   };
 
   return (
@@ -173,7 +194,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
         />
 
         {rows.length > 0 && (
-          <div style={{ maxHeight: 440, overflowY: "auto" }}>
+          <div ref={listRef} style={{ maxHeight: 440, overflowY: "auto" }}>
             {rows.map((r, i) => {
               const prevGroup = i > 0 ? rows[i - 1].group : null;
               const showHeader = r.group !== prevGroup;
@@ -192,6 +213,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
                     </div>
                   )}
                   <button
+                    data-row-idx={i}
                     onClick={r.onSelect}
                     onMouseEnter={() => setSelectedIdx(i)}
                     style={{

@@ -241,6 +241,7 @@ export const zh: Translations = {
     slashCommand: "斜杠命令",
     stopGeneration: "停止生成",
     closePanel: "关闭面板",
+    deleteSession: "删除会话",
   },
 
   setup: {

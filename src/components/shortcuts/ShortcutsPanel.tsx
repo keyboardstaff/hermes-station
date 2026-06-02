@@ -47,7 +47,7 @@ export default function ShortcutsPanel({ onClose }: ShortcutsPanelProps) {
     [t.shortcuts.slashCommand, ["/"]],
     [t.shortcuts.stopGeneration, ["Escape"]],
     [t.shortcuts.closePanel, ["Escape"]],
-    ["Delete session (hold Shift, click session)", ["Shift", "Click"]],
+    [t.shortcuts.deleteSession, ["Shift", "Click"]],
   ];
 
   return (

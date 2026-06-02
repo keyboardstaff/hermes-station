@@ -241,6 +241,7 @@ export const en: Translations = {
     slashCommand: "Slash Command",
     stopGeneration: "Stop Generation",
     closePanel: "Close Panel",
+    deleteSession: "Delete session",
   },
 
   setup: {

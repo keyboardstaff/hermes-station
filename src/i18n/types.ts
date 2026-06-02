@@ -257,6 +257,7 @@ export interface Translations {
     slashCommand: string;
     stopGeneration: string;
     closePanel: string;
+    deleteSession: string;
   };
 
   setup: {
