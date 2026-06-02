@@ -3,8 +3,12 @@ import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, Gi
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import ToolCallCard from "./ToolCallCard";
 import CodeBlock from "./CodeBlock";
+import MermaidDiagram from "./MermaidDiagram";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
@@ -134,8 +138,10 @@ const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
       ? (codeEl as { props: { className?: string; children?: ReactNode } }).props
       : null;
     const lang = (codeProps?.className ?? "").replace(/^language-/, "");
-    const code = extractText(codeProps?.children ?? "");
-    return <CodeBlock language={lang} code={code.replace(/\n$/, "")} />;
+    const code = extractText(codeProps?.children ?? "").replace(/\n$/, "");
+    // Mermaid fenced blocks render as diagrams (lazy); everything else is code.
+    if (lang === "mermaid") return <MermaidDiagram code={code} />;
+    return <CodeBlock language={lang} code={code} />;
   },
   code: ({ className: _className, children, ...props }) => {
     return (
@@ -270,7 +276,11 @@ const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
 
 function MarkdownText({ content }: { content: string }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex]}
+      components={MARKDOWN_COMPONENTS}
+    >
       {content}
     </ReactMarkdown>
   );
