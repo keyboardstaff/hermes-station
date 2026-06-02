@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useThemeStore } from "@/store/app";
+import { naturalSizeSvg } from "@/lib/mermaid-util";
 import CodeBlock from "./CodeBlock";
 
 // Per-render unique id for mermaid.render (must be a valid DOM id).
@@ -43,13 +44,17 @@ export default function MermaidDiagram({ code }: { code: string }) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
+          // Don't inject the "Syntax error" bomb graphic into the DOM on a
+          // failed/partial parse (it piled up at the page bottom mid-stream);
+          // render() throws instead and our catch handles it.
+          suppressErrorRendering: true,
           theme: resolvedTheme === "dark" ? "dark" : "default",
         });
         const ok = await mermaid.parse(code, { suppressErrors: true });
         if (cancelled) return;
         if (!ok) { markInvalidSoon(); return; } // partial (streaming) or malformed
         const rendered = await mermaid.render(`hms-mermaid-${_seq++}`, code);
-        if (!cancelled) setSvg(rendered.svg);
+        if (!cancelled) setSvg(naturalSizeSvg(rendered.svg));
       } catch {
         if (!cancelled) markInvalidSoon();
       }
