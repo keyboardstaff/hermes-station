@@ -413,7 +413,6 @@ export default function SessionRecents({
   // `+` button is the one and only entry point to start a new session.
   const dbSessions = data?.sessions ?? [];
   const dbSessionIds = new Set(dbSessions.map((s) => s.session_id));
-  const activeSessionIds = new Set(activeRuns.map((r) => r.session_id));
   // Prepend in-flight sessions the DB doesn't have yet (newest → top); dropped
   // automatically once the real row appears (its id enters dbSessionIds).
   const inflightRows: SessionSummary[] = activeRuns
@@ -424,6 +423,11 @@ export default function SessionRecents({
       started_at: r.started_at,
       updated_at: r.started_at,
     }));
+  // Spinner source: a session is "running" if it's a synthetic in-flight row
+  // OR this client still tracks its run. Keying off this (not the raw active
+  // set) means a completed run — now in dbSessionIds, so out of inflight — stops
+  // spinning at once instead of lingering until the next /api/runs/active poll.
+  const inflightSessionIds = new Set(inflightRows.map((r) => r.session_id));
   const sessions = [...inflightRows, ...dbSessions];
 
   // Split into pinned and recents when pinnedIds is provided.
@@ -492,7 +496,7 @@ export default function SessionRecents({
                   key={s.session_id}
                   session={s}
                   isActive={activeSessionId === s.session_id}
-                  isRunning={activeSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
+                  isRunning={inflightSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
                   isRenaming={renamingId === s.session_id}
                   renameValue={renameValue}
                   shiftHeld={shiftHeld}
@@ -632,7 +636,7 @@ export default function SessionRecents({
             key={s.session_id}
             session={s}
             isActive={activeSessionId === s.session_id}
-            isRunning={activeSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
+            isRunning={inflightSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
             isRenaming={renamingId === s.session_id}
             renameValue={renameValue}
             shiftHeld={shiftHeld}

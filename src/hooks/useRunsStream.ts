@@ -427,7 +427,14 @@ export function useRunsStream() {
           return {
             ...old,
             sessions: [
-              { session_id: runId, started_at: Date.now() / 1000, updated_at: Date.now() / 1000 },
+              // Provisional title = the user's prompt; the run's auto-title
+              // replaces it on completion (the sessions cache is refetched then).
+              {
+                session_id: runId,
+                title: input.trim().slice(0, 80),
+                started_at: Date.now() / 1000,
+                updated_at: Date.now() / 1000,
+              },
               ...old.sessions,
             ],
           };
