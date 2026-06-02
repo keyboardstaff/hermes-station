@@ -9,6 +9,17 @@ export const zh: Translations = {
     back: "返回",
   },
 
+  palette: {
+    placeholder: "搜索或执行命令…",
+    actions: "操作",
+    pages: "页面",
+    messages: "消息",
+    newChat: "新建聊天",
+    toggleTheme: "切换主题",
+    toggleReasoning: "切换推理显示",
+    toggleTokens: "切换 token 标签",
+  },
+
   nav: {
     chat: "聊天",
     sessions: "会话",

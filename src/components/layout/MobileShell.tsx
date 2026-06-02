@@ -18,14 +18,14 @@ import { Menu } from "lucide-react";
  * that opens the Drawer. Each Panel's PanelTwoColumn handles its own
  * list↔detail flow on mobile (no shell wrapper required).
  *
- * onOpenSearch is accepted so AppShell's signature doesn't change; ⌘K
+ * onOpenPalette is accepted so AppShell's signature doesn't change; ⌘K
  * remains the only entry point and AppShell catches it globally.
  */
 export default function MobileShell({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onOpenSearch,
+  onOpenPalette,
 }: {
-  onOpenSearch: () => void;
+  onOpenPalette: () => void;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { t } = useI18n();

@@ -9,6 +9,17 @@ export const en: Translations = {
     back: "Back",
   },
 
+  palette: {
+    placeholder: "Search or run a command…",
+    actions: "Actions",
+    pages: "Pages",
+    messages: "Messages",
+    newChat: "New chat",
+    toggleTheme: "Toggle theme",
+    toggleReasoning: "Toggle reasoning display",
+    toggleTokens: "Toggle token labels",
+  },
+
   nav: {
     chat: "Chat",
     sessions: "Sessions",

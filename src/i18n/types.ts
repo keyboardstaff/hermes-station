@@ -10,6 +10,18 @@ export interface Translations {
     back: string;
   };
 
+  /** ⌘K command palette (search + navigate + actions). */
+  palette: {
+    placeholder: string;
+    actions: string;
+    pages: string;
+    messages: string;
+    newChat: string;
+    toggleTheme: string;
+    toggleReasoning: string;
+    toggleTokens: string;
+  };
+
   nav: {
     chat: string;
     sessions: string;

@@ -3,7 +3,7 @@ import type { InputHTMLAttributes } from "react";
 
 /**
  * Search field with a leading magnifier — replaces the bespoke search inputs
- * in Sessions / Skills / Cron / Files / GlobalSearch. Token-only.
+ * in Sessions / Skills / Cron / Files. Token-only.
  */
 export default function SearchInput({
   value,
