@@ -1,4 +1,4 @@
-"""``server/lib/profile_run.py`` + ``state_db.db_for_home`` — D17 profile re-scope.
+"""``server/lib/profile_run.py`` + ``state_db.db_for_home`` — profile re-scope.
 
 These cover the in-process HERMES_HOME override that lets the Composer profile
 pill re-scope a run without a gateway restart (the same mechanism upstream's

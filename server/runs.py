@@ -63,7 +63,7 @@ class RunHandle:
     ended_at: float | None = None
     model: str | None = None
     provider: str | None = None
-    # Profile this run executes under (owner review D17). None / "default" runs
+    # Profile this run executes under. None / "default" runs
     # on the process HERMES_HOME; a named profile re-scopes via profile_run.
     profile: str | None = None
     # The user's prompt text — kept so a re-attach (refresh mid-run) can restore
@@ -430,7 +430,7 @@ async def _run_to_completion(
         # interrupted partial is stale.
         await loop.run_in_executor(None, run_snapshot.delete_for_session, handle.session_id)
 
-        # Profile re-scoping (owner review D17): a named profile points the run
+        # Profile re-scoping: a named profile points the run
         # at that profile's HERMES_HOME (config / .env / skills / memory) via
         # the override, and at its own state.db via db_for_home — without
         # spawning a sibling gateway or restarting. None → process default.
@@ -504,7 +504,7 @@ async def _run_to_completion(
             )
             try:
                 # Keep the HERMES_HOME override active for the whole turn so
-                # tools/config/.env resolve under the selected profile (D17).
+                # tools/config/.env resolve under the selected profile.
                 with profile_home_override(handle.profile):
                     return handle.agent.run_conversation(
                         user_message=input_data,

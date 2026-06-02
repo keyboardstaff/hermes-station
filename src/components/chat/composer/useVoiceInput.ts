@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Web Speech API voice input, extracted from Composer (owner-review D7).
+// Web Speech API voice input, extracted from Composer.
 
 interface SpeechRecognitionLike {
   lang: string;

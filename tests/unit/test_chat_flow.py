@@ -113,7 +113,7 @@ async def test_existing_session_passes_session_id(app_server):
 
 @pytest.mark.asyncio
 async def test_profile_passed_through_to_start_run(app_server):
-    """D17: POST /api/runs with a valid profile threads it to start_run."""
+    """POST /api/runs with a valid profile threads it to start_run."""
     handle = _make_handle()
     with patch(
         "server.routes.runs.runs.start_run", new_callable=AsyncMock, return_value=handle
@@ -132,7 +132,7 @@ async def test_profile_passed_through_to_start_run(app_server):
 
 @pytest.mark.asyncio
 async def test_invalid_profile_name_rejected(app_server):
-    """D17: a malformed profile name is a 400 before any run starts."""
+    """A malformed profile name is a 400 before any run starts."""
     async with aiohttp.ClientSession() as cs:
         async with cs.post(
             f"{app_server}/api/runs",

@@ -567,7 +567,7 @@ export interface Translations {
     sourceGit: string;
   };
 
-  /** MCP server management (D12), shown on the /skills page. */
+  /** MCP server management, shown on the /skills page. */
   mcp: {
     title: string;
     intro: string;

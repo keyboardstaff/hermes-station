@@ -409,7 +409,7 @@ export function useRunsStream() {
 
       // Active profile = the Composer pill's sticky selection (cached under
       // ["profile-active"]). Sending it lets the backend re-scope this run to
-      // that profile's HERMES_HOME in-process, no restart (owner review D17).
+      // that profile's HERMES_HOME in-process, no restart.
       // Omit "default" — that's the process home already.
       const activeProfile = queryClient.getQueryData<{ sticky?: string }>(["profile-active"])?.sticky;
 

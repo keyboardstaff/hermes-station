@@ -1,7 +1,7 @@
 // Characterization tests for the chat store's hardest logic: streaming↔DB
 // reconciliation, turn-keyed single-bubble routing, and the small state
 // transitions the run lifecycle depends on. These pin current behavior so
-// the Composer / chat-runtime refactors (owner-review D7) have a safety net.
+// the Composer / chat-runtime refactors have a safety net.
 //
 // They assert what store/chat.ts ACTUALLY does today — not an ideal — so a
 // behavior change shows up as a failing test to be reviewed, not a silent drift.

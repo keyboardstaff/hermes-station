@@ -309,7 +309,7 @@ class _Profiles:
     # Context-local HERMES_HOME override (ContextVar) — lets a single in-process
     # run re-scope to another profile's home without a restart, the same way
     # upstream's cron scheduler runs per-job profiles. Consumed by
-    # ``server.lib.profile_run`` for the Composer profile pill (owner review D17).
+    # ``server.lib.profile_run`` for the Composer profile pill.
     set_hermes_home_override: Callable | None = field(
         default_factory=lambda: _try_import("hermes_constants", "set_hermes_home_override")
     )

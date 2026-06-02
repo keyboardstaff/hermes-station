@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-// Context ring + token helpers, extracted from Composer (owner-review D7).
+// Context ring + token helpers, extracted from Composer.
 
 export interface UsageBreakdown {
   input_tokens: number;

@@ -26,7 +26,7 @@ import { TreeNode, type CreateState, type CreateProps } from "./FileTreeNode";
  * - Selection lives in the ``useFilesSelection`` zustand store.
  *
  * The recursive node rendering lives in ``FileTreeNode``; the root/workspace
- * switcher in ``WorkspacePicker`` (owner-review D7 split).
+ * switcher in ``WorkspacePicker``.
  */
 export default function FilesSideTree({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();

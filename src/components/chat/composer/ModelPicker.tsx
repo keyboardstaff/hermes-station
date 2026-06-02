@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Cpu, ChevronDown, Search, Check } from "lucide-react";
 import type { ProviderInfo } from "@/hooks/useProviders";
 
-// Provider-grouped model picker, extracted from Composer (owner-review D7).
+// Provider-grouped model picker, extracted from Composer.
 // Distinct from the Models page's ModelPickerDialog — this is the inline
 // composer pill with live OpenRouter catalog search.
 

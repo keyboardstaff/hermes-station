@@ -29,7 +29,7 @@ export interface RunInput {
   /** Required when selected model lives on a different provider than config default. */
   provider?: string;
   reasoning_effort?: string;
-  /** Profile to run under (owner review D17). Re-scopes the in-process run to
+  /** Profile to run under. Re-scopes the in-process run to
    *  that profile's HERMES_HOME without a gateway restart. Omitted = default. */
   profile?: string;
   metadata?: Record<string, unknown>;
@@ -39,7 +39,7 @@ export interface RunInput {
 // WebSocket frame contract in ws-types.ts (RunEventMessage / RunEventKind),
 // NOT here. Station has no SSE endpoint; the earlier `GET /v1/runs/{id}/events`
 // types and a `RunCreated` status union ("pending"/"stopped") that never
-// occurred were dead code and have been removed (owner-review D2/D3).
+// occurred were dead code and have been removed.
 
 export interface ToolCall {
   id: string;

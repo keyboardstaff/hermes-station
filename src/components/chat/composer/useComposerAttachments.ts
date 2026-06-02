@@ -5,7 +5,7 @@ import type { ComposerAttachment } from "@/lib/hermes-types";
 
 /**
  * Owns composer attachment state + every ingest path (file picker, paste, drag,
- * imperative addFiles). Extracted from Composer (owner-review D7); the four
+ * imperative addFiles). Extracted from Composer; the four
  * previously-duplicated handlers now funnel through one `ingestFiles`.
  *
  * Uploads go to POST /api/upload (persisted across refreshes). `maxBytes` is the

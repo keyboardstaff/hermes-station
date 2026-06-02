@@ -1,7 +1,7 @@
 // macOS APFS stores .epub as a directory; browser fetch() can't read it
 // (ERR_ACCESS_DENIED). Re-package via File System Access API into a real ZIP.
 //
-// Pure, zero-React utility extracted from Composer (owner-review D7). Kept
+// Pure, zero-React utility extracted from Composer. Kept
 // dependency-free so it can be unit-tested in isolation.
 
 interface EpubFileEntry {

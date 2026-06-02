@@ -1,6 +1,6 @@
 import { PopupSelect } from "@/components/ui/PopupSelect";
 
-// Small composer toolbar building blocks, extracted from Composer (D7).
+// Small composer toolbar building blocks, extracted from Composer.
 
 export function PillSelect({
   icon,

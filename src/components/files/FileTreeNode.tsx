@@ -14,7 +14,7 @@ import { useFileTree, type FileRoot, type FsEntry } from "@/hooks/useFiles";
 import { type FileSelection } from "@/store/panel-selection";
 
 // Recursive file-tree node cluster (TreeNode ↔ TreeEntry, plus the inline
-// new-item input), extracted from FilesSideTree (owner-review D7). The lazy
+// new-item input), extracted from FilesSideTree. The lazy
 // per-directory ``useFileTree`` query lives at the node level so each expanded
 // folder fetches its own children.
 

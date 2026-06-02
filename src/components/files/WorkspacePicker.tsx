@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronDown, Check, Trash2, FolderPlus } from "lucide-react";
 import { type WorkspacesData } from "@/hooks/useWorkspaces";
 
-// Workspace switcher dropdown, extracted from FilesSideTree (owner-review D7).
+// Workspace switcher dropdown, extracted from FilesSideTree.
 // ~/.hermes, default ~/workspace, and custom workspaces in one picker;
 // selection drives the file-tree root and (for workspaces) the agent's
 // TERMINAL_CWD.

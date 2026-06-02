@@ -39,7 +39,7 @@ def state_db_path(home: Path | None = None) -> Path:
     """``state.db`` under ``home`` (default: the current HERMES_HOME).
 
     ``home`` lets the run path address a specific profile's database when the
-    Composer pill re-scopes a run (owner review D17).
+    Composer pill re-scopes a run.
     """
     return (home if home is not None else hermes_home()) / "state.db"
 

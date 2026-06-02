@@ -1,9 +1,9 @@
 """Run a chat turn under a specific Hermes profile, in-process, no restart.
 
 Station loads inside one gateway process whose ``HERMES_HOME`` is fixed at
-launch. To let the Composer's profile pill actually re-scope a run (owner
-review D17) without spawning a sibling gateway or restarting, we lean on the
-same mechanism upstream's cron scheduler uses for per-job profiles
+launch. To let the Composer's profile pill actually re-scope a run without
+spawning a sibling gateway or restarting, we lean on the same mechanism
+upstream's cron scheduler uses for per-job profiles
 (``cron/scheduler._job_profile_context``): the context-local
 ``set_hermes_home_override`` ``ContextVar`` plus an ``os.environ`` snapshot.
 

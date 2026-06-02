@@ -2,7 +2,7 @@ import { X, FileText } from "lucide-react";
 import type { ComposerAttachment } from "@/lib/hermes-types";
 
 // Attachment chip row (images → thumbnail, others → file chip), extracted from
-// Composer (owner-review D7).
+// Composer.
 export function AttachmentChips({
   attachments,
   onRemove,

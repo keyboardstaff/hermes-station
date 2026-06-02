@@ -1,7 +1,7 @@
 import { Brain } from "lucide-react";
 import { PopupSelect } from "@/components/ui/PopupSelect";
 
-// Reasoning-effort picker, extracted from Composer (owner-review D7).
+// Reasoning-effort picker, extracted from Composer.
 // Values match upstream hermes_constants.VALID_REASONING_EFFORTS.
 // null = omit field → upstream uses config.yaml default. NEVER send "auto" — invalid.
 

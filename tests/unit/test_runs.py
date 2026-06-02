@@ -413,7 +413,7 @@ def test_ring_is_bounded() -> None:
 
 
 # ── Shared terminal-frame contract across run paths ───────────────────
-# These guard D1 (contract unification) + D2 (status vocabulary). The slash
+# These guard the run-contract unification + status vocabulary. The slash
 # path is patched at _build_hms_event so it runs without the agent venv.
 
 
@@ -448,7 +448,7 @@ async def test_slash_run_success_emits_completed_with_session_id(quiet_hms_env) 
 
 @pytest.mark.asyncio
 async def test_slash_run_failure_uses_failed_not_error(quiet_hms_env) -> None:
-    """Regression for D2: the slash path must emit the canonical ``failed``
+    """Regression: the slash path must emit the canonical ``failed``
     status, not the legacy ``error`` spelling that diverged from the AIAgent
     path."""
     from server import runs as runs_mod

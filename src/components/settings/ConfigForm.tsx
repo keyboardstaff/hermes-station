@@ -4,7 +4,7 @@ import { Search, RotateCcw, AlertCircle } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
-// Schema-driven config FORM (owner-review D7 Stage 2). The schema + defaults
+// Schema-driven config FORM. The schema + defaults
 // are static (DEFAULT_CONFIG-derived), served by the Dashboard at
 // /api/dashboard/config/{schema,defaults}; the VALUES are profile-scoped and
 // read/written via Station's /api/profiles/{name}/config/values. Scalar fields

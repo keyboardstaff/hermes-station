@@ -2,7 +2,7 @@
 
 ``db()`` is the default-home SessionDB every route uses. ``db_for_home(home)``
 is the profile-scoped variant: a per-home cache used by the run path when the
-Composer pill re-scopes a turn to another profile (owner review D17). The
+Composer pill re-scopes a turn to another profile. The
 HERMES_HOME override (``profile_run``) covers config/.env/skills, but a
 ``SessionDB`` captures its ``db_path`` at construction, so the run must read /
 write the chosen profile's ``state.db`` explicitly through this cache.

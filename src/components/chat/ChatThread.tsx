@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import type { ChatMessage } from "@/lib/hermes-types";
 
 // Presentational transcript body shared by the live chat view (ChatStream)
-// and the /sessions preview drawer (owner-review D15). ChatBubble — and its
+// and the /sessions preview drawer. ChatBubble — and its
 // heavy render stack (react-markdown + remark-gfm + highlight.js) — is
 // `lazy()`-loaded here so it is code-split into its own chunk: opening the
 // /sessions *table* no longer pulls markdown/highlight.js until a preview
