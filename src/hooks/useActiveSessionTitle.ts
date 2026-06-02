@@ -26,6 +26,9 @@ export function useActiveSessionTitle(): string | undefined {
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,
   });
+  const provisional = useChatStore((s) => s.provisionalTitles);
   if (!activeSessionId) return undefined;
-  return data?.sessions.find((s) => s.session_id === activeSessionId)?.title;
+  const dbTitle = data?.sessions.find((s) => s.session_id === activeSessionId)?.title;
+  // Fall back to the provisional (first-prompt) title until the auto-title lands.
+  return dbTitle?.trim() ? dbTitle : provisional[activeSessionId];
 }

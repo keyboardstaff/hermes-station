@@ -10,11 +10,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+from pathlib import Path
 
 from aiohttp import web
 
 from server.lib.route_helpers import SESSION_ID_RE, coerce_int_arg
-from server.lib.state_db import db, run_db
+from server.lib.state_db import db, db_for_home, run_db
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,36 @@ def _split_csv(raw: str | None, *, validator: re.Pattern[str]) -> list[str] | No
     return items
 
 
+def _profile_homes() -> list[tuple[str, Path | None]]:
+    """``(profile_name, home)`` for every profile — default first, then named.
+
+    ``home`` is ``None`` for the default profile (the process ``db()``) or a
+    resolved ``Path`` for a named one. Sessions live in each profile's own
+    ``state.db``, so the listing reads them all and tags each row — otherwise a
+    non-default profile's chats are invisible in Recents / the sessions table.
+    """
+    from server.lib.profile_run import resolve_profile_home
+    from server.lib.upstream_shim import shim
+
+    homes: list[tuple[str, Path | None]] = [("default", None)]
+    lister = shim.profiles.list_profiles
+    if lister is None:
+        return homes
+    try:
+        items = lister() or []
+    except Exception:
+        logger.warning("[hms.chat] list_profiles failed; default-only listing", exc_info=True)
+        return homes
+    for p in items:
+        name = p.get("name") if isinstance(p, dict) else getattr(p, "name", None)
+        if not name or name == "default":
+            continue
+        home = resolve_profile_home(str(name))
+        if home is not None:
+            homes.append((str(name), home))
+    return homes
+
+
 # ── Sessions CRUD ────────────────────────────────────────────────────
 
 
@@ -55,22 +86,37 @@ async def list_sessions(request: web.Request) -> web.Response:
 
     order_by_last_active = (request.query.get("sort") or "started_at") == "last_active"
 
-    try:
-        rows = await run_db(
-            db().list_sessions_rich,
-            source=source,
-            limit=limit,
-            offset=offset,
-            order_by_last_active=order_by_last_active,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("list_sessions failed")
-        return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
+    # Read each profile's own state.db, tag rows with their profile, then merge +
+    # sort + page. Reading offset+limit per profile keeps the merged page correct;
+    # default-only users read just db() (one query, unchanged). A default-DB
+    # failure is a real error (500); a named profile's failure is skipped.
+    per_profile = min(offset + limit, 5000)
+    merged: list[dict] = []
+    for name, home in _profile_homes():
+        try:
+            sdb = db() if home is None else db_for_home(home)
+            rows = await run_db(
+                sdb.list_sessions_rich,
+                source=source,
+                limit=per_profile,
+                offset=0,
+                order_by_last_active=order_by_last_active,
+            )
+        except Exception as exc:  # noqa: BLE001
+            if home is None:
+                logger.exception("list_sessions failed")
+                return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
+            logger.warning("[hms.chat] list_sessions failed for profile %s", name, exc_info=True)
+            continue
+        for row in rows or []:
+            if isinstance(row, dict):
+                merged.append({**row, "profile": name})
+
+    sort_key = "last_active" if order_by_last_active else "started_at"
+    merged.sort(key=lambda r: (r.get(sort_key) or r.get("started_at") or 0), reverse=True)
 
     normalised: list[dict] = []
-    for row in rows or []:
-        if not isinstance(row, dict):
-            continue
+    for row in merged[offset:offset + limit]:
         rid = row.get("session_id") or row.get("id")
         if not rid:
             continue

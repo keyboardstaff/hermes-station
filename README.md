@@ -79,7 +79,7 @@ The frontend is a React 19 + Vite + Zustand SPA; the backend is aiohttp on
   live gateway logs. Station also supervises the upstream Dashboard and
   transparently proxies `/api/dashboard/*`.
 
-Cross-cutting: WebSocket live updates, light/dark themes, and English / 中文
+Cross-cutting: WebSocket live updates, light/dark themes, and English / Chinese
 localization.
 
 ## 📸 Screenshots

@@ -29,6 +29,11 @@ interface ChatState {
   lastUsage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
   /** sessionId-scoped so tab switches hide/surface the drawer; cleared on resolve. */
   pendingApproval: PendingApproval | null;
+  /** sessionId → the user's first prompt, a title FALLBACK shown until the run's
+   *  auto-title lands in the DB. Bridges the window where a just-completed
+   *  session is persisted with no title yet, so it never flashes "Untitled".
+   *  In-memory only (a refresh re-derives in-flight titles from /api/runs/active). */
+  provisionalTitles: Record<string, string>;
 
   setActiveSession: (id: string | null) => void;
   /** Update id without clearing messages — used after first send creates a session. */
@@ -64,6 +69,7 @@ interface ChatState {
   setLastUsage: (u: ChatState["lastUsage"]) => void;
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
+  setProvisionalTitle: (sessionId: string, title: string) => void;
 }
 
 /** Deterministic id for a turn's assistant bubble — all streaming events
@@ -102,6 +108,7 @@ export const useChatStore = create<ChatState>()(
   showTokens: true,
   lastUsage: null,
   pendingApproval: null,
+  provisionalTitles: {},
 
   setActiveSession: (id) =>
     set((s) => {
@@ -348,6 +355,8 @@ export const useChatStore = create<ChatState>()(
   setLastUsage: (u) => set({ lastUsage: u }),
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),
+  setProvisionalTitle: (sessionId, title) =>
+    set((s) => ({ provisionalTitles: { ...s.provisionalTitles, [sessionId]: title } })),
     }),
     {
       name: "hms-chat-prefs",

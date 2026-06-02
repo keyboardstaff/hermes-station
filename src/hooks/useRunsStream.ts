@@ -215,11 +215,18 @@ export function useRunsStream() {
             // session_id rides the terminal frame — avoids racing a store read.
             const sid = msg.session_id ?? useChatStore.getState().activeSessionId;
             if (sid) clearRunningForSession(sid);
+            // Refetch now (persisted row), then a few more times as the run's
+            // auto-title lands asynchronously — timing varies, especially for
+            // concurrent runs — so the LLM title appears on its own rather than
+            // only on a click/refresh. The provisionalTitles fallback covers the
+            // gap so the row never reads "Untitled" in between.
             queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
-            // LLM title generation lands a few seconds after completion.
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
-            }, 6000);
+            for (const ms of [3000, 8000, 18000]) {
+              setTimeout(
+                () => queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] }),
+                ms,
+              );
+            }
 
             // Fill tool-result bodies from the DB by tool_call_id — keeps the live
             // bubble (incl. reasoning / approval notices) but lands the persisted
@@ -406,6 +413,10 @@ export function useRunsStream() {
 
       if (!currentSessionId) {
         updateActiveSessionId(runId);
+        // Remember the prompt as a title fallback until the run's auto-title is
+        // persisted — keeps the row from flashing "Untitled" across the refetch
+        // that lands a still-title-less DB row right after completion.
+        useChatStore.getState().setProvisionalTitle(runId, input.trim().slice(0, 80));
         // Tag pre-session uploads so refresh can recover them via /api/upload/session/<run_id>.
         if (attachments) {
           const UPLOAD_RE = /^\/api\/upload\/([^/]+)\/[^/?#]+$/;
@@ -427,14 +438,9 @@ export function useRunsStream() {
           return {
             ...old,
             sessions: [
-              // Provisional title = the user's prompt; the run's auto-title
-              // replaces it on completion (the sessions cache is refetched then).
-              {
-                session_id: runId,
-                title: input.trim().slice(0, 80),
-                started_at: Date.now() / 1000,
-                updated_at: Date.now() / 1000,
-              },
+              // Title comes from the provisionalTitles fallback (set above) until
+              // the auto-title lands — so it survives the post-completion refetch.
+              { session_id: runId, started_at: Date.now() / 1000, updated_at: Date.now() / 1000 },
               ...old.sessions,
             ],
           };

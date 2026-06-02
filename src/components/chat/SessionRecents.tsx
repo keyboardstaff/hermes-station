@@ -280,6 +280,8 @@ export default function SessionRecents({
   // Every session with a live run shows a spinner — not just the focused one,
   // so concurrent runs are all visible.
   const runningBySession = useChatStore((s) => s.runningBySession);
+  // Title fallback while a run's auto-title is still being generated.
+  const provisionalTitles = useChatStore((s) => s.provisionalTitles);
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
@@ -428,7 +430,11 @@ export default function SessionRecents({
   // set) means a completed run — now in dbSessionIds, so out of inflight — stops
   // spinning at once instead of lingering until the next /api/runs/active poll.
   const inflightSessionIds = new Set(inflightRows.map((r) => r.session_id));
-  const sessions = [...inflightRows, ...dbSessions];
+  // Fall back to the provisional (first-prompt) title while the DB row still has
+  // none — so a just-completed session shows the prompt, never "Untitled".
+  const sessions = [...inflightRows, ...dbSessions].map((s) =>
+    s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] },
+  );
 
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0

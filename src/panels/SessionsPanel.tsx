@@ -217,6 +217,7 @@ export default function SessionsPanel() {
                   </th>
                   <th style={{ padding: "8px 12px", textAlign: "left" }}>Title</th>
                   <th style={{ padding: "8px 12px", textAlign: "left" }}>Source</th>
+                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Profile</th>
                   <th style={{ padding: "8px 12px", textAlign: "left" }}>Model</th>
                   <th style={{ padding: "8px 12px", textAlign: "right" }}>Time</th>
                 </tr>
@@ -245,6 +246,9 @@ export default function SessionsPanel() {
                     </td>
                     <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 'var(--hms-text-xs)'}}>
                       {s.source ?? "—"}
+                    </td>
+                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {s.profile ?? "default"}
                     </td>
                     <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {s.model ?? "—"}

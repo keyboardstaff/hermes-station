@@ -94,6 +94,8 @@ export interface SessionSummary {
   session_id: string;
   title?: string;
   source?: string;
+  /** Which profile's state.db this session was read from (default / a named profile). */
+  profile?: string;
   model?: string;
   input_tokens?: number;
   output_tokens?: number;
