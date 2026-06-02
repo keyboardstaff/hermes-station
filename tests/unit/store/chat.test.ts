@@ -60,6 +60,25 @@ describe("chat store", () => {
     expect(useChatStore.getState().activeSessionId).toBe("new-session-id");
   });
 
+  it("setActiveSession re-points activeRun/Turn at the new session's run (no cross-session bleed)", () => {
+    // s2 is mid-run; s1 is done (not in runningBySession).
+    useChatStore.setState({
+      activeSessionId: "s2", activeRunId: "run2", activeTurnId: "run2",
+      runningBySession: { s2: "run2" },
+    });
+    // Switch to the done session → the previous session's run must NOT stay active,
+    // else its live stream bleeds into s1 on re-attach.
+    useChatStore.getState().setActiveSession("s1");
+    expect(useChatStore.getState().activeRunId).toBeNull();
+    expect(useChatStore.getState().activeTurnId).toBeNull();
+
+    // Switch to a session that IS running → re-point at its own run.
+    useChatStore.setState({ runningBySession: { s2: "run2", s3: "run3" } });
+    useChatStore.getState().setActiveSession("s3");
+    expect(useChatStore.getState().activeRunId).toBe("run3");
+    expect(useChatStore.getState().activeTurnId).toBe("run3");
+  });
+
   it("appendToolCallPart inserts a tool segment, upsertToolCall patches it", () => {
     const { appendToolCallPart, upsertToolCall } = useChatStore.getState();
     appendToolCallPart({ id: "tc1", toolName: "bash", status: "running" });

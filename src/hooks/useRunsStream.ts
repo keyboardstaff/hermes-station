@@ -302,8 +302,18 @@ export function useRunsStream() {
 
   // Resume persisted run on mount: re-subscribe and let server replay from last_seq.
   useEffect(() => {
-    const persistedRunId = useChatStore.getState().activeRunId;
+    const { activeRunId: persistedRunId, activeSessionId: sid0, runningBySession } =
+      useChatStore.getState();
     if (!persistedRunId) return;
+    // Stale-run guard: only resume a run that belongs to the active session.
+    // Otherwise re-attaching streams a *different* session's live content into
+    // this one (cross-session bleed) — e.g. returning to /chat on session A
+    // while session B is still running and activeRunId lagged behind.
+    if (sid0 && runningBySession[sid0] !== persistedRunId) {
+      setActiveRunId(null);
+      setActiveTurn(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {

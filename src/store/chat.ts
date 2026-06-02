@@ -115,10 +115,17 @@ export const useChatStore = create<ChatState>()(
       // If clicking the same session that's already active, do nothing — prevents
       // erasing messages and the subsequent "content disappears" bug.
       if (id !== null && id === s.activeSessionId) return {};
+      // Re-point the active run/turn at the NEW session's own in-flight run (if
+      // any), else clear it. Otherwise a still-running run from the PREVIOUS
+      // session stays "active" and a re-attach streams its content into this
+      // session (cross-session bleed).
+      const runId = id ? s.runningBySession[id] ?? null : null;
       return {
         activeSessionId: id,
         messages: [],
         lastUsage: null,
+        activeRunId: runId,
+        activeTurnId: runId,
         // isHistoryPending = true only when switching TO a real session;
         // new session (null) has nothing to load.
         isHistoryPending: id !== null,
