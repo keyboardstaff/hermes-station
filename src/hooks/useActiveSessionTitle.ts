@@ -27,8 +27,11 @@ export function useActiveSessionTitle(): string | undefined {
     refetchInterval: 30_000,
   });
   const provisional = useChatStore((s) => s.provisionalTitles);
+  // The active session's first user message is always in the store — the most
+  // robust fallback when neither the DB title nor a provisional is available.
+  const firstUserMsg = useChatStore((s) => s.messages.find((m) => m.role === "user")?.content);
   if (!activeSessionId) return undefined;
   const dbTitle = data?.sessions.find((s) => s.session_id === activeSessionId)?.title;
-  // Fall back to the provisional (first-prompt) title until the auto-title lands.
-  return dbTitle?.trim() ? dbTitle : provisional[activeSessionId];
+  if (dbTitle?.trim()) return dbTitle;
+  return provisional[activeSessionId] || firstUserMsg?.slice(0, 80);
 }

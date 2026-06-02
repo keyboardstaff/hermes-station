@@ -119,7 +119,12 @@ export default function SessionsPanel() {
     },
   });
 
-  const allSessions = allData?.sessions ?? [];
+  // Fall back to the provisional (first-prompt) title while the DB row has none,
+  // so a just-completed session never reads "Untitled" here either.
+  const provisionalTitles = useChatStore((s) => s.provisionalTitles);
+  const allSessions = (allData?.sessions ?? []).map((s) =>
+    s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] },
+  );
 
   // Client-side filter (search + source)
   const filteredSessions = allSessions.filter((s) => {

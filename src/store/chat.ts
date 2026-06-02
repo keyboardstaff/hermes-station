@@ -356,7 +356,13 @@ export const useChatStore = create<ChatState>()(
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),
   setProvisionalTitle: (sessionId, title) =>
-    set((s) => ({ provisionalTitles: { ...s.provisionalTitles, [sessionId]: title } })),
+    set((s) => {
+      const next: Record<string, string> = { ...s.provisionalTitles, [sessionId]: title };
+      // Bound the map (persisted): keep the most-recently-inserted ~60.
+      const keys = Object.keys(next);
+      if (keys.length > 60) for (const k of keys.slice(0, keys.length - 60)) delete next[k];
+      return { provisionalTitles: next };
+    }),
     }),
     {
       name: "hms-chat-prefs",
@@ -383,6 +389,9 @@ export const useChatStore = create<ChatState>()(
         activeRunId: state.activeRunId,
         // Persisted so a refresh / switch can re-attach a still-running run per session.
         runningBySession: state.runningBySession,
+        // Persisted so a refresh during the title-not-ready window still has the
+        // first-prompt fallback (otherwise the row briefly reads "Untitled").
+        provisionalTitles: state.provisionalTitles,
       }),
     }
   )
