@@ -52,19 +52,62 @@ class RunHandle:
     seq: int = 0
     ring: deque[dict] = field(default_factory=lambda: deque(maxlen=RUN_RING_MAX))
     seq_lock: threading.Lock = field(default_factory=threading.Lock)
+    # Durable accumulation of the in-flight turn. The ring is
+    # bounded (512), so a long run evicts early frames and a re-attach (refresh /
+    # session switch) couldn't rebuild the turn from replay alone. These grow
+    # with the *response size* (one turn), not the frame count, so the transcript
+    # endpoint can always hand a re-attaching client the full partial answer.
+    partial_text: str = ""
+    partial_reasoning: str = ""
+    partial_tools: dict[str, dict] = field(default_factory=dict)
 
     def stamp(self, frame: dict) -> dict:
-        """Assign the next seq, buffer the frame, and return it for broadcast."""
+        """Assign the next seq, buffer the frame, accumulate, return for broadcast."""
         with self.seq_lock:
             self.seq += 1
             frame["seq"] = self.seq
             self.ring.append(frame)
+            self._accumulate(frame)
         return frame
+
+    def _accumulate(self, frame: dict) -> None:
+        """Fold a frame into the durable partial-turn snapshot (called under lock)."""
+        ev = frame.get("event")
+        if ev == "message.delta":
+            self.partial_text += frame.get("delta") or ""
+        elif ev == "reasoning.available":
+            self.partial_reasoning += frame.get("text") or ""
+        elif ev == "tool.started":
+            tcid = str(frame.get("tool_call_id") or "")
+            self.partial_tools[tcid] = {
+                "tool_call_id": tcid,
+                "tool": frame.get("tool"),
+                "preview": frame.get("preview", ""),
+                "status": "running",
+            }
+        elif ev == "tool.completed":
+            tcid = str(frame.get("tool_call_id") or "")
+            cur = self.partial_tools.get(tcid) or {"tool_call_id": tcid, "tool": frame.get("tool")}
+            cur["status"] = "error" if frame.get("error") else "done"
+            if frame.get("duration") is not None:
+                cur["duration"] = frame.get("duration")
+            self.partial_tools[tcid] = cur
 
     def replay_since(self, last_seq: int) -> list[dict]:
         """Buffered frames with seq > last_seq, oldest first (for re-subscribe)."""
         with self.seq_lock:
             return [f for f in self.ring if f.get("seq", 0) > last_seq]
+
+    def partial_snapshot(self) -> dict:
+        """The accumulated in-flight turn — what a re-attaching client renders
+        before live frames resume."""
+        with self.seq_lock:
+            return {
+                "seq": self.seq,
+                "text": self.partial_text,
+                "reasoning": self.partial_reasoning,
+                "tool_calls": list(self.partial_tools.values()),
+            }
 
 
 class RunRegistry:

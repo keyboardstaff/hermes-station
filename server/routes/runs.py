@@ -247,6 +247,44 @@ async def get_run_route(request: web.Request) -> web.Response:
     })
 
 
+@router.get("/api/runs/{run_id}/transcript")
+async def get_run_transcript(request: web.Request) -> web.Response:
+    """In-flight turn snapshot for re-attach.
+
+    Returns the *durable* accumulated partial (text / reasoning / tool cards)
+    that the bounded replay ring may have evicted on a long run, plus the
+    current ``seq`` so the client dedups the live frames it then receives over
+    the WS. ``?since=<seq>`` additionally returns the buffered frames newer
+    than that seq (fine-grained replay).
+    """
+    run_id = request.match_info["run_id"]
+    if not _RUN_ID_RE.match(run_id):
+        return web.json_response({"error": "invalid_run_id"}, status=400)
+    handle = await runs.get_registry().get(run_id)
+    if handle is None:
+        return web.json_response({"error": "not_found"}, status=404)
+    snap = handle.partial_snapshot()
+    body = {
+        "run_id": handle.run_id,
+        "session_id": handle.session_id,
+        "status": handle.status,
+        "seq": snap["seq"],
+        "partial": {
+            "text": snap["text"],
+            "reasoning": snap["reasoning"],
+            "tool_calls": snap["tool_calls"],
+        },
+    }
+    since_raw = request.query.get("since")
+    if since_raw is not None:
+        try:
+            since = int(since_raw)
+        except ValueError:
+            return web.json_response({"error": "invalid_since"}, status=400)
+        body["frames"] = handle.replay_since(since)
+    return web.json_response(body)
+
+
 def attach(app: web.Application) -> None:
     app.router.add_routes(router)
 

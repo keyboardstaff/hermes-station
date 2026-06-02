@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore } from "@/store/chat";
 import { useWSStore } from "@/store/ws";
-import type { ComposerAttachment, ContentPart, RunInput } from "@/lib/hermes-types";
+import type { ComposerAttachment, ContentPart, RunInput, ToolCall } from "@/lib/hermes-types";
 import type { RunEventMessage } from "@/lib/ws-types";
 import { api } from "@/lib/api";
 import { toolResultsById } from "@/lib/load-session";
@@ -141,7 +141,6 @@ export function useRunsStream() {
       setActiveTurn(runId);
       lastSeqRef.current = 0;
       const channel = `run:${runId}`;
-      subscribe(channel);
       subscribedChannelRef.current = channel;
 
       const offRunEvent = on<RunEventMessage>("run.event", (msg) => {
@@ -240,6 +239,43 @@ export function useRunsStream() {
           }
         }
       });
+      offRunEventRef.current = offRunEvent;
+
+      // seed the in-flight turn from the durable transcript BEFORE
+      // subscribing, so a long run whose replay ring (512) evicted early frames
+      // still reconstructs the full partial answer on refresh / session switch.
+      // The WS ring replay then re-sends frames the seed already covered, but
+      // lastSeqRef dedups them (shouldApplyFrame) so nothing doubles. Fetch
+      // failure → just subscribe (the ring replay alone reconstructs short runs).
+      (async () => {
+        try {
+          const r = await fetch(`/api/runs/${encodeURIComponent(runId)}/transcript`);
+          if (r.ok) {
+            const data = (await r.json()) as {
+              seq?: number;
+              partial?: {
+                text?: string;
+                reasoning?: string;
+                tool_calls?: Array<{ tool_call_id: string; tool: string; preview?: string; status: ToolCall["status"] }>;
+              };
+            };
+            const p = data.partial;
+            if (p && (p.text || (p.tool_calls && p.tool_calls.length > 0))) {
+              if (p.text) appendDelta(p.text);
+              if (p.reasoning && useChatStore.getState().reasoningEffort !== "none") {
+                appendReasoning(p.reasoning);
+              }
+              for (const tc of p.tool_calls ?? []) {
+                appendToolCallPart({
+                  id: tc.tool_call_id, toolName: tc.tool, preview: tc.preview, status: tc.status,
+                });
+              }
+              if (typeof data.seq === "number") lastSeqRef.current = data.seq;
+            }
+          }
+        } catch { /* best-effort; ring replay still reconstructs */ }
+        subscribe(channel);
+      })();
 
       return offRunEvent;
     },

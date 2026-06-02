@@ -470,3 +470,91 @@ async def test_slash_run_failure_uses_failed_not_error(quiet_hms_env) -> None:
     failed = next(p for _, p in fake_ws.calls if p.get("event") == "run.failed")
     assert failed["session_id"] == "sess-2"
     assert "boom" in failed["error"]
+
+
+# RunHandle durable accumulator — in-flight turn survives ring eviction
+
+
+def test_runhandle_accumulates_partial_turn() -> None:
+    from server.runs import RunHandle
+
+    h = RunHandle(run_id="r", session_id="s", status="running", created_at=0.0)
+    h.stamp({"event": "message.delta", "delta": "Hello "})
+    h.stamp({"event": "message.delta", "delta": "world"})
+    h.stamp({"event": "reasoning.available", "text": "thinking"})
+    h.stamp({"event": "tool.started", "tool_call_id": "t1", "tool": "shell", "preview": "ls"})
+    h.stamp({"event": "tool.completed", "tool_call_id": "t1", "tool": "shell", "error": False})
+
+    snap = h.partial_snapshot()
+    assert snap["text"] == "Hello world"
+    assert snap["reasoning"] == "thinking"
+    assert snap["seq"] == 5
+    assert snap["tool_calls"] == [
+        {"tool_call_id": "t1", "tool": "shell", "preview": "ls", "status": "done"}
+    ]
+
+
+def test_runhandle_accumulator_survives_ring_eviction() -> None:
+    """The replay ring is bounded; the accumulator is not — so a long run that
+    overflowed the ring still hands a re-attaching client the whole partial."""
+    from server.runs import RUN_RING_MAX, RunHandle
+
+    h = RunHandle(run_id="r", session_id="s", status="running", created_at=0.0)
+    for _ in range(RUN_RING_MAX + 50):
+        h.stamp({"event": "message.delta", "delta": "x"})
+    # Ring kept only the last RUN_RING_MAX frames …
+    assert len(h.replay_since(0)) == RUN_RING_MAX
+    # … but the accumulated text has every delta.
+    assert len(h.partial_snapshot()["text"]) == RUN_RING_MAX + 50
+
+
+# GET /api/runs/{id}/transcript — re-attach replay channel
+
+_VALID_RUN_ID = "run_" + "a" * 32
+
+
+@pytest.mark.asyncio
+async def test_transcript_endpoint_returns_partial() -> None:
+    import json
+
+    from aiohttp.test_utils import make_mocked_request
+    from server import runs
+    from server.routes.runs import get_run_transcript
+
+    runs.reset_for_test()
+    try:
+        handle = runs.RunHandle(
+            run_id=_VALID_RUN_ID, session_id="s", status="running", created_at=0.0,
+        )
+        handle.stamp({"event": "message.delta", "delta": "partial answer"})
+        handle.stamp({"event": "tool.started", "tool_call_id": "t1", "tool": "shell", "preview": "ls"})
+        await runs.get_registry().add(handle)
+
+        req = make_mocked_request(
+            "GET", f"/api/runs/{_VALID_RUN_ID}/transcript",
+            match_info={"run_id": _VALID_RUN_ID},
+        )
+        resp = await get_run_transcript(req)
+        assert resp.status == 200
+        data = json.loads(resp.body)
+        assert data["status"] == "running"
+        assert data["seq"] == 2
+        assert data["partial"]["text"] == "partial answer"
+        assert data["partial"]["tool_calls"][0]["tool"] == "shell"
+    finally:
+        runs.reset_for_test()
+
+
+@pytest.mark.asyncio
+async def test_transcript_endpoint_404_for_unknown_run() -> None:
+    from aiohttp.test_utils import make_mocked_request
+    from server import runs
+    from server.routes.runs import get_run_transcript
+
+    runs.reset_for_test()
+    req = make_mocked_request(
+        "GET", f"/api/runs/{_VALID_RUN_ID}/transcript",
+        match_info={"run_id": _VALID_RUN_ID},
+    )
+    resp = await get_run_transcript(req)
+    assert resp.status == 404
