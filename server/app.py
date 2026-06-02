@@ -27,7 +27,11 @@ def build_app(*, adapter: StationAdapter | None = None):
         middlewares=[
             host_guard_middleware,
             cors_middleware,
-            rate_limit(limit=100, window_seconds=60.0),
+            rate_limit(
+                limit=config_reader.rate_limit_per_minute(),
+                loopback_limit=config_reader.rate_limit_loopback_per_minute(),
+                window_seconds=60.0,
+            ),
             security_headers_middleware,
             auth_middleware,
             csrf_middleware,

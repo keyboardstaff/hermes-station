@@ -23,6 +23,8 @@ class _Fallback(TypedDict):
     max_concurrent_runs: int
     max_upload_bytes: int
     upload_retention_days: int
+    rate_limit_per_minute: int
+    rate_limit_loopback_per_minute: int
 
 
 # Used only when neither config.yaml nor env vars specify a value (fresh install).
@@ -36,6 +38,13 @@ _FALLBACK: _Fallback = {
     "max_concurrent_runs": 10,
     "max_upload_bytes": 50 * 1024 * 1024,
     "upload_retention_days": 30,
+    # The SPA fans out dozens of requests per page load; a couple of quick
+    # refreshes legitimately exceeded the old flat 100/min. Loopback is the
+    # trusted single-user norm (the auth model already trusts it), so it gets
+    # generous headroom; a remote peer (only reachable with a token) stays
+    # strict as a DoS safety net. Both overridable in config.yaml extra.
+    "rate_limit_per_minute": 240,
+    "rate_limit_loopback_per_minute": 3000,
 }
 
 
@@ -130,6 +139,25 @@ def upload_retention_days() -> int:
         os.getenv("HMS_UPLOAD_RETENTION_DAYS")
         or _cached_extra().get("upload_retention_days"),
         _FALLBACK["upload_retention_days"],
+    )
+
+
+def rate_limit_per_minute() -> int:
+    """Per-IP request cap for non-loopback peers (DoS safety net)."""
+    return _coerce_int(
+        os.getenv("HMS_RATE_LIMIT_PER_MINUTE")
+        or _cached_extra().get("rate_limit_per_minute"),
+        _FALLBACK["rate_limit_per_minute"],
+    )
+
+
+def rate_limit_loopback_per_minute() -> int:
+    """Per-IP request cap for trusted loopback peers — generous so the SPA's
+    fan-out + a few refreshes never trip it, but still bounds a runaway client."""
+    return _coerce_int(
+        os.getenv("HMS_RATE_LIMIT_LOOPBACK_PER_MINUTE")
+        or _cached_extra().get("rate_limit_loopback_per_minute"),
+        _FALLBACK["rate_limit_loopback_per_minute"],
     )
 
 

@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 
 interface Props {
@@ -9,6 +9,9 @@ interface Props {
 
 interface State {
   error: Error | null;
+  /** Bumped on Retry so children remount under a fresh key — discards any stale
+   *  subtree state instead of re-rendering straight back into the same error. */
+  resetKey: number;
 }
 
 /**
@@ -22,9 +25,9 @@ interface State {
  *
  */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, resetKey: 0 };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
@@ -32,11 +35,11 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("[hms] Panel render error:", error, info.componentStack);
   }
 
-  reset = () => this.setState({ error: null });
+  reset = () => this.setState((s) => ({ error: null, resetKey: s.resetKey + 1 }));
 
   render() {
-    const { error } = this.state;
-    if (!error) return this.props.children;
+    const { error, resetKey } = this.state;
+    if (!error) return <Fragment key={resetKey}>{this.props.children}</Fragment>;
 
     const isDev = import.meta.env.DEV;
     const label = this.props.label ?? "Panel";

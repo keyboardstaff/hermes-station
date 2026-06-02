@@ -253,3 +253,44 @@ def test_unix_socket_honors_xff_for_lan_client() -> None:
     from server import auth
     assert auth.is_localhost(_unix_request({"X-Forwarded-For": "10.0.0.5"})) is False
     assert auth.is_localhost(_unix_request({"X-Forwarded-For": "127.0.0.1"})) is True
+
+
+def _tcp_request(peer_ip: str):
+    from unittest.mock import Mock
+
+    from aiohttp.test_utils import make_mocked_request
+
+    transport = Mock()
+    transport.get_extra_info.side_effect = lambda key, default=None: (
+        (peer_ip, 5555) if key == "peername" else default
+    )
+    return make_mocked_request("GET", "/api/x", transport=transport)
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_loopback_gets_higher_limit() -> None:
+    """Trusted loopback peers get the generous cap so the SPA's per-load fan-out
+    + a few refreshes never trip it; remote peers stay on the strict cap."""
+    from aiohttp import web
+    from server.middleware.rate_limit import rate_limit
+
+    async def _ok(_req):
+        return web.json_response({"ok": True})
+
+    mw = rate_limit(limit=2, loopback_limit=5, window_seconds=60.0)
+    for _ in range(5):
+        assert (await mw(_tcp_request("127.0.0.1"), _ok)).status == 200
+    assert (await mw(_tcp_request("127.0.0.1"), _ok)).status == 429  # 6th over loopback cap
+
+    mw2 = rate_limit(limit=2, loopback_limit=5, window_seconds=60.0)
+    for _ in range(2):
+        assert (await mw2(_tcp_request("10.0.0.1"), _ok)).status == 200
+    assert (await mw2(_tcp_request("10.0.0.1"), _ok)).status == 429  # 3rd over remote cap
+
+
+def test_rate_limit_config_loopback_is_more_generous(quiet_hms_env) -> None:
+    from server.lib import config_reader
+    assert (
+        config_reader.rate_limit_loopback_per_minute()
+        > config_reader.rate_limit_per_minute()
+    )

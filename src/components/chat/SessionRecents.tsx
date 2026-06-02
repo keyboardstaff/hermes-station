@@ -269,7 +269,9 @@ export default function SessionRecents({
   limit,
 }: SessionRecentsProps = {}) {
   const { activeSessionId, setActiveSession, clearMessages } = useChatStore();
-  const activeRunId = useChatStore((s) => s.activeRunId);
+  // Every session with a live run shows a spinner — not just the focused one,
+  // so concurrent runs are all visible.
+  const runningBySession = useChatStore((s) => s.runningBySession);
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
@@ -368,7 +370,9 @@ export default function SessionRecents({
       if (!res.ok) throw new Error(`${res.status}`);
       return res.json();
     },
-    retry: false,
+    // One retry so a transient blip (a rate-limit burst on refresh, a momentary
+    // backend hiccup) self-heals instead of stranding "Dashboard unavailable".
+    retry: 1,
     staleTime: 10_000,
     gcTime: 5 * 60_000,
     refetchInterval: 30_000,
@@ -448,7 +452,7 @@ export default function SessionRecents({
                   key={s.session_id}
                   session={s}
                   isActive={activeSessionId === s.session_id}
-                  isRunning={activeSessionId === s.session_id && !!activeRunId}
+                  isRunning={!!runningBySession[s.session_id]}
                   isRenaming={renamingId === s.session_id}
                   renameValue={renameValue}
                   shiftHeld={shiftHeld}
@@ -588,7 +592,7 @@ export default function SessionRecents({
             key={s.session_id}
             session={s}
             isActive={activeSessionId === s.session_id}
-            isRunning={activeSessionId === s.session_id && !!activeRunId}
+            isRunning={!!runningBySession[s.session_id]}
             isRenaming={renamingId === s.session_id}
             renameValue={renameValue}
             shiftHeld={shiftHeld}

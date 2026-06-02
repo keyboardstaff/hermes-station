@@ -269,11 +269,17 @@ export const useChatStore = create<ChatState>()(
       // end). Keep the live turn bubbles so streaming isn't wiped; DB owns the rest.
       const liveUser = s.messages.find((m) => m.id === `turn-${runId}-user`);
       const liveAsst = s.messages.find((m) => m.id === `turn-${runId}-assistant`);
-      const rebuiltHasUser = rebuilt.some((m) => m.role === "user");
+      // The in-flight turn isn't in the DB yet (upstream persists on completion),
+      // and the rebuild ids it as hist-<dbId>, never turn-<runId>-user — so the
+      // rebuild can't represent it. Keep the live user bubble unless the rebuild's
+      // LAST user message already IS this turn's prompt (i.e. it just got
+      // persisted): that dedups without dropping the prompt in an EXISTING session
+      // (whose rebuild legitimately has prior turns' user messages).
+      const lastRebuiltUser = [...rebuilt].reverse().find((m) => m.role === "user");
+      const dbHasThisUser =
+        !!liveUser && lastRebuiltUser?.content?.trim() === liveUser.content?.trim();
       const tail: ChatMessage[] = [];
-      // Drop the live user copy if the DB already represents it (avoids a dup);
-      // for a brand-new session the DB is still empty so we keep it.
-      if (liveUser && !rebuiltHasUser) tail.push(liveUser);
+      if (liveUser && !dbHasThisUser) tail.push(liveUser);
       if (liveAsst) tail.push(liveAsst);
       return { messages: [...rebuilt, ...tail], isHistoryPending: false };
     }),

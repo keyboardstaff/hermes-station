@@ -97,7 +97,7 @@ describe("reconcileSession", () => {
     expect(ids).toEqual(["turn-r1-user", "turn-r1-assistant"]);
   });
 
-  it("DB already has the user turn: drops the live user dup, keeps the live assistant", () => {
+  it("existing session (DB has a PRIOR turn): keeps the in-flight user + assistant", () => {
     useChatStore.setState({
       activeRunId: "r1",
       messages: [
@@ -105,7 +105,24 @@ describe("reconcileSession", () => {
         { id: "turn-r1-assistant", role: "assistant", content: "partial", createdAt: 2, streaming: true },
       ],
     });
-    // DB rebuild already contains a user row → live user would be a duplicate.
+    // The DB rebuild has a DIFFERENT, prior turn ("hi"/"hello"); the in-flight
+    // "do x" isn't persisted yet, so BOTH live bubbles must survive. (Dropping
+    // the live user whenever the DB had *any* user was the lost-prompt bug.)
+    useChatStore.getState().reconcileSession([dbUser, dbAsst]);
+    const ids = useChatStore.getState().messages.map((m) => m.id);
+    expect(ids).toEqual(["db-user", "db-asst", "turn-r1-user", "turn-r1-assistant"]);
+  });
+
+  it("DB already has THIS turn's user (same content): drops the live user dup", () => {
+    useChatStore.setState({
+      activeRunId: "r1",
+      messages: [
+        { id: "turn-r1-user", role: "user", content: "hi", createdAt: 1 },
+        { id: "turn-r1-assistant", role: "assistant", content: "partial", createdAt: 2, streaming: true },
+      ],
+    });
+    // The rebuild's last user IS this turn's prompt ("hi") → drop the live dup,
+    // keep the still-streaming assistant.
     useChatStore.getState().reconcileSession([dbUser, dbAsst]);
     const ids = useChatStore.getState().messages.map((m) => m.id);
     expect(ids).toEqual(["db-user", "db-asst", "turn-r1-assistant"]);
