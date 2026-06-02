@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff } from "lucide-react";
+import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff, Volume2, Square } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,6 +12,7 @@ import MermaidDiagram from "./MermaidDiagram";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import type { ChatMessage } from "@/lib/hermes-types";
 import type { ReactNode } from "react";
 
@@ -386,6 +387,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const showReasoning = useChatStore((s) => s.showReasoning);
+  const tts = useTextToSpeech();
 
   // Legacy kind=approval_notice from before the segment refactor.
   if (msg.kind === "approval_notice") {
@@ -498,6 +500,15 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
           <button onClick={copyContent} title="Copy" style={actionBtnStyle}>
             {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
+          {tts.supported && (
+            <button
+              onClick={() => (tts.speaking ? tts.stop() : tts.speak(getMessageText()))}
+              title={tts.speaking ? "Stop" : "Speak"}
+              style={actionBtnStyle}
+            >
+              {tts.speaking ? <Square size={12} /> : <Volume2 size={12} />}
+            </button>
+          )}
         </div>
       )}
     </div>
