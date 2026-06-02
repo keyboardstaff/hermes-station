@@ -3,6 +3,7 @@ import { Plus, MessageSquare, MoreHorizontal, Pencil, Download, Trash2, X, Check
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
+import { exportSessionsToPdf } from "@/lib/export-pdf";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Tooltip from "@/components/ui/Tooltip";
@@ -701,6 +702,12 @@ export default function SessionRecents({
             {
               icon: <Download size={13} />, label: "Export Markdown", action: () => {
                 exportSession(menu.sessionId, "markdown");
+                setMenu(null);
+              }
+            },
+            {
+              icon: <Download size={13} />, label: "Export PDF", action: () => {
+                exportSessionsToPdf([menu.sessionId]);
                 setMenu(null);
               }
             },

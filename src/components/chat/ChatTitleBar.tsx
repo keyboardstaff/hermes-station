@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { SessionSummary } from "@/lib/hermes-types";
 import PageTopBar from "@/components/layout/PageTopBar";
 import IconButton from "@/components/ui/IconButton";
+import { exportSessionsToPdf } from "@/lib/export-pdf";
 
 async function exportSession(sessionId: string, format: "json" | "markdown") {
   const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`);
@@ -169,6 +170,12 @@ export default function ChatTitleBar({
                       icon: <Download size={13} />, label: t.nav.exportMarkdown, action: () => {
                         setMenuOpen(false);
                         exportSession(activeSessionId, "markdown");
+                      }
+                    },
+                    {
+                      icon: <Download size={13} />, label: t.nav.exportPdf, action: () => {
+                        setMenuOpen(false);
+                        exportSessionsToPdf([activeSessionId]);
                       }
                     },
                     { icon: <Eraser size={13} />, label: t.nav.clearSession, action: handleClear },

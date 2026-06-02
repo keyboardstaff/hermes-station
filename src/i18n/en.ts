@@ -52,6 +52,7 @@ export const en: Translations = {
     clearSession: "Clear",
     exportJson: "Export JSON",
     exportMarkdown: "Export Markdown",
+    exportPdf: "Export PDF",
     collapseSidebar: "Collapse sidebar",
   },
 

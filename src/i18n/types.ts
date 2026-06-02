@@ -56,6 +56,7 @@ export interface Translations {
     clearSession: string;
     exportJson: string;
     exportMarkdown: string;
+    exportPdf: string;
   };
 
   /** Primary CTAs surfaced in the Sidebar header etc. */

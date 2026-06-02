@@ -1,51 +1,67 @@
 import { describe, it, expect } from "vitest";
-import { escapeHtml, buildSessionsPrintHtml } from "@/lib/export-pdf";
-import type { MessageRow } from "@/lib/session-messages";
-
-function row(role: string, content: MessageRow["content"]): MessageRow {
-  return { id: 1, role, content, tool_calls: null, tool_name: null, tool_call_id: null, timestamp: 0 };
-}
+import { escapeHtml, messageToMarkdown, extractMermaid, buildPrintDoc } from "@/lib/export-pdf";
+import type { ChatMessage } from "@/lib/hermes-types";
 
 describe("escapeHtml", () => {
   it("escapes the HTML-significant characters", () => {
-    expect(escapeHtml(`<script>"&"</script>`)).toBe("&lt;script&gt;&quot;&amp;&quot;&lt;/script&gt;");
+    expect(escapeHtml(`<a href="x">&</a>`)).toBe("&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;");
   });
 });
 
-describe("buildSessionsPrintHtml", () => {
-  it("renders one print section per session with role + content", () => {
-    const html = buildSessionsPrintHtml([
-      { id: "s1", messages: [row("user", "hi"), row("assistant", "hello")] },
-    ]);
-    expect(html).toContain("<section>");
-    expect(html).toContain("Session s1");
-    expect(html).toContain(">user<");
-    expect(html).toContain("hi");
-    expect(html).toContain("hello");
-    expect(html.startsWith("<!doctype html>")).toBe(true);
+describe("messageToMarkdown (strips tool cards)", () => {
+  it("keeps text segments and drops tool/approval segments", () => {
+    const msg: ChatMessage = {
+      id: "m1", role: "assistant", content: "", createdAt: 0,
+      segments: [
+        { type: "text", content: "Here is the answer." },
+        { type: "tool", tc: { id: "t1", toolName: "bash", status: "done", result: "secret-output" } },
+        { type: "text", content: "Done." },
+      ],
+    };
+    const md = messageToMarkdown(msg);
+    expect(md).toContain("Here is the answer.");
+    expect(md).toContain("Done.");
+    expect(md).not.toContain("secret-output");
+    expect(md).not.toContain("bash");
   });
 
-  it("escapes message content (no markup injection into the print window)", () => {
-    const html = buildSessionsPrintHtml([
-      { id: "s1", messages: [row("user", "<img src=x onerror=alert(1)>")] },
-    ]);
-    expect(html).not.toContain("<img src=x");
-    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+  it("falls back to content when there are no segments", () => {
+    expect(messageToMarkdown({ id: "m", role: "user", content: "hi there", createdAt: 0 })).toBe("hi there");
   });
 
-  it("coerces non-string (multimodal array / null) content without throwing", () => {
-    const html = buildSessionsPrintHtml([
-      { id: "s1", messages: [row("user", [{ type: "text", text: "x" }]), row("assistant", null)] },
-    ]);
-    expect(html).toContain("Session s1");
-    // array → JSON, null → empty; both escaped, neither throws.
-    expect(html).toContain("type");
+  it("returns empty for tool-role messages", () => {
+    expect(messageToMarkdown({ id: "m", role: "tool", content: "tool blob", createdAt: 0 })).toBe("");
+  });
+});
+
+describe("extractMermaid", () => {
+  it("replaces a mermaid fence with a placeholder and extracts the source", () => {
+    const { md, fences } = extractMermaid("before\n\n```mermaid\ngraph TD\nA-->B\n```\n\nafter");
+    expect(fences).toEqual(["graph TD\nA-->B"]);
+    expect(md).toContain("HMSMERMAIDPH0");
+    expect(md).not.toContain("graph TD");
+    expect(md).toContain("before");
+    expect(md).toContain("after");
   });
 
-  it("pluralizes the session count header", () => {
-    expect(buildSessionsPrintHtml([{ id: "a", messages: [] }])).toContain("1 session<");
-    expect(buildSessionsPrintHtml([
-      { id: "a", messages: [] }, { id: "b", messages: [] },
-    ])).toContain("2 sessions");
+  it("leaves non-mermaid markdown untouched", () => {
+    const { md, fences } = extractMermaid("# title\n\n```js\nconst x = 1;\n```");
+    expect(fences).toEqual([]);
+    expect(md).toContain("```js");
+  });
+});
+
+describe("buildPrintDoc", () => {
+  it("wraps body in a standalone doc with a CJK-capable font + count", () => {
+    const doc = buildPrintDoc("<section>x</section>", 1);
+    expect(doc.startsWith("<!doctype html>")).toBe(true);
+    expect(doc).toContain('<meta charset="utf-8">');
+    expect(doc).toContain("PingFang SC"); // CJK fallback so Chinese renders
+    expect(doc).toContain("1 session<");
+    expect(doc).toContain("<section>x</section>");
+  });
+
+  it("pluralizes the session count", () => {
+    expect(buildPrintDoc("", 3)).toContain("3 sessions");
   });
 });

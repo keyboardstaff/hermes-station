@@ -16,7 +16,7 @@ import { api } from "@/lib/api";
 
 import type { MessageRow } from "@/lib/session-messages";
 import { historyToChatMessages } from "@/lib/session-messages";
-import { printSessionsPdf } from "@/lib/export-pdf";
+import { exportSessionsToPdf } from "@/lib/export-pdf";
 
 function relativeTime(ts?: number): string {
   if (!ts) return "";
@@ -65,20 +65,11 @@ async function exportSessions(ids: string[], format: "json" | "markdown") {
   URL.revokeObjectURL(url);
 }
 
-// PDF export: open a print window with the full transcript (browser "Save as
-// PDF"). Same message fetch as exportSessions; rendering lives in export-pdf.ts.
+// PDF export: render the transcript (Markdown + math + Mermaid, tool cards
+// stripped) into a print window → browser "Save as PDF". Fetch + render live
+// in export-pdf.tsx so all call sites (here, ChatTitleBar, Recents) share it.
 async function exportSessionsPdf(ids: string[]) {
-  const results = await Promise.all(
-    ids.map((id) =>
-      api
-        .get<{ messages?: MessageRow[] }>(
-          `/api/sessions/${encodeURIComponent(id)}/messages?limit=5000`,
-        )
-        .catch(() => ({ messages: [] }))
-        .then((d) => ({ id, messages: d.messages ?? [] })),
-    ),
-  );
-  if (!printSessionsPdf(results)) alert("Allow pop-ups to export as PDF.");
+  if (!(await exportSessionsToPdf(ids))) alert("Allow pop-ups to export as PDF.");
 }
 
 const PAGE_SIZE = 50;

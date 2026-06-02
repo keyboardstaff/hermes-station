@@ -52,6 +52,7 @@ export const zh: Translations = {
     clearSession: "清除",
     exportJson: "导出 JSON",
     exportMarkdown: "导出 Markdown",
+    exportPdf: "导出 PDF",
     collapseSidebar: "收起侧边栏",
   },
 
