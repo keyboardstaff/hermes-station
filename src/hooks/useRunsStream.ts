@@ -43,10 +43,17 @@ export function useRunsStream() {
   const lastSeqRef = useRef(0);
   // MUST be invoked on detach — otherwise each new run leaks a closure in the global handlers Map.
   const offRunEventRef = useRef<(() => void) | null>(null);
+  // Bumped on every detach/attach. attachRun's async transcript-seed captures the
+  // generation it began in and bails if a newer attach/detach superseded it —
+  // otherwise a rapid session switch (B→A→B) lets run A's partial land in B's
+  // live turn (cross-session bleed) and leaks run A's channel into the global
+  // subscription set (replayed on every reconnect).
+  const attachGenRef = useRef(0);
 
   useEffect(() => { connect(); }, [connect]);
 
   const detach = useCallback(() => {
+    attachGenRef.current++;
     const ch = subscribedChannelRef.current;
     if (ch) {
       unsubscribe(ch);
@@ -101,19 +108,20 @@ export function useRunsStream() {
     if (prev === activeSessionId) return;
     lastSessionRef.current = activeSessionId;
     if (prev === null) return; // first send into a fresh session — sendMessage attaches.
-    const currentRun = useChatStore.getState().activeRunId;
-    if (currentRun && currentRun === activeSessionId) return;
 
-    // Tear down the previous session's live subscription.
+    // Tear down the previous session's live subscription. Do NOT null
+    // activeRunId/activeTurnId here: setActiveSession already re-pointed them at
+    // THIS session's in-flight run, and clearing them re-opens the window where
+    // the history reconcile (ChatPanel) sees no active run and wipes the live
+    // turn — the user's prompt + half-streamed answer vanish on switch.
     detach();
-    setActiveRunId(null);
-    setActiveTurn(null);
-
     if (!activeSessionId) return;
+
     const runId = useChatStore.getState().runningBySession[activeSessionId];
     if (!runId) return;
 
-    // Re-attach only if the server still considers the run live.
+    // Re-subscribe only if the server still considers the run live; a stale entry
+    // (the run finished while we were away) clears the run + drops the spinner.
     const targetSession = activeSessionId;
     let cancelled = false;
     fetch(`/api/runs/${encodeURIComponent(runId)}`)
@@ -124,6 +132,10 @@ export function useRunsStream() {
           setActiveRunId(runId);
           attachRun(runId);
         } else {
+          if (useChatStore.getState().activeRunId === runId) {
+            setActiveRunId(null);
+            setActiveTurn(null);
+          }
           clearRunningForSession(targetSession);
         }
       })
@@ -137,6 +149,9 @@ export function useRunsStream() {
     (runId: string) => {
       // Always detach first — stale closure with captured runId leaks + cross-pollinates.
       detach();
+      // Capture the generation this attach owns (detach bumped it). The async
+      // seed below bails if a newer attach/detach supersedes us mid-fetch.
+      const myGen = attachGenRef.current;
       // All streaming events target turn-<runId>-assistant; set before any frame lands.
       setActiveTurn(runId);
       lastSeqRef.current = 0;
@@ -255,41 +270,47 @@ export function useRunsStream() {
       // lastSeqRef dedups them (shouldApplyFrame) so nothing doubles. Fetch
       // failure → just subscribe (the ring replay alone reconstructs short runs).
       (async () => {
+        let data: {
+          seq?: number;
+          user_input?: string;
+          partial?: {
+            text?: string;
+            reasoning?: string;
+            tool_calls?: Array<{ tool_call_id: string; tool: string; preview?: string; status: ToolCall["status"] }>;
+          };
+        } | null = null;
         try {
           const r = await fetch(`/api/runs/${encodeURIComponent(runId)}/transcript`);
-          if (r.ok) {
-            const data = (await r.json()) as {
-              seq?: number;
-              user_input?: string;
-              partial?: {
-                text?: string;
-                reasoning?: string;
-                tool_calls?: Array<{ tool_call_id: string; tool: string; preview?: string; status: ToolCall["status"] }>;
-              };
-            };
-            // Restore the user bubble first — upstream persists it to state.db
-            // only on completion, so a DB rebuild on a mid-run refresh lacks it
-            // (the accumulator holds only the assistant side of the turn).
-            const userId = `turn-${runId}-user`;
-            if (data.user_input
-              && !useChatStore.getState().messages.some((m) => m.id === userId)) {
-              appendMessage({ id: userId, role: "user", content: data.user_input, createdAt: Date.now() });
-            }
-            const p = data.partial;
-            if (p && (p.text || (p.tool_calls && p.tool_calls.length > 0))) {
-              if (p.text) appendDelta(p.text);
-              if (p.reasoning && useChatStore.getState().reasoningEffort !== "none") {
-                appendReasoning(p.reasoning);
-              }
-              for (const tc of p.tool_calls ?? []) {
-                appendToolCallPart({
-                  id: tc.tool_call_id, toolName: tc.tool, preview: tc.preview, status: tc.status,
-                });
-              }
-              if (typeof data.seq === "number") lastSeqRef.current = data.seq;
-            }
-          }
+          if (r.ok) data = await r.json();
         } catch { /* best-effort; ring replay still reconstructs */ }
+        // A newer attach/detach superseded us while awaiting → bail before any
+        // store mutation or subscribe. Applying this run's partial now would
+        // bleed it into the now-active turn, and subscribing would leak this
+        // run's channel into the global subscription set.
+        if (attachGenRef.current !== myGen) return;
+        if (data) {
+          // Restore the user bubble first — upstream persists it to state.db
+          // only on completion, so a DB rebuild on a mid-run refresh lacks it
+          // (the accumulator holds only the assistant side of the turn).
+          const userId = `turn-${runId}-user`;
+          if (data.user_input
+            && !useChatStore.getState().messages.some((m) => m.id === userId)) {
+            appendMessage({ id: userId, role: "user", content: data.user_input, createdAt: Date.now() });
+          }
+          const p = data.partial;
+          if (p && (p.text || (p.tool_calls && p.tool_calls.length > 0))) {
+            if (p.text) appendDelta(p.text);
+            if (p.reasoning && useChatStore.getState().reasoningEffort !== "none") {
+              appendReasoning(p.reasoning);
+            }
+            for (const tc of p.tool_calls ?? []) {
+              appendToolCallPart({
+                id: tc.tool_call_id, toolName: tc.tool, preview: tc.preview, status: tc.status,
+              });
+            }
+            if (typeof data.seq === "number") lastSeqRef.current = data.seq;
+          }
+        }
         subscribe(channel);
       })();
 

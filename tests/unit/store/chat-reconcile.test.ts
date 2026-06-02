@@ -220,4 +220,33 @@ describe("run/session transitions", () => {
     expect(st.activeSessionId).toBe("s2");
     expect(st.isHistoryPending).toBe(true);
   });
+
+  it("switch to a RUNNING session, then reconcile, keeps the in-flight turn (no content loss)", () => {
+    // s2 is mid-run (run r2). The history reconcile lands while the run streams.
+    // Invariant the switch path depends on: setActiveSession points activeRunId at
+    // the target's own run, so reconcileSession preserves the live turn instead of
+    // wiping the prompt + half-streamed answer. (Re-introducing a null activeRunId
+    // on switch is exactly the lost-content bug.)
+    const s = useChatStore.getState();
+    s.setActiveSession("s1");
+    useChatStore.setState({ runningBySession: { s2: "r2" } });
+    s.setActiveSession("s2");
+    expect(useChatStore.getState().activeRunId).toBe("r2");
+    expect(useChatStore.getState().activeTurnId).toBe("r2");
+
+    // attachRun seeds the live turn from the transcript:
+    useChatStore.setState({
+      messages: [
+        { id: "turn-r2-user", role: "user", content: "hello", createdAt: 1 },
+        {
+          id: "turn-r2-assistant", role: "assistant", content: "",
+          segments: [{ type: "text", content: "half" }], createdAt: 2, streaming: true,
+        },
+      ],
+    });
+    // DB rebuild has no in-flight turn yet (upstream persists on completion).
+    useChatStore.getState().reconcileSession([]);
+    const ids = useChatStore.getState().messages.map((m) => m.id);
+    expect(ids).toEqual(["turn-r2-user", "turn-r2-assistant"]);
+  });
 });
