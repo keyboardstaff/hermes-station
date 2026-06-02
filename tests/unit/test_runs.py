@@ -475,6 +475,18 @@ async def test_slash_run_failure_uses_failed_not_error(quiet_hms_env) -> None:
 # RunHandle durable accumulator — in-flight turn survives ring eviction
 
 
+def test_user_display_text_extracts_prompt() -> None:
+    from server.runs import _user_display_text
+
+    assert _user_display_text("hello") == "hello"
+    # Multimodal: the user's typed prompt is the first text part.
+    assert _user_display_text([
+        {"type": "text", "text": "describe this"},
+        {"type": "image_url", "image_url": {"url": "data:..."}},
+    ]) == "describe this"
+    assert _user_display_text([{"type": "image_url", "image_url": {}}]) == ""
+
+
 def test_runhandle_accumulates_partial_turn() -> None:
     from server.runs import RunHandle
 
@@ -525,6 +537,7 @@ async def test_transcript_endpoint_returns_partial() -> None:
     try:
         handle = runs.RunHandle(
             run_id=_VALID_RUN_ID, session_id="s", status="running", created_at=0.0,
+            user_input="describe this",
         )
         handle.stamp({"event": "message.delta", "delta": "partial answer"})
         handle.stamp({"event": "tool.started", "tool_call_id": "t1", "tool": "shell", "preview": "ls"})
@@ -539,6 +552,8 @@ async def test_transcript_endpoint_returns_partial() -> None:
         data = json.loads(resp.body)
         assert data["status"] == "running"
         assert data["seq"] == 2
+        # The user prompt rides along so a mid-run refresh restores the user bubble.
+        assert data["user_input"] == "describe this"
         assert data["partial"]["text"] == "partial answer"
         assert data["partial"]["tool_calls"][0]["tool"] == "shell"
     finally:

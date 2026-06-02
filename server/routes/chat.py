@@ -179,6 +179,7 @@ async def get_session_interrupted(request: web.Request) -> web.Response:
     return web.json_response({
         "run_id": snap.get("run_id"),
         "updated_at": snap.get("updated_at"),
+        "user_input": snap.get("user_input", ""),
         "partial": snap.get("partial"),
     })
 

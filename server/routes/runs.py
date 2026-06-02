@@ -269,6 +269,7 @@ async def get_run_transcript(request: web.Request) -> web.Response:
         "session_id": handle.session_id,
         "status": handle.status,
         "seq": snap["seq"],
+        "user_input": handle.user_input,
         "partial": {
             "text": snap["text"],
             "reasoning": snap["reasoning"],

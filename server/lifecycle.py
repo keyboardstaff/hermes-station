@@ -270,6 +270,38 @@ def restart_gateway() -> dict[str, Any]:
     return {"ok": True, "reason": "restarted"}
 
 
+def restart_gateway_under_profile(profile: str) -> dict[str, Any]:
+    """`hermes -p <profile> gateway restart`, synchronously, streaming upstream's
+    own output to the caller's terminal.
+
+    The in-process ``restart_gateway()`` kickstarts the service under its
+    install-time plist env; if the active profile was switched *after* install,
+    that env has the wrong (default) HERMES_HOME and upstream warns it's writing
+    to the wrong profile. Delegating to the ``-p`` CLI lets upstream resolve the
+    profile's home itself — the same path ``spawn_profile_gateway`` uses for
+    start/stop.
+    """
+    import shlex
+    import subprocess
+
+    from server.lib.upstream_paths import hermes_executable
+
+    exe = hermes_executable()
+    prefix = shlex.split(exe) if " " in exe else [exe]
+    argv = [*prefix, "-p", profile, "gateway", "restart"]
+    env = dict(os.environ)
+    env.setdefault("HERMES_NONINTERACTIVE", "1")
+    env.pop("HERMES_HOME", None)  # -p sets it from argv; drop any inherited override
+    try:
+        proc = subprocess.run(argv, env=env, timeout=120, check=False)
+    except Exception as exc:
+        logger.exception("[hms.lifecycle] restart_gateway_under_profile failed")
+        return {"ok": False, "reason": "spawn_failed", "error": str(exc)}
+    if proc.returncode == 0:
+        return {"ok": True, "reason": "restarted"}
+    return {"ok": False, "reason": "service_command_failed", "exit_code": proc.returncode}
+
+
 def get_gateway_status() -> dict[str, Any]:
     """live_pids defaults to [] — the SPA's restart-PID dance spins forever on None."""
     find_gateway_pids = shim.gateway.find_gateway_pids

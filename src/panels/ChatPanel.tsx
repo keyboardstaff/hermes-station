@@ -133,14 +133,26 @@ export default function ChatPanel() {
         // returns null if the run is actually still live (resuming over the WS).
         fetch(`/api/sessions/${encodeURIComponent(fetchingSessionId)}/interrupted`)
           .then((r) => (r.ok ? r.json() : null))
-          .then((data: { run_id?: string; partial?: { text?: string } | null } | null) => {
+          .then((data: { run_id?: string; user_input?: string; partial?: { text?: string } | null } | null) => {
             if (!data || loadedSessionRef.current !== fetchingSessionId) return;
             const text = data.partial?.text;
-            if (!text) return;
+            const userInput = data.user_input;
+            if (!text && !userInput) return;
+            const stamp = data.run_id ?? Date.now();
+            if (userInput) {
+              appendMessage({
+                id: `interrupted-user-${stamp}`,
+                role: "user",
+                content: userInput,
+                createdAt: Date.now(),
+              });
+            }
             appendMessage({
-              id: `interrupted-${data.run_id ?? Date.now()}`,
+              id: `interrupted-${stamp}`,
               role: "assistant",
-              content: `${text}\n\n_⚠️ Response interrupted — the gateway restarted mid-reply._`,
+              content: text
+                ? `${text}\n\n_⚠️ Response interrupted — the gateway restarted mid-reply._`
+                : "_⚠️ Response interrupted — the gateway restarted before replying._",
               createdAt: Date.now(),
             });
           })

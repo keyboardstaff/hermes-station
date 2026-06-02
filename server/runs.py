@@ -44,7 +44,8 @@ async def _snapshot_loop(handle: RunHandle, loop: asyncio.AbstractEventLoop) -> 
             if not (snap["text"] or snap["reasoning"] or snap["tool_calls"]):
                 continue
             await loop.run_in_executor(
-                None, run_snapshot.write, handle.run_id, handle.session_id, snap,
+                None, run_snapshot.write,
+                handle.run_id, handle.session_id, snap, handle.user_input,
             )
     except asyncio.CancelledError:
         raise
@@ -65,6 +66,10 @@ class RunHandle:
     # Profile this run executes under (owner review D17). None / "default" runs
     # on the process HERMES_HOME; a named profile re-scopes via profile_run.
     profile: str | None = None
+    # The user's prompt text — kept so a re-attach (refresh mid-run) can restore
+    # the user bubble too; upstream only persists it to state.db on completion,
+    # so without this a refresh before completion loses the user's message.
+    user_input: str = ""
     output: str | None = None
     error: str | None = None
     usage: dict[str, int] = field(default_factory=dict)
@@ -211,6 +216,19 @@ def _terminal_frame(handle: RunHandle, event: str, **fields: Any) -> dict:
     })
 
 
+def _user_display_text(input_data: str | list[dict[str, Any]]) -> str:
+    """The user's typed prompt, for restoring the user bubble on re-attach — the
+    first text part of a multimodal input, or the raw string."""
+    if isinstance(input_data, str):
+        return input_data
+    for item in input_data:
+        if isinstance(item, dict) and item.get("type") == "text":
+            text = item.get("text")
+            if isinstance(text, str) and text.strip():
+                return text
+    return ""
+
+
 async def start_run(
     *,
     input_data: str | list[dict[str, Any]],
@@ -234,6 +252,7 @@ async def start_run(
         model=model,
         provider=provider,
         profile=profile,
+        user_input=_user_display_text(input_data),
     )
     await registry.reserve(handle, config_reader.max_concurrent_runs())
 

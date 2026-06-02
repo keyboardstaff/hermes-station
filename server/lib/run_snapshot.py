@@ -26,11 +26,12 @@ def _path(run_id: str) -> Path:
     return run_snapshots_dir() / f"{run_id}.json"
 
 
-def write(run_id: str, session_id: str, partial: dict) -> None:
+def write(run_id: str, session_id: str, partial: dict, user_input: str = "") -> None:
     """Atomically checkpoint the in-flight partial (tmp + rename)."""
     payload = {
         "run_id": run_id,
         "session_id": session_id,
+        "user_input": user_input,
         "partial": partial,
         "updated_at": time.time(),
     }

@@ -19,11 +19,15 @@ _RUN_B = "run_" + "b" * 32
 
 
 def test_write_and_orphan_roundtrip(quiet_hms_env) -> None:
-    run_snapshot.write(_RUN_A, "sess-1", {"text": "hi", "reasoning": "", "tool_calls": []})
+    run_snapshot.write(
+        _RUN_A, "sess-1", {"text": "hi", "reasoning": "", "tool_calls": []},
+        user_input="what is 2+2",
+    )
     orphan = run_snapshot.orphan_for_session("sess-1")
     assert orphan is not None
     assert orphan["run_id"] == _RUN_A
     assert orphan["partial"]["text"] == "hi"
+    assert orphan["user_input"] == "what is 2+2"  # user prompt recovered too
 
 
 def test_orphan_none_for_unknown_session(quiet_hms_env) -> None:

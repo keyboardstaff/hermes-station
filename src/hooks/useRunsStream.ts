@@ -253,12 +253,21 @@ export function useRunsStream() {
           if (r.ok) {
             const data = (await r.json()) as {
               seq?: number;
+              user_input?: string;
               partial?: {
                 text?: string;
                 reasoning?: string;
                 tool_calls?: Array<{ tool_call_id: string; tool: string; preview?: string; status: ToolCall["status"] }>;
               };
             };
+            // Restore the user bubble first — upstream persists it to state.db
+            // only on completion, so a DB rebuild on a mid-run refresh lacks it
+            // (the accumulator holds only the assistant side of the turn).
+            const userId = `turn-${runId}-user`;
+            if (data.user_input
+              && !useChatStore.getState().messages.some((m) => m.id === userId)) {
+              appendMessage({ id: userId, role: "user", content: data.user_input, createdAt: Date.now() });
+            }
             const p = data.partial;
             if (p && (p.text || (p.tool_calls && p.tool_calls.length > 0))) {
               if (p.text) appendDelta(p.text);
@@ -279,7 +288,7 @@ export function useRunsStream() {
 
       return offRunEvent;
     },
-    [appendDelta, appendReasoning, appendToolCallPart, upsertToolCall,
+    [appendMessage, appendDelta, appendReasoning, appendToolCallPart, upsertToolCall,
       patchToolResultsById, setFinalContent, setActiveTurn, setActiveRunId,
       clearRunningForSession, queryClient, subscribe, on, detach]
   );

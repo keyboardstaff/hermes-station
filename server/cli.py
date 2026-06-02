@@ -221,8 +221,15 @@ def _cmd_status(_args: argparse.Namespace) -> int:
 def _cmd_restart(_args: argparse.Namespace) -> int:
     # Same in-process service-manager call as `hermes gateway restart` (and
     # symmetric with `hms start` / `hms stop`); it prints its own
-    # "✓ Service restarted".
-    out = lifecycle.restart_gateway()
+    # "✓ Service restarted". Under a non-default active profile, restart via the
+    # `-p` CLI so the gateway comes back up on that profile's HERMES_HOME instead
+    # of the service's install-time (default) plist env.
+    from server.lib.profile_run import active_profile_name
+    active = active_profile_name()
+    out = (
+        lifecycle.restart_gateway_under_profile(active)
+        if active else lifecycle.restart_gateway()
+    )
     if out["ok"]:
         return 0
     reason = out.get("reason", "unknown")
