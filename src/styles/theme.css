@@ -420,6 +420,26 @@ body,
   animation: slideDown 200ms ease-in forwards;
 }
 
+/* Command palette enter/exit — keeps the top anchor (translateX only), unlike
+   slideUp/Down which re-center vertically. */
+@keyframes hms-palette-in {
+  from { opacity: 0; transform: translate(-50%, -6px) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes hms-palette-out {
+  from { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -6px) scale(0.98); }
+}
+
+.animate-paletteIn {
+  animation: hms-palette-in 200ms ease-out forwards;
+}
+
+.animate-paletteOut {
+  animation: hms-palette-out 200ms ease-in forwards;
+}
+
 @keyframes contentUp {
   from {
     opacity: 0.92;
