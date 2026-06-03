@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import StatusDot from "@/components/ui/StatusDot";
 import RenameProfileDialog from "@/components/profile/RenameProfileDialog";
 import MarkdownDocEditor from "@/components/profile/MarkdownDocEditor";
+import MemoryFacts from "@/components/profile/MemoryFacts";
 import { useThemeStore } from "@/store/app";
 import {
   useProfiles,
@@ -27,11 +28,12 @@ import PageTopBar from "@/components/layout/PageTopBar";
 /**
  * Profile page. Owns its own list↔detail layout via PanelTwoColumn. Each
  * profile is its own HERMES_HOME, so the detail surfaces that profile's
- * own docs as tabs: Overview / SOUL.md / MEMORY.md / USER.md (the latter
- * two replace the retired global /memory page).
+ * own docs as tabs: Overview / SOUL.md / MEMORY.md / USER.md / Memory store
+ * (the markdown docs + the structured holographic memory store all live here,
+ * per-profile — there is no top-level /memory page).
  */
 
-type ProfileDocTab = "soul" | "memory" | "user";
+type ProfileDocTab = "soul" | "memory" | "user" | "store";
 
 export default function ProfilePanel() {
   const { t } = useI18n();
@@ -110,6 +112,7 @@ const DOC_TABS: { id: ProfileDocTab; label: string }[] = [
   { id: "soul", label: "SOUL.md" },
   { id: "memory", label: "MEMORY.md" },
   { id: "user", label: "USER.md" },
+  { id: "store", label: "Memory store" },
 ];
 
 function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typeof useI18n>["t"]["profile"] }) {
@@ -185,6 +188,10 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
 
       {tab === "soul" ? (
         <SoulTab name={profile.name} monacoTheme={monacoTheme} />
+      ) : tab === "store" ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <MemoryFacts profile={profile.name} />
+        </div>
       ) : (
         <MemoryTab name={profile.name} tab={tab} monacoTheme={monacoTheme} />
       )}

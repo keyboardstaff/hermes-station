@@ -46,7 +46,6 @@ export interface Translations {
     analytics: string;
     channels: string;
     logs: string;
-    memory: string;
     files: string;
     profile: string;
     settings: string;

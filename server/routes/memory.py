@@ -16,7 +16,7 @@ import logging
 
 from aiohttp import web
 
-from server.lib.profile_run import active_profile_home
+from server.lib.profile_run import resolve_profile_home
 from server.lib.upstream_paths import memory_store_path
 from server.lib.upstream_shim import shim
 
@@ -43,11 +43,13 @@ def _remove_fact(store_cls: type, path: str, fact_id: int) -> bool:
 
 
 @router.get("/api/memory")
-async def list_memory(_request: web.Request) -> web.Response:
+async def list_memory(request: web.Request) -> web.Response:
     store_cls = shim.memory.MemoryStore
     if store_cls is None:
         return web.json_response({"available": False, "facts": []})
-    path = memory_store_path(active_profile_home())
+    # ``?profile=<name>`` scopes to a specific profile's store (the Profile panel
+    # inspects any profile); absent / "default" → the process home.
+    path = memory_store_path(resolve_profile_home(request.query.get("profile")))
     if not path.exists():
         # Holographic is present but nothing's been remembered yet — do NOT
         # open the store (that would create an empty db side-effect).
@@ -71,7 +73,7 @@ async def delete_memory(request: web.Request) -> web.Response:
         fact_id = int(request.match_info["fact_id"])
     except ValueError:
         return web.json_response({"error": "invalid_fact_id"}, status=400)
-    path = memory_store_path(active_profile_home())
+    path = memory_store_path(resolve_profile_home(request.query.get("profile")))
     if not path.exists():
         return web.json_response({"removed": False})
     try:

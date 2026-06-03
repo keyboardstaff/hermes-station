@@ -17,15 +17,18 @@ interface MemoryResponse {
   facts: MemoryFact[];
 }
 
-/** Structured memory (data sovereignty): list + forget facts the agent stored.
- *  Backed by the holographic provider's per-profile memory_store.db. */
-export function useMemory() {
+/** Structured memory (data sovereignty): list + forget facts the agent stored
+ *  for a given profile. Backed by the holographic provider's per-profile
+ *  memory_store.db; `profile` omitted / "default" → the process home. */
+export function useMemory(profile?: string) {
   const qc = useQueryClient();
+  const qs = profile ? `?profile=${encodeURIComponent(profile)}` : "";
+  const key = ["memory", profile ?? null] as const;
 
   const query = useQuery<MemoryResponse>({
-    queryKey: ["memory"],
+    queryKey: key,
     queryFn: async () => {
-      const r = await fetch("/api/memory");
+      const r = await fetch(`/api/memory${qs}`);
       if (!r.ok) throw new Error(`${r.status}`);
       return r.json();
     },
@@ -34,14 +37,14 @@ export function useMemory() {
 
   const forget = useMutation({
     mutationFn: async (factId: number) => {
-      const r = await fetch(`/api/memory/${factId}`, {
+      const r = await fetch(`/api/memory/${factId}${qs}`, {
         method: "DELETE",
         headers: { "X-HMS-CSRF": "1" },
       });
       if (!r.ok) throw new Error(`${r.status}`);
       return r.json() as Promise<{ removed: boolean }>;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["memory"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 
   return { query, forget };

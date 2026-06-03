@@ -43,7 +43,6 @@ export const en: Translations = {
     analytics: "Analytics",
     channels: "Channels",
     logs: "Logs",
-    memory: "Memory",
     files: "Files",
     profile: "Profile",
     settings: "Settings",

@@ -78,7 +78,7 @@
 | Persona file (SOUL.md) | profile `SOUL.md` | profiles route get/put SOUL | ✅ |
 | Memory files (MEMORY.md / USER.md) | profile `memories/` | profiles route get/put memory | ✅ |
 | Profiles (full HERMES_HOME) CRUD + sticky-active | `hermes_cli.profiles` | profiles route + ProfilePanel | ✅ |
-| **Structured memory store** | `memory_store.db` (holographic), memory nudges | **`memory` route + `MemoryPanel`** — view + forget facts for the **holographic** provider's local store (D44); remote providers (honcho/mem0/…) degrade to a notice | ◐ |
+| **Structured memory store** | `memory_store.db` (holographic), memory nudges | **Profile panel → "Memory store" tab** — view + forget facts for the **holographic** provider's per-profile local store (D44); remote providers (honcho/mem0/…) degrade to a notice | ◐ |
 | **Honcho dialectic user model** | `config.honcho`, `honcho` toolset | — | ✗ |
 
 ## 5. Automation & tasks

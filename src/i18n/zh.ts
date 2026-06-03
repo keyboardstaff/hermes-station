@@ -43,7 +43,6 @@ export const zh: Translations = {
     analytics: "分析",
     channels: "频道",
     logs: "日志",
-    memory: "记忆",
     files: "文件",
     profile: "配置",
     settings: "设置",

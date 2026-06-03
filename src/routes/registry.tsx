@@ -13,7 +13,7 @@ import {
   MessageSquare, LayoutList, Users, Kanban, Clock,
   Sparkles, Puzzle, Cpu,
   BarChart3, Globe, FileText, FolderOpen,
-  User, Settings, Brain,
+  User, Settings,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Translations } from "@/i18n/types";
@@ -57,7 +57,6 @@ export const ROUTES: RouteRecord[] = [
   // Group B (observability): analytics, logs                    (order 5–6)
   { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), module: "manage", order: 5 },
   { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      module: "manage", order: 6 },
-  { path: "/memory",    labelKey: "memory",    icon: Brain,       panel: lazy(() => import("@/panels/MemoryPanel")),    module: "manage", order: 7 },
 
   // ── UserButton routes (popover, not module nav) ────────────────────
   { path: "/profile",  labelKey: "profile",  icon: User,          panel: lazy(() => import("@/panels/ProfilePanel")),  module: "manage", order: 99, hidden: true },
