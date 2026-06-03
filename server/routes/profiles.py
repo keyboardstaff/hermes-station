@@ -518,6 +518,44 @@ async def put_profile_config_values(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "sha256": _sha256(src)})
 
 
+@router.get("/api/profiles/{name}/personalities")
+async def get_profile_personalities(request: web.Request) -> web.Response:
+    """A profile's defined personality overlays (``agent.personalities`` in its
+    config.yaml). Each is a name → prompt; the prompt may be a plain string or a
+    ``{description, system_prompt}`` dict. Read-only — the *active* overlay is a
+    runtime, per-chat choice (the ``/personality`` picker), not a profile setting."""
+    name = request.match_info["name"]
+    if not _PROFILE_ID_RE.match(name):
+        return web.json_response({"error": "invalid_profile_name"}, status=400)
+    profile_dir = _profile_dir(name)
+    if profile_dir is None:
+        return web.json_response({"error": "upstream_unavailable"}, status=503)
+    try:
+        text, _mtime = await asyncio.to_thread(_read_profile_config, profile_dir)
+    except OSError:
+        logger.exception("[hms.profiles] config read failed for %r", name)
+        return web.json_response({"error": "read_failed"}, status=500)
+    try:
+        cfg = yaml.safe_load(text) or {}
+    except yaml.YAMLError:
+        cfg = {}
+    raw: dict = {}
+    if isinstance(cfg, dict):
+        agent = cfg.get("agent")
+        if isinstance(agent, dict) and isinstance(agent.get("personalities"), dict):
+            raw = agent["personalities"]
+    out = []
+    for pname, val in raw.items():
+        if isinstance(val, dict):
+            description = str(val.get("description") or "")
+            prompt = str(val.get("system_prompt") or "")
+        else:
+            description = ""
+            prompt = str(val or "")
+        out.append({"name": str(pname), "description": description, "prompt": prompt})
+    return web.json_response({"personalities": out})
+
+
 def attach(app: web.Application) -> None:
     app.add_routes(router)
 

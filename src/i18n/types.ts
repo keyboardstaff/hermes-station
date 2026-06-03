@@ -22,6 +22,14 @@ export interface Translations {
     trust: string;
   };
 
+  /** Profile personality overlays tab. */
+  personality: {
+    explainer: string;
+    empty: string;
+    copyCommand: string;
+    copied: string;
+  };
+
   /** ⌘K command palette (search + navigate + actions). */
   palette: {
     placeholder: string;

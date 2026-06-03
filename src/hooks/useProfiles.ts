@@ -86,6 +86,28 @@ export function useSetProfileSoul() {
   });
 }
 
+// ── Per-profile personality overlays (agent.personalities in config.yaml) ──
+// Read-only: the defined overlays for a profile. The *active* overlay is a
+// runtime, per-chat choice (the /personality picker), not a profile setting.
+
+export interface Personality {
+  name: string;
+  description: string;
+  prompt: string;
+}
+
+export function useProfilePersonalities(name: string | null) {
+  return useQuery<{ personalities: Personality[] }>({
+    queryKey: ["profile-personalities", name],
+    queryFn: () =>
+      api.get<{ personalities: Personality[] }>(
+        `/api/profiles/${encodeURIComponent(name!)}/personalities`,
+      ),
+    enabled: !!name,
+    staleTime: 10_000,
+  });
+}
+
 // ── Per-profile memory docs (memories/MEMORY.md, memories/USER.md) ───
 // Each profile is its own HERMES_HOME — these read/write that profile's
 // own memory files, distinct from any other profile's.

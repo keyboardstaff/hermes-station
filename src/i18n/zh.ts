@@ -20,6 +20,13 @@ export const zh: Translations = {
     trust: "可信度",
   },
 
+  personality: {
+    explainer: "该身份定义的人格叠加层。在聊天中用 /personality <名称> 应用(用 /personality 清除)。",
+    empty: "该身份未定义人格。可在 config.yaml 的 agent.personalities 下添加。",
+    copyCommand: "复制 /personality 命令",
+    copied: "已复制",
+  },
+
   palette: {
     placeholder: "搜索或执行命令…",
     actions: "操作",

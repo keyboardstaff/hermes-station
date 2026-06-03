@@ -144,6 +144,40 @@ async def test_get_values_parses_yaml(app_server):
 
 
 @pytest.mark.asyncio
+async def test_get_personalities_parses_both_shapes(app_server):
+    base, prof = app_server
+    prof.mkdir(parents=True, exist_ok=True)
+    (prof / "config.yaml").write_text(
+        "agent:\n"
+        "  personalities:\n"
+        "    coder: 'You are a terse engineer.'\n"
+        "    mentor:\n"
+        "      description: Patient teacher\n"
+        "      system_prompt: 'Explain step by step.'\n",
+        encoding="utf-8",
+    )
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/profiles/{PROFILE}/personalities") as r:
+            assert r.status == 200
+            data = await r.json()
+    ps = {p["name"]: p for p in data["personalities"]}
+    assert ps["coder"]["prompt"] == "You are a terse engineer."
+    assert ps["coder"]["description"] == ""
+    assert ps["mentor"]["description"] == "Patient teacher"
+    assert ps["mentor"]["prompt"] == "Explain step by step."
+
+
+@pytest.mark.asyncio
+async def test_get_personalities_empty_when_none(app_server):
+    base, prof = app_server
+    prof.mkdir(parents=True, exist_ok=True)
+    (prof / "config.yaml").write_text("model: x\n", encoding="utf-8")
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/profiles/{PROFILE}/personalities") as r:
+            assert (await r.json())["personalities"] == []
+
+
+@pytest.mark.asyncio
 async def test_put_values_sets_dotpaths_and_preserves_comments(app_server):
     base, prof = app_server
     prof.mkdir(parents=True, exist_ok=True)

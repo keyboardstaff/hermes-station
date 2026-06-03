@@ -6,6 +6,7 @@ import StatusDot from "@/components/ui/StatusDot";
 import RenameProfileDialog from "@/components/profile/RenameProfileDialog";
 import MarkdownDocEditor from "@/components/profile/MarkdownDocEditor";
 import MemoryFacts from "@/components/profile/MemoryFacts";
+import Personalities from "@/components/profile/Personalities";
 import { useThemeStore } from "@/store/app";
 import {
   useProfiles,
@@ -28,14 +29,14 @@ import PageTopBar from "@/components/layout/PageTopBar";
 /**
  * Profile page. Owns its own list↔detail layout via PanelTwoColumn. Each
  * profile is its own HERMES_HOME, so the detail surfaces that profile's
- * own docs as tabs: Overview / SOUL.md / USER.md / MEMORY.md / Memory store
- * (the markdown docs + the structured holographic memory store all live here,
- * per-profile — there is no top-level /memory page).
+ * own docs as tabs: Overview / SOUL.md / Personality / USER.md / MEMORY.md /
+ * Memory store (the markdown docs, the personality overlays, and the structured
+ * holographic memory store all live here, per-profile — no top-level pages).
  */
 
-// Tab order follows the memory layering: identity (SOUL) → user model (USER) →
-// the agent's accumulated notes (MEMORY) → the structured store.
-type ProfileDocTab = "soul" | "user" | "memory" | "store";
+// Tab order: persona (SOUL base + Personality overlays) → the memory layering
+// (USER model → the agent's accumulated MEMORY notes → the structured store).
+type ProfileDocTab = "soul" | "personality" | "user" | "memory" | "store";
 
 export default function ProfilePanel() {
   const { t } = useI18n();
@@ -112,6 +113,7 @@ export default function ProfilePanel() {
 
 const DOC_TABS: { id: ProfileDocTab; label: string }[] = [
   { id: "soul", label: "SOUL.md" },
+  { id: "personality", label: "Personality" },
   { id: "user", label: "USER.md" },
   { id: "memory", label: "MEMORY.md" },
   { id: "store", label: "Memory store" },
@@ -190,6 +192,10 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
 
       {tab === "soul" ? (
         <SoulTab name={profile.name} monacoTheme={monacoTheme} />
+      ) : tab === "personality" ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <Personalities profile={profile.name} />
+        </div>
       ) : tab === "store" ? (
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <MemoryFacts profile={profile.name} />

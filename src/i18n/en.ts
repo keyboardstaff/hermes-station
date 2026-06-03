@@ -20,6 +20,13 @@ export const en: Translations = {
     trust: "trust",
   },
 
+  personality: {
+    explainer: "Personality overlays defined for this profile. Apply one in chat with /personality <name> (clear with /personality).",
+    empty: "No personalities defined for this profile. Add them under agent.personalities in config.yaml.",
+    copyCommand: "Copy /personality command",
+    copied: "Copied",
+  },
+
   palette: {
     placeholder: "Search or run a command…",
     actions: "Actions",
