@@ -456,6 +456,8 @@ export const zh: Translations = {
   profile: {
     refresh: "刷新",
     newProfile: "新建身份",
+    export: "导出",
+    importProfile: "导入身份",
     listLabel: "身份列表",
     loading: "加载中…",
     errorLoading: "加载身份失败。",

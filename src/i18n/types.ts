@@ -480,6 +480,8 @@ export interface Translations {
   profile: {
     refresh: string;
     newProfile: string;
+    export: string;
+    importProfile: string;
     listLabel: string;
     loading: string;
     errorLoading: string;

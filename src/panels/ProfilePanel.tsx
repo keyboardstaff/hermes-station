@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Pencil, User, Play, Square } from "lucide-react";
+import { Trash2, Pencil, User, Play, Square, Download } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
 import StatusDot from "@/components/ui/StatusDot";
@@ -37,6 +37,17 @@ import PageTopBar from "@/components/layout/PageTopBar";
 // Tab order: persona (SOUL base + Personality overlays) → the memory layering
 // (USER model → the agent's accumulated MEMORY notes → the structured store).
 type ProfileDocTab = "soul" | "personality" | "user" | "memory" | "store";
+
+/** Download a profile as a .tar.gz (the server sets Content-Disposition). A
+ *  same-origin anchor click carries the auth cookie without navigating away. */
+function downloadProfileExport(name: string) {
+  const a = document.createElement("a");
+  a.href = `/api/profiles/${encodeURIComponent(name)}/export`;
+  a.download = `${name}.tar.gz`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 export default function ProfilePanel() {
   const { t } = useI18n();
@@ -247,6 +258,10 @@ function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typ
           </Button>
         )}
         <div style={{ flex: 1 }} />
+        <Button size="sm" onClick={() => downloadProfileExport(profile.name)}>
+          <Download size={12} />
+          {pf?.export ?? "Export"}
+        </Button>
         <Button size="sm" onClick={() => setRenameOpen(true)}>
           <Pencil size={12} />
           {pf?.rename ?? "Rename"}

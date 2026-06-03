@@ -318,6 +318,12 @@ class _Profiles:
     seed_profile_skills: Callable | None = field(
         default_factory=lambda: _try_import("hermes_cli.profiles", "seed_profile_skills")
     )
+    export_profile: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.profiles", "export_profile")
+    )
+    import_profile: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.profiles", "import_profile")
+    )
     # Context-local HERMES_HOME override (ContextVar) — lets a single in-process
     # run re-scope to another profile's home without a restart, the same way
     # upstream's cron scheduler runs per-job profiles. Consumed by

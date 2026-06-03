@@ -457,6 +457,8 @@ export const en: Translations = {
   profile: {
     refresh: "Refresh",
     newProfile: "New profile",
+    export: "Export",
+    importProfile: "Import profile",
     listLabel: "Profiles",
     loading: "Loading…",
     errorLoading: "Failed to load profiles.",

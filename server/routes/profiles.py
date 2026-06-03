@@ -14,11 +14,12 @@ import asyncio
 import hashlib
 import logging
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import yaml
-from aiohttp import web
+from aiohttp import BodyPartReader, web
 
 from server.lib import yaml_edit
 from server.lib.upstream_shim import shim
@@ -554,6 +555,94 @@ async def get_profile_personalities(request: web.Request) -> web.Response:
             prompt = str(val or "")
         out.append({"name": str(pname), "description": description, "prompt": prompt})
     return web.json_response({"personalities": out})
+
+
+# Cap an uploaded profile archive (config-level export — no sessions/logs) so a
+# rogue upload can't exhaust memory.
+_IMPORT_MAX_BYTES = 256 * 1024 * 1024
+
+
+@router.get("/api/profiles/{name}/export")
+async def export_profile_route(request: web.Request) -> web.Response:
+    """Stream a profile as a ``.tar.gz`` (upstream `export_profile`, which omits
+    sessions/logs via its own ignore list) for backup / migration / sharing."""
+    fn = shim.profiles.export_profile
+    if fn is None:
+        return web.json_response({"error": "upstream_unavailable"}, status=503)
+    name = request.match_info["name"]
+    if not _PROFILE_ID_RE.match(name):
+        return web.json_response({"error": "invalid_profile_name"}, status=400)
+    if _profile_dir(name) is None:
+        return web.json_response({"error": "upstream_unavailable"}, status=503)
+
+    def _make() -> bytes:
+        with tempfile.TemporaryDirectory() as td:
+            archive = fn(name, str(Path(td) / f"{name}.tar.gz"))
+            return Path(archive).read_bytes()
+
+    try:
+        data = await asyncio.get_running_loop().run_in_executor(None, _make)
+    except Exception:
+        logger.exception("[hms.profiles] export failed for %r", name)
+        return web.json_response({"error": "export_failed"}, status=500)
+    return web.Response(
+        body=data,
+        headers={
+            "Content-Type": "application/gzip",
+            "Content-Disposition": f'attachment; filename="{name}.tar.gz"',
+        },
+    )
+
+
+@router.post("/api/profiles/import")
+async def import_profile_route(request: web.Request) -> web.Response:
+    """Create a new profile from an uploaded ``.tar.gz`` (multipart: ``file`` +
+    optional ``name``). Extraction is upstream's safe-extract path."""
+    fn = shim.profiles.import_profile
+    if fn is None:
+        return web.json_response({"error": "upstream_unavailable"}, status=503)
+    try:
+        reader = await request.multipart()
+    except Exception:
+        return web.json_response({"error": "multipart_parse_failed"}, status=400)
+
+    archive_bytes: bytes | None = None
+    override_name: str | None = None
+    while True:
+        part = await reader.next()
+        if part is None:
+            break
+        if not isinstance(part, BodyPartReader):
+            continue  # narrow away nested multipart groups
+        if part.name == "file":
+            archive_bytes = await part.read(decode=False)
+        elif part.name == "name":
+            raw = (await part.read(decode=True)).decode("utf-8", "replace").strip()
+            override_name = raw or None
+
+    if not archive_bytes:
+        return web.json_response({"error": "no_file"}, status=400)
+    if len(archive_bytes) > _IMPORT_MAX_BYTES:
+        return web.json_response({"error": "too_large"}, status=413)
+    if override_name is not None and not _PROFILE_ID_RE.match(override_name):
+        return web.json_response({"error": "invalid_profile_name"}, status=400)
+
+    def _do() -> str:
+        with tempfile.TemporaryDirectory() as td:
+            arc = Path(td) / "import.tar.gz"
+            arc.write_bytes(archive_bytes)
+            return Path(fn(str(arc), override_name)).name
+
+    try:
+        new_name = await asyncio.get_running_loop().run_in_executor(None, _do)
+    except FileNotFoundError:
+        return web.json_response({"error": "archive_invalid"}, status=400)
+    except ValueError as exc:
+        return web.json_response({"error": "import_rejected", "detail": str(exc)}, status=400)
+    except Exception:
+        logger.exception("[hms.profiles] import failed")
+        return web.json_response({"error": "import_failed"}, status=500)
+    return web.json_response({"ok": True, "name": new_name})
 
 
 def attach(app: web.Application) -> None:

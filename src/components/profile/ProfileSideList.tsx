@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, User } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, RefreshCw, User, Upload } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
 import { useProfiles, type ProfileInfo } from "@/hooks/useProfiles";
 import { useProfileSelection } from "@/store/panel-selection";
@@ -23,6 +24,36 @@ export default function ProfileSideList() {
   const setSelected = useProfileSelection((s) => s.setSelected);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+
+  const onImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-importing the same filename
+    if (!file) return;
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await fetch("/api/profiles/import", {
+        method: "POST",
+        headers: { "X-HMS-CSRF": "1" },
+        body: form,
+      });
+      const payload = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        alert(payload?.detail || payload?.error || `Import failed (${r.status})`);
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      if (payload?.name) setSelected(payload.name);
+    } catch {
+      alert("Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const profiles = useMemo(() => data?.profiles ?? [], [data]);
   const isMobile = useIsMobile();
@@ -48,6 +79,14 @@ export default function ProfileSideList() {
             <RefreshCw size={11} />
           </button>
           <button
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            title={pf?.importProfile ?? "Import profile"}
+            style={iconBtn}
+          >
+            <Upload size={11} />
+          </button>
+          <button
             onClick={() => setCreateOpen(true)}
             title={pf?.newProfile ?? "New profile"}
             style={{ ...iconBtn, color: "var(--hms-success-text)" }}
@@ -56,6 +95,13 @@ export default function ProfileSideList() {
           </button>
         </div>
       </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".tar.gz,.tgz,application/gzip"
+        onChange={onImportFile}
+        style={{ display: "none" }}
+      />
 
       <CreateProfileDialog
         open={createOpen}

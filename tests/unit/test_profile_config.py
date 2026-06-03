@@ -177,6 +177,83 @@ async def test_get_personalities_empty_when_none(app_server):
             assert (await r.json())["personalities"] == []
 
 
+# ── export / import ──────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_export_streams_archive(app_server, monkeypatch):
+    base, _ = app_server
+    from server.lib import upstream_shim
+
+    def _fake_export(name, out):
+        Path(out).write_bytes(b"FAKEGZ")
+        return out
+
+    monkeypatch.setattr(upstream_shim.shim.profiles, "export_profile", _fake_export)
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/profiles/{PROFILE}/export") as r:
+            assert r.status == 200
+            assert r.headers["Content-Disposition"] == f'attachment; filename="{PROFILE}.tar.gz"'
+            assert await r.read() == b"FAKEGZ"
+
+
+@pytest.mark.asyncio
+async def test_export_unavailable_when_absent(app_server, monkeypatch):
+    base, _ = app_server
+    from server.lib import upstream_shim
+    monkeypatch.setattr(upstream_shim.shim.profiles, "export_profile", None)
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/profiles/{PROFILE}/export") as r:
+            assert r.status == 503
+
+
+@pytest.mark.asyncio
+async def test_import_creates_profile(app_server, monkeypatch, tmp_path):
+    base, _ = app_server
+    from server.lib import upstream_shim
+    captured: dict = {}
+
+    def _fake_import(arc, name):
+        captured["name"] = name
+        captured["bytes"] = Path(arc).read_bytes()
+        return tmp_path / "imported_profile"
+
+    monkeypatch.setattr(upstream_shim.shim.profiles, "import_profile", _fake_import)
+    form = aiohttp.FormData()
+    form.add_field("file", b"ARCHIVE", filename="p.tar.gz", content_type="application/gzip")
+    form.add_field("name", "imported_profile")
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(f"{base}/api/profiles/import", data=form, headers={"X-HMS-CSRF": "1"}) as r:
+            assert r.status == 200
+            assert await r.json() == {"ok": True, "name": "imported_profile"}
+    assert captured["name"] == "imported_profile"
+    assert captured["bytes"] == b"ARCHIVE"
+
+
+@pytest.mark.asyncio
+async def test_import_no_file_rejected(app_server, monkeypatch):
+    base, _ = app_server
+    from server.lib import upstream_shim
+    # Upstream present (else the route 503s before reaching the no-file check).
+    monkeypatch.setattr(upstream_shim.shim.profiles, "import_profile", lambda *a: None)
+    form = aiohttp.FormData()
+    form.add_field("name", "x", content_type="text/plain")  # content_type → multipart
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(f"{base}/api/profiles/import", data=form, headers={"X-HMS-CSRF": "1"}) as r:
+            assert r.status == 400
+            assert (await r.json())["error"] == "no_file"
+
+
+@pytest.mark.asyncio
+async def test_import_requires_csrf(app_server):
+    base, _ = app_server
+    form = aiohttp.FormData()
+    form.add_field("file", b"X", filename="p.tar.gz", content_type="application/gzip")
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(f"{base}/api/profiles/import", data=form) as r:
+            assert r.status == 403
+
+
 @pytest.mark.asyncio
 async def test_put_values_sets_dotpaths_and_preserves_comments(app_server):
     base, prof = app_server
