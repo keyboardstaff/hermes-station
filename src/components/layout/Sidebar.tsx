@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Zap, Settings2 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
@@ -59,6 +60,7 @@ export default function Sidebar({
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
 
   const [activeModule, setActiveModuleState] = useState<RouteModule>(readStoredModule);
@@ -68,6 +70,19 @@ export default function Sidebar({
     try { localStorage.setItem(MODULE_STORAGE_KEY, m); } catch { /* ignore */ }
   };
 
+  // Most-recently-updated session from the shared sessions cache (Recents/Sessions
+  // populate it), or null if none/not loaded yet.
+  const latestSessionId = (): string | null => {
+    const data = queryClient.getQueryData<{
+      sessions: Array<{ session_id: string; updated_at?: number; started_at?: number }>;
+    }>(["sessions-table-all"]);
+    const sessions = data?.sessions ?? [];
+    if (sessions.length === 0) return null;
+    return [...sessions].sort(
+      (a, b) => (b.updated_at ?? b.started_at ?? 0) - (a.updated_at ?? a.started_at ?? 0),
+    )[0].session_id;
+  };
+
   // Clicking a module tab also navigates to that module's first route
   // otherwise the page stayed put while only the nav list changed.
   // moduleNavTarget returns null (stay) when already in the module, so an
@@ -75,7 +90,17 @@ export default function Sidebar({
   const handleModuleClick = (m: RouteModule) => {
     setModule(m);
     const target = moduleNavTarget(m, location.pathname);
-    if (target) navigate(target);
+    if (target) {
+      // Entering the agent module lands on the most recent conversation (not the
+      // /sessions list); fall back to the list when there are no sessions yet.
+      const latest = m === "agent" ? latestSessionId() : null;
+      if (latest) {
+        setActiveSession(latest);
+        navigate("/chat");
+      } else {
+        navigate(target);
+      }
+    }
     onNavigate?.();
   };
 

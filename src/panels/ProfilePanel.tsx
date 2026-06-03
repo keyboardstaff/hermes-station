@@ -28,12 +28,14 @@ import PageTopBar from "@/components/layout/PageTopBar";
 /**
  * Profile page. Owns its own list↔detail layout via PanelTwoColumn. Each
  * profile is its own HERMES_HOME, so the detail surfaces that profile's
- * own docs as tabs: Overview / SOUL.md / MEMORY.md / USER.md / Memory store
+ * own docs as tabs: Overview / SOUL.md / USER.md / MEMORY.md / Memory store
  * (the markdown docs + the structured holographic memory store all live here,
  * per-profile — there is no top-level /memory page).
  */
 
-type ProfileDocTab = "soul" | "memory" | "user" | "store";
+// Tab order follows the memory layering: identity (SOUL) → user model (USER) →
+// the agent's accumulated notes (MEMORY) → the structured store.
+type ProfileDocTab = "soul" | "user" | "memory" | "store";
 
 export default function ProfilePanel() {
   const { t } = useI18n();
@@ -110,8 +112,8 @@ export default function ProfilePanel() {
 
 const DOC_TABS: { id: ProfileDocTab; label: string }[] = [
   { id: "soul", label: "SOUL.md" },
-  { id: "memory", label: "MEMORY.md" },
   { id: "user", label: "USER.md" },
+  { id: "memory", label: "MEMORY.md" },
   { id: "store", label: "Memory store" },
 ];
 
