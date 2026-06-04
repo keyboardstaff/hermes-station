@@ -392,6 +392,7 @@ export interface Translations {
   agents: {
     subtitle: string;
     addAgent: string;
+    clearRoom: string;
     noMembers: string;
     noMembersHint: string;
     respondsLabel: string;

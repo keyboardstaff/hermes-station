@@ -369,6 +369,7 @@ export const zh: Translations = {
   agents: {
     subtitle: "在一个房间里与多个 profile 智能体协作 —— @提及把某一轮路由给它",
     addAgent: "添加智能体",
+    clearRoom: "清空房间",
     noMembers: "还没有智能体",
     noMembersHint: "把一个或多个 profile 添加为智能体,然后 @提及它们对话。",
     respondsLabel: "回复者",

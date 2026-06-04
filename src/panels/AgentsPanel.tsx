@@ -1,31 +1,33 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Users, Plus, X, ArrowUp, Square } from "lucide-react";
+import { Users, Plus, X, ArrowUp, Square, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { useChatStore } from "@/store/chat";
-import { useRunsStream } from "@/hooks/useRunsStream";
 import { useAgentRoomStore } from "@/store/agentRoom";
+import { useAgentRoomStream } from "@/hooks/useAgentRoomStream";
 import { useProfiles } from "@/hooks/useProfiles";
 import ChatStream from "@/components/chat/ChatStream";
 import PageTopBar from "@/components/layout/PageTopBar";
-import { loadSessionMessages } from "@/lib/load-session";
 
 /**
- * AgentsPanel — a multi-agent room (MVP).
+ * AgentsPanel — an ISOLATED, persisted multi-agent room.
  *
- * Members are profiles; the responder picks which one answers the next turn,
- * and the turn's run is routed under that profile's HERMES_HOME via the
- * per-run `profile` override. The conversation reuses the shared chat store +
- * ChatStream; user turns are tagged with the agent they were routed to.
- * Multiple named rooms / invite codes / per-message attribution badges are
- * follow-ups tracked in the debt register.
+ * Fully decoupled from /chat: the conversation lives in `useAgentRoomStore`
+ * (persisted to localStorage) and streams through `useAgentRoomStream` (each
+ * turn is a real run under the routed member's profile, with the room's prior
+ * turns sent as conversation_history). Members are profiles; route a turn with
+ * a leading `@member` mention or by picking the active responder chip.
+ *
+ * Follow-ups (debt register): reuse the full /chat Composer, multiple named
+ * rooms + invite codes, persisted-across-devices storage.
  */
 export default function AgentsPanel() {
   const { t } = useI18n();
   const g = t.agents;
-  const { messages, activeSessionId, isHistoryPending, reconcileSession, setHistoryPending } = useChatStore();
-  const activeRunId = useChatStore((s) => s.activeRunId);
-  const { sendMessage, stopRun } = useRunsStream();
-  const { members, responder, addMember, removeMember, setResponder } = useAgentRoomStore();
+  const messages = useAgentRoomStore((s) => s.messages);
+  const members = useAgentRoomStore((s) => s.members);
+  const responder = useAgentRoomStore((s) => s.responder);
+  const activeRunId = useAgentRoomStore((s) => s.activeRunId);
+  const { addMember, removeMember, setResponder, clearConversation } = useAgentRoomStore();
+  const { send, stop } = useAgentRoomStream();
   const profilesQuery = useProfiles();
   const profileNames: string[] = (profilesQuery.data?.profiles ?? []).map((p) => p.name);
   const addable = profileNames.filter((n) => !members.includes(n));
@@ -33,24 +35,6 @@ export default function AgentsPanel() {
   const [draft, setDraft] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const addRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef<string | null>(null);
-
-  // Adopt the active session's transcript (shared with /chat). Load only when
-  // nothing is in the store yet (a direct landing on /agents).
-  useEffect(() => {
-    if (!activeSessionId) return;
-    if (loadedRef.current === activeSessionId) return;
-    if (useChatStore.getState().messages.length > 0) {
-      loadedRef.current = activeSessionId;
-      return;
-    }
-    loadedRef.current = activeSessionId;
-    setHistoryPending(true);
-    loadSessionMessages(activeSessionId)
-      .then((msgs) => { if (loadedRef.current === activeSessionId) reconcileSession(msgs); })
-      .catch(() => { /* best-effort */ })
-      .finally(() => setHistoryPending(false));
-  }, [activeSessionId, reconcileSession, setHistoryPending]);
 
   useEffect(() => {
     if (!addOpen) return;
@@ -64,12 +48,20 @@ export default function AgentsPanel() {
   const running = activeRunId != null;
   const target = responder ?? members[0] ?? null;
 
+  // @mention autocomplete: a leading "@partial" with no space yet.
+  const mentionMatch = /^@(\S*)$/.exec(draft);
+  const mentionQuery = mentionMatch ? mentionMatch[1].toLowerCase() : null;
+  const mentionHits =
+    mentionQuery !== null ? members.filter((m) => m.toLowerCase().startsWith(mentionQuery)) : [];
+
   const submit = useCallback(() => {
     const text = draft.trim();
     if (!text || running || !target) return;
     setDraft("");
-    void sendMessage(text, undefined, { profileOverride: target });
-  }, [draft, running, target, sendMessage]);
+    void send(text);
+  }, [draft, running, target, send]);
+
+  const pickMention = (name: string) => setDraft(`@${name} `);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
@@ -77,49 +69,66 @@ export default function AgentsPanel() {
         title={t.nav.agents}
         subtitle={g.subtitle}
         actions={
-          <div ref={addRef} style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => setAddOpen((o) => !o)}
-              disabled={addable.length === 0}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-                padding: "4px 10px", borderRadius: 6,
-                border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
-                color: addable.length === 0 ? "var(--hms-text-muted)" : "var(--hms-text)",
-                fontSize: 'var(--hms-text-caption)', cursor: addable.length === 0 ? "default" : "pointer",
-              }}
-            >
-              <Plus size={13} /> {g.addAgent}
-            </button>
-            {addOpen && addable.length > 0 && (
-              <div
+          <>
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={clearConversation}
+                title={g.clearRoom}
                 style={{
-                  position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 9999,
-                  minWidth: 160, padding: "4px 0", borderRadius: 8,
-                  background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
+                  padding: "4px 10px", borderRadius: 6,
+                  border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
+                  color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)', cursor: "pointer",
                 }}
               >
-                {addable.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => { addMember(name); setAddOpen(false); }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
-                      padding: "7px 14px", border: "none", background: "none",
-                      color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', cursor: "pointer", textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
-                  >
-                    <Users size={13} style={{ color: "var(--hms-accent)" }} /> {name}
-                  </button>
-                ))}
-              </div>
+                <Trash2 size={13} /> {g.clearRoom}
+              </button>
             )}
-          </div>
+            <div ref={addRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setAddOpen((o) => !o)}
+                disabled={addable.length === 0}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
+                  padding: "4px 10px", borderRadius: 6,
+                  border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
+                  color: addable.length === 0 ? "var(--hms-text-muted)" : "var(--hms-text)",
+                  fontSize: 'var(--hms-text-caption)', cursor: addable.length === 0 ? "default" : "pointer",
+                }}
+              >
+                <Plus size={13} /> {g.addAgent}
+              </button>
+              {addOpen && addable.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 9999,
+                    minWidth: 160, padding: "4px 0", borderRadius: 8,
+                    background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  {addable.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => { addMember(name); setAddOpen(false); }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
+                        padding: "7px 14px", border: "none", background: "none",
+                        color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', cursor: "pointer", textAlign: "left",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
+                    >
+                      <Users size={13} style={{ color: "var(--hms-accent)" }} /> {name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         }
       />
 
@@ -182,10 +191,37 @@ export default function AgentsPanel() {
         </div>
       ) : (
         <>
-          <ChatStream messages={messages} isLoadingHistory={isHistoryPending} />
+          <ChatStream messages={messages} />
 
-          {/* Room composer — routes the turn to @responder's profile. */}
-          <div style={{ borderTop: "1px solid var(--hms-border)", padding: "10px 16px" }}>
+          {/* Room composer — routes to a leading @member or the active responder. */}
+          <div style={{ borderTop: "1px solid var(--hms-border)", padding: "10px 16px", position: "relative" }}>
+            {mentionHits.length > 0 && (
+              <div
+                style={{
+                  position: "absolute", bottom: "calc(100% - 4px)", left: 16, zIndex: 9999,
+                  minWidth: 180, padding: "4px 0", borderRadius: 8,
+                  background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                }}
+              >
+                {mentionHits.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => pickMention(name)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
+                      padding: "7px 14px", border: "none", background: "none",
+                      color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', cursor: "pointer", textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
+                  >
+                    <Users size={13} style={{ color: "var(--hms-accent)" }} /> @{name}
+                  </button>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 display: "flex", alignItems: "flex-end", gap: 'var(--hms-space-2)',
@@ -197,7 +233,10 @@ export default function AgentsPanel() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+                  if (e.key === "Enter" && !e.shiftKey && mentionHits.length === 0) {
+                    e.preventDefault();
+                    submit();
+                  }
                 }}
                 placeholder={target ? `@${target} · ${g.placeholder}` : g.placeholder}
                 rows={1}
@@ -210,7 +249,7 @@ export default function AgentsPanel() {
               {running ? (
                 <button
                   type="button"
-                  onClick={() => void stopRun()}
+                  onClick={() => void stop()}
                   title="Stop"
                   style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",

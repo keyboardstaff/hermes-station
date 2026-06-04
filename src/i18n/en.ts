@@ -370,6 +370,7 @@ export const en: Translations = {
   agents: {
     subtitle: "Chat with several profile-agents in one room — @mention to route a turn",
     addAgent: "Add agent",
+    clearRoom: "Clear room",
     noMembers: "No agents yet",
     noMembersHint: "Add one or more profiles as agents, then @mention them to chat.",
     respondsLabel: "Replies",
