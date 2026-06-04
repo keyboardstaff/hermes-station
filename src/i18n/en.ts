@@ -3,6 +3,7 @@ import type { Translations } from "./types.js";
 export const en: Translations = {
   common: {
     save: "Save",
+    cancel: "Cancel",
     retry: "Retry",
     search: "Search",
     coming: "Coming soon",
@@ -71,6 +72,13 @@ export const en: Translations = {
     exportJson: "Export JSON",
     exportMarkdown: "Export Markdown",
     exportPdf: "Export PDF",
+    copyId: "Copy ID",
+    copyIdDone: "ID copied",
+    pin: "Pin",
+    unpin: "Unpin",
+    archiveSession: "Archive",
+    deleteSession: "Delete",
+    clearLocal: "Clear local view",
     collapseSidebar: "Collapse sidebar",
   },
 
@@ -283,15 +291,21 @@ export const en: Translations = {
   },
 
   theme: {
-    sectionLabel: "Theme",
+    sectionLabel: "Color Mode",
     language: "Language",
     light: "Light",
     dark: "Dark",
     system: "System",
+    toolCalls: "Tool Call Display",
+    toolCallsHint: "Product hides raw tool payloads; Technical shows full input/output.",
+    product: "Product",
+    productHint: "Human-friendly tool activity with concise summaries.",
+    technical: "Technical",
+    technicalHint: "Include raw tool args and results.",
   },
 
   skin: {
-    sectionLabel: "Skin",
+    sectionLabel: "Theme",
     // Per-skin labels — keyed by name in `src/styles/skins.ts`. Mirrors upstream's _BUILTIN_DASHBOARD_THEMES.
     default:   "Hermes Teal",
     midnight:  "Midnight",
@@ -428,6 +442,7 @@ export const en: Translations = {
   composer: {
     profileSwitchConfirm: "Switch active profile to {name}? The gateway will restart.",
     manageProfiles: "Manage profiles",
+    thinking: "Thinking",
   },
 
   createProfile: {

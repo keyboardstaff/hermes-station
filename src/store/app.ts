@@ -104,6 +104,36 @@ export const useSkinStore = create<SkinStore>((set) => {
   };
 });
 
+// ── Tool-call display ─────────────────────────────────────────────
+// Product = concise summary (raw payloads hidden); Technical = full
+// input/output. Mirrors upstream desktop's $toolViewMode. Defaults to
+// Product so chat reads clean; power users opt into Technical once.
+
+export type ToolViewMode = "product" | "technical";
+
+const TOOL_VIEW_KEY = "hms_tool_view";
+
+function readStoredToolView(): ToolViewMode {
+  try {
+    const v = localStorage.getItem(TOOL_VIEW_KEY);
+    if (v === "product" || v === "technical") return v;
+  } catch { /* localStorage disabled */ }
+  return "product";
+}
+
+interface ToolViewStore {
+  toolView: ToolViewMode;
+  setToolView: (v: ToolViewMode) => void;
+}
+
+export const useToolViewStore = create<ToolViewStore>((set) => ({
+  toolView: readStoredToolView(),
+  setToolView: (toolView) => {
+    try { localStorage.setItem(TOOL_VIEW_KEY, toolView); } catch { /* ignore */ }
+    set({ toolView });
+  },
+}));
+
 // ── Font size ─────────────────────────────────────────────────────
 
 export type FontSize = "small" | "default" | "large" | "extra-large";

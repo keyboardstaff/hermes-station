@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, CheckCircle2, XCircle, Copy, Check, AlertTriangle, Clock, MinusCircle } from "lucide-react";
 import type { ToolCall } from "@/lib/hermes-types";
+import { useToolViewStore } from "@/store/app";
 
 const STATUS_ICON: Record<ToolCall["status"], React.ReactNode> = {
   running: <Loader2 size={13} style={{ animation: "spin 1s linear infinite", color: "var(--hms-info, #60a5fa)", flexShrink: 0 }} />,
@@ -31,6 +32,10 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ToolCallCard({ tc }: { tc: ToolCall }) {
+  const { toolView } = useToolViewStore();
+  // Product mode hides raw tool payloads (no expand); Technical shows the full
+  // ARGS/RESULT detail. Mirrors upstream desktop's Tool Call Display setting.
+  const technical = toolView === "technical";
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -46,13 +51,13 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
     >
       {/* Header row */}
       <div
-        onClick={() => setExpanded((e) => !e)}
+        onClick={technical ? () => setExpanded((e) => !e) : undefined}
         style={{
           display: "flex",
           alignItems: "center",
           gap: 'var(--hms-space-2)',
           padding: "6px 10px",
-          cursor: "pointer",
+          cursor: technical ? "pointer" : "default",
           userSelect: "none",
         }}
       >
@@ -81,12 +86,14 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
               {tc.duration.toFixed(2)}s
             </span>
           )}
-          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {technical && (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
         </span>
       </div>
 
       {/* Expandable detail — grid-row transition gives smooth height animation
-          without needing a fixed max-height guess. */}
+          without needing a fixed max-height guess. Technical mode only; Product
+          hides raw tool payloads entirely. */}
+      {technical && (
       <div
         style={{
           display: "grid",
@@ -134,6 +141,7 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

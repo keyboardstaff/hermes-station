@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Cpu, ChevronDown, Search, Check } from "lucide-react";
+import { Cpu, ChevronDown, Search, Check, Brain } from "lucide-react";
 import type { ProviderInfo } from "@/hooks/useProviders";
+import { useI18n } from "@/i18n";
 
 // Provider-grouped model picker, extracted from Composer.
 // Distinct from the Models page's ModelPickerDialog — this is the inline
 // composer pill with live OpenRouter catalog search.
+//
+// Reasoning-effort lives HERE (absorbed from the old standalone ReasoningPicker)
+// so thinking is chosen alongside the model — mirrors upstream desktop, where
+// each model's menu carries its Thinking/Effort controls.
 
 function providerConfigKey(p: ProviderInfo): string {
   return p.slug;
@@ -14,17 +19,59 @@ function modelLabel(m: string): string {
   return m.length > 36 ? m.slice(0, 34) + "…" : m;
 }
 
+// Values match upstream hermes_constants.VALID_REASONING_EFFORTS.
+// null = omit field → upstream uses config.yaml default. NEVER send "auto".
+interface ReasoningOption {
+  value: string | null;
+  label: string;
+}
+
+const REASONING_OPTIONS: ReasoningOption[] = [
+  { value: "none", label: "None" },
+  { value: null, label: "Default" },
+  { value: "minimal", label: "Minimal" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "Max" },
+];
+
+/** Compact suffix for the model pill (Default → no suffix). */
+function reasoningShort(value: string | null): string {
+  switch (value) {
+    case "none":
+      return "Off";
+    case "minimal":
+      return "Min";
+    case "low":
+      return "Low";
+    case "medium":
+      return "Med";
+    case "high":
+      return "High";
+    case "xhigh":
+      return "Max";
+    default:
+      return "";
+  }
+}
+
 export function ModelPicker({
   value,
   providers,
   modelDefault,
   onChange,
+  reasoningValue,
+  onReasoningChange,
 }: {
   value: string | null;
   providers: ProviderInfo[];
   modelDefault: string | null;
   onChange: (model: string, providerKey: string) => void;
+  reasoningValue: string | null;
+  onReasoningChange: (v: string | null) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
@@ -94,7 +141,9 @@ export function ModelPicker({
     setOpen((o) => !o);
   };
 
-  const displayLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
+  const baseLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
+  const effortSuffix = reasoningShort(reasoningValue);
+  const displayLabel = effortSuffix ? `${baseLabel} · ${effortSuffix}` : baseLabel;
   const panelMaxH = 340;
   const searchQuery = search.trim().toLowerCase();
   const filteredProviders = providers
@@ -197,6 +246,57 @@ export function ModelPicker({
               />
             </div>
           </div>
+
+          {/* Thinking / reasoning effort — absorbed from the standalone ReasoningPicker. */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 'var(--hms-space-1)',
+              padding: "2px 12px 8px",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 'var(--hms-space-1)',
+                marginRight: 2,
+                fontSize: 'var(--hms-text-xs)',
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "var(--hms-text-muted)",
+              }}
+            >
+              <Brain size={11} style={{ flexShrink: 0 }} /> {t.composer.thinking}
+            </span>
+            {REASONING_OPTIONS.map((opt) => {
+              const active = reasoningValue === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  onClick={() => onReasoningChange(opt.value)}
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    border: "1px solid",
+                    borderColor: active ? "var(--hms-accent)" : "var(--hms-border)",
+                    background: active ? "var(--hms-accent-weak)" : "transparent",
+                    color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
+                    fontSize: 'var(--hms-text-caption)',
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ height: 1, background: "var(--hms-border)", margin: "0 0 4px" }} />
 
           {providers.length === 0 && (
             <div style={{ padding: "8px 14px", fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>

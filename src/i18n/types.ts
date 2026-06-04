@@ -3,6 +3,7 @@ export type Locale = "en" | "zh";
 export interface Translations {
   common: {
     save: string;
+    cancel: string;
     retry: string;
     search: string;
     coming: string;
@@ -77,6 +78,13 @@ export interface Translations {
     exportJson: string;
     exportMarkdown: string;
     exportPdf: string;
+    copyId: string;
+    copyIdDone: string;
+    pin: string;
+    unpin: string;
+    archiveSession: string;
+    deleteSession: string;
+    clearLocal: string;
   };
 
   /** Primary CTAs surfaced in the Sidebar header etc. */
@@ -313,6 +321,12 @@ export interface Translations {
     light: string;
     dark: string;
     system: string;
+    toolCalls: string;
+    toolCallsHint: string;
+    product: string;
+    productHint: string;
+    technical: string;
+    technicalHint: string;
   };
   skin: {
     sectionLabel: string;
@@ -451,6 +465,7 @@ export interface Translations {
     /** ``{name}`` is the placeholder for the target profile name. */
     profileSwitchConfirm: string;
     manageProfiles: string;
+    thinking: string;
   };
 
   createProfile: {

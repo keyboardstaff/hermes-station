@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Brain, Shield } from "lucide-react";
+import { Brain, Shield, Globe } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
@@ -18,7 +18,7 @@ const MIB = 1024 * 1024;
 // Preferences — Station-global knobs (operational limits + chat display).
 // Lives in platforms.station.extra.* / chat store; NOT per-Profile config.yaml.
 export function PreferencesTab() {
-  const { t } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const qc = useQueryClient();
   const { data: settings } = useQuery<AdvancedSettings>({
     queryKey: ["internal-settings"],
@@ -73,6 +73,28 @@ export function PreferencesTab() {
 
   return (
     <div id="preferences" style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-4)' }}>
+      <Section icon={<Globe size={14} />} title={t.theme.language}>
+        <div style={{ display: "flex", gap: 'var(--hms-space-2)' }}>
+          {(["en", "zh"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              aria-pressed={locale === l}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 6,
+                border: `1px solid ${locale === l ? "var(--hms-accent)" : "var(--hms-border)"}`,
+                background: "var(--hms-surface)",
+                color: "var(--hms-text)",
+                cursor: "pointer",
+                fontSize: 'var(--hms-text-caption)',
+              }}
+            >
+              {l === "en" ? "English" : "中文"}
+            </button>
+          ))}
+        </div>
+      </Section>
       <Section icon={<Brain size={14} />} title={label.displaySection ?? "Display"}>
         <label style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', cursor: "pointer", fontSize: 'var(--hms-text-sm)' }}>
           <input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} />

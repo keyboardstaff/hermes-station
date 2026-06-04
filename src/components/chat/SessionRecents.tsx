@@ -1,11 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Download, Trash2, X, Check, Archive, Eraser, Loader2, ChevronDown, Pin, PinOff } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Trash2, X, Check, Loader2, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
+import { buildSessionActions } from "@/lib/session-actions";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useI18n } from "@/i18n";
 import Tooltip from "@/components/ui/Tooltip";
 
 function relativeTime(ts?: number): string {
@@ -277,6 +279,7 @@ export default function SessionRecents({
   onTogglePin,
   limit,
 }: SessionRecentsProps = {}) {
+  const { t } = useI18n();
   const { activeSessionId, setActiveSession, clearMessages } = useChatStore();
   // Every session with a live run shows a spinner — not just the focused one,
   // so concurrent runs are all visible.
@@ -678,61 +681,25 @@ export default function SessionRecents({
             boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
           }}
         >
-          {[
-            {
-              icon: <Pencil size={13} />, label: "Rename", action: () => {
-                const s = sessions.find((x) => x.session_id === menu.sessionId);
-                setRenameValue(s?.title ?? "");
-                setRenamingId(menu.sessionId);
-                setMenu(null);
-              }
+          {buildSessionActions(t, {
+            pinned: pinnedIds?.has(menu.sessionId),
+            onRename: () => {
+              const s = sessions.find((x) => x.session_id === menu.sessionId);
+              setRenameValue(s?.title ?? "");
+              setRenamingId(menu.sessionId);
             },
-            ...(onTogglePin ? [{
-              icon: pinnedIds?.has(menu.sessionId) ? <PinOff size={13} /> : <Pin size={13} />,
-              label: pinnedIds?.has(menu.sessionId) ? "Unpin" : "Pin",
-              danger: false,
-              action: () => { onTogglePin(menu.sessionId); setMenu(null); },
-            }] : []),
-            {
-              icon: <Download size={13} />, label: "Export JSON", action: () => {
-                exportSession(menu.sessionId, "json");
-                setMenu(null);
-              }
-            },
-            {
-              icon: <Download size={13} />, label: "Export Markdown", action: () => {
-                exportSession(menu.sessionId, "markdown");
-                setMenu(null);
-              }
-            },
-            {
-              icon: <Download size={13} />, label: "Export PDF", action: () => {
-                exportSessionsToPdf([menu.sessionId]);
-                setMenu(null);
-              }
-            },
-            {
-              icon: <Eraser size={13} />, label: "Clear local view", action: () => {
-                clearContext(menu.sessionId);
-                setMenu(null);
-              }
-            },
-            {
-              icon: <Archive size={13} />, label: "Archive", action: () => {
-                archiveSession(menu.sessionId);
-                setMenu(null);
-              }
-            },
-            {
-              icon: <Trash2 size={13} />, label: "Delete", danger: true, action: () => {
-                deleteSession(menu.sessionId);
-                setMenu(null);
-              }
-            },
-          ].map((item) => (
+            onTogglePin: onTogglePin ? () => onTogglePin(menu.sessionId) : undefined,
+            onCopyId: () => void navigator.clipboard?.writeText(menu.sessionId),
+            onExportJson: () => exportSession(menu.sessionId, "json"),
+            onExportMarkdown: () => exportSession(menu.sessionId, "markdown"),
+            onExportPdf: () => exportSessionsToPdf([menu.sessionId]),
+            onClearLocal: () => clearContext(menu.sessionId),
+            onArchive: () => archiveSession(menu.sessionId),
+            onDelete: () => deleteSession(menu.sessionId),
+          }).map((item) => (
             <button
-              key={item.label}
-              onClick={item.action}
+              key={item.key}
+              onClick={() => { item.onSelect(); setMenu(null); }}
               style={{
                 display: "flex",
                 alignItems: "center",

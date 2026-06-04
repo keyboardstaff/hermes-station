@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from "react";
-import { PanelRight, MoreHorizontal, Pencil, Download, Eraser } from "lucide-react";
+import { PanelRight } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
@@ -9,6 +8,8 @@ import type { SessionSummary } from "@/lib/hermes-types";
 import PageTopBar from "@/components/layout/PageTopBar";
 import IconButton from "@/components/ui/IconButton";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
+import { usePinnedSessions } from "@/hooks/usePinnedSessions";
+import SessionActionsMenu from "@/components/chat/SessionActionsMenu";
 
 async function exportSession(sessionId: string, format: "json" | "markdown") {
   const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`);
@@ -42,10 +43,11 @@ async function exportSession(sessionId: string, format: "json" | "markdown") {
  * ChatTitleBar — top bar for ChatPanel.
  *
  * Left: session title (truncated)
- * Right: [FolderOpen workspaces toggle] [MoreHorizontal export/actions dropdown]
+ * Right: [workspaces toggle] [··· session-actions dropdown]
  *
- * The workspaces button calls `onToggleWorkspaces` which is owned by ChatPanel.
- * The export dropdown contains: Rename / Export JSON / Export Markdown / Clear.
+ * The ··· menu is the shared `SessionActionsMenu` (same item spec as the
+ * SessionRecents right-click menu, via `buildSessionActions`): Rename / Pin /
+ * Copy ID / Export JSON·MD·PDF / Clear local view / Archive / Delete.
  */
 export default function ChatTitleBar({
   onToggleWorkspaces,
@@ -55,61 +57,61 @@ export default function ChatTitleBar({
   workspacesOpen?: boolean;
 }) {
   const { t } = useI18n();
-  const { activeSessionId, clearMessages } = useChatStore();
+  const { activeSessionId, clearMessages, setActiveSession } = useChatStore();
   const activeSessionTitle = useActiveSessionTitle();
-
   const queryClient = useQueryClient();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const { pinnedIds, toggle } = usePinnedSessions();
 
-  // Close menu on outside click
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
 
-  const handleRename = () => {
+  const handleRenameSubmit = (next: string) => {
     if (!activeSessionId) return;
-    setMenuOpen(false);
-    const current = formatSessionTitle(activeSessionTitle);
-    const newTitle = window.prompt(t.nav.renameSession, current);
-    if (!newTitle || newTitle.trim() === current) return;
     fetch(`/api/sessions/${encodeURIComponent(activeSessionId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-      body: JSON.stringify({ title: newTitle.trim() }),
+      body: JSON.stringify({ title: next }),
     }).then((res) => {
-      if (res.ok) {
-        // Optimistically patch the shared cache (the single source of truth) so
-        // the title bar updates instantly, then reconcile with the server.
-        queryClient.setQueryData<{ sessions: SessionSummary[] }>(
-          ["sessions-table-all"],
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  sessions: old.sessions.map((s) =>
-                    s.session_id === activeSessionId
-                      ? { ...s, title: newTitle.trim() }
-                      : s,
-                  ),
-                }
-              : old,
-        );
-        queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
-      }
+      if (!res.ok) return;
+      // Optimistically patch the shared cache so the title bar updates instantly.
+      queryClient.setQueryData<{ sessions: SessionSummary[] }>(
+        ["sessions-table-all"],
+        (old) =>
+          old
+            ? {
+                ...old,
+                sessions: old.sessions.map((s) =>
+                  s.session_id === activeSessionId ? { ...s, title: next } : s,
+                ),
+              }
+            : old,
+      );
+      invalidate();
     });
   };
 
-  const handleClear = () => {
-    setMenuOpen(false);
-    clearMessages();
+  const handleArchive = () => {
+    if (!activeSessionId) return;
+    fetch(`/api/dashboard/sessions/${encodeURIComponent(activeSessionId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
+      body: JSON.stringify({ archived: true }),
+    }).then(() => {
+      invalidate();
+      setActiveSession(null);
+    });
+  };
+
+  const handleDelete = () => {
+    if (!activeSessionId) return;
+    fetch(`/api/dashboard/sessions/${encodeURIComponent(activeSessionId)}`, {
+      method: "DELETE",
+      headers: { "X-HMS-CSRF": "1" },
+    }).then((res) => {
+      if (!res.ok) return;
+      invalidate();
+      setActiveSession(null);
+    });
   };
 
   const title = activeSessionId
@@ -131,82 +133,21 @@ export default function ChatTitleBar({
             <PanelRight size={16} />
           </IconButton>
 
-          {/* Export / actions menu */}
+          {/* Shared session-actions ··· menu */}
           {activeSessionId && (
-            <div style={{ position: "relative" }} ref={menuRef}>
-              <IconButton
-                active={menuOpen}
-                onClick={() => setMenuOpen((o) => !o)}
-                aria-label={t.nav.exportSession}
-                aria-expanded={menuOpen}
-              >
-                <MoreHorizontal size={16} />
-              </IconButton>
-
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "calc(100% + 4px)",
-                    zIndex: 9999,
-                    background: "var(--hms-surface)",
-                    border: "1px solid var(--hms-border)",
-                    borderRadius: 8,
-                    padding: "4px 0",
-                    minWidth: 180,
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                  }}
-                >
-                  {([
-                    { icon: <Pencil size={13} />, label: t.nav.renameSession, action: handleRename },
-                    {
-                      icon: <Download size={13} />, label: t.nav.exportJson, action: () => {
-                        setMenuOpen(false);
-                        exportSession(activeSessionId, "json");
-                      }
-                    },
-                    {
-                      icon: <Download size={13} />, label: t.nav.exportMarkdown, action: () => {
-                        setMenuOpen(false);
-                        exportSession(activeSessionId, "markdown");
-                      }
-                    },
-                    {
-                      icon: <Download size={13} />, label: t.nav.exportPdf, action: () => {
-                        setMenuOpen(false);
-                        exportSessionsToPdf([activeSessionId]);
-                      }
-                    },
-                    { icon: <Eraser size={13} />, label: t.nav.clearSession, action: handleClear },
-                  ] as { icon: React.ReactNode; label: string; action: () => void; danger?: boolean }[]).map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={item.action}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--hms-space-2)",
-                        width: "100%",
-                        padding: "8px 14px",
-                        border: "none",
-                        background: "none",
-                        color: item.danger ? "var(--hms-error, #e53e3e)" : "var(--hms-text)",
-                        fontSize: "var(--hms-text-sm)",
-                        cursor: "pointer",
-                        textAlign: "left",
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-surface-hover)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
-                    >
-                      {item.icon}
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SessionActionsMenu
+              sessionId={activeSessionId}
+              title={title}
+              pinned={pinnedIds.has(activeSessionId)}
+              onRenameSubmit={handleRenameSubmit}
+              onTogglePin={() => toggle(activeSessionId)}
+              onExportJson={() => exportSession(activeSessionId, "json")}
+              onExportMarkdown={() => exportSession(activeSessionId, "markdown")}
+              onExportPdf={() => exportSessionsToPdf([activeSessionId])}
+              onClearLocal={clearMessages}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+            />
           )}
         </>
       }

@@ -12,7 +12,6 @@ import { useI18n } from "@/i18n";
 import type { ComposerAttachment } from "@/lib/hermes-types";
 import type { ProviderInfo } from "@/hooks/useProviders";
 import { ContextMeter, estimateTokenCount } from "./composer/ContextMeter";
-import { ReasoningPicker } from "./composer/ReasoningPicker";
 import { ModelPicker } from "./composer/ModelPicker";
 import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
 import { AttachmentChips } from "./composer/AttachmentChips";
@@ -333,7 +332,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
           }}
         />
 
-        {/* Toolbar: [attach][voice] | [profile][model][reasoning] | [~tok] | [■/▶] */}
+        {/* Toolbar: [attach][voice] | [profile][model+thinking] | [~tok] | [■/▶] */}
         <div
           style={{
             display: "flex",
@@ -388,8 +387,9 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
               setSelectedModel(model);
               setSelectedProvider(providerKey);
             }}
+            reasoningValue={reasoning}
+            onReasoningChange={setReasoning}
           />
-          <ReasoningPicker value={reasoning} onChange={setReasoning} />
 
           {/* Spacer */}
           <div style={{ flex: 1 }} />

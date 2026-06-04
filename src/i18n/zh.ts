@@ -3,6 +3,7 @@ import type { Translations } from "./types.js";
 export const zh: Translations = {
   common: {
     save: "保存",
+    cancel: "取消",
     retry: "重试",
     search: "搜索",
     coming: "即将推出",
@@ -71,6 +72,13 @@ export const zh: Translations = {
     exportJson: "导出 JSON",
     exportMarkdown: "导出 Markdown",
     exportPdf: "导出 PDF",
+    copyId: "复制 ID",
+    copyIdDone: "ID 已复制",
+    pin: "置顶",
+    unpin: "取消置顶",
+    archiveSession: "归档",
+    deleteSession: "删除",
+    clearLocal: "清除本地视图",
     collapseSidebar: "收起侧边栏",
   },
 
@@ -283,15 +291,21 @@ export const zh: Translations = {
   },
 
   theme: {
-    sectionLabel: "主题",
+    sectionLabel: "颜色模式",
     language: "语言",
     light: "浅色",
     dark: "深色",
     system: "跟随系统",
+    toolCalls: "工具调用显示",
+    toolCallsHint: "Product 隐藏原始载荷;Technical 显示完整输入/输出。",
+    product: "Product",
+    productHint: "人性化的工具活动,仅显示精简摘要。",
+    technical: "Technical",
+    technicalHint: "包含原始工具参数与结果。",
   },
 
   skin: {
-    sectionLabel: "皮肤",
+    sectionLabel: "主题",
     default:   "Hermes 青绿",
     midnight:  "午夜",
     ember:     "余烬",
@@ -427,6 +441,7 @@ export const zh: Translations = {
   composer: {
     profileSwitchConfirm: "切换到 Profile「{name}」吗？Gateway 将重启。",
     manageProfiles: "管理 Profile",
+    thinking: "思考",
   },
 
   createProfile: {
