@@ -53,6 +53,8 @@ export default function MobileShell({
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+            {/* Back-compat: the Agents page moved from /group → /agents. */}
+            <Route path="/group" element={<Navigate to="/agents" replace />} />
             {ROUTES.map(({ path, labelKey, panel: Panel }) => (
               <Route
                 key={path}

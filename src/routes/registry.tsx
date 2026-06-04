@@ -38,7 +38,7 @@ export interface RouteRecord {
 export const ROUTES: RouteRecord[] = [
   // ── agent ─────────────────────────────────────────────────────────
   { path: "/sessions", labelKey: "sessions", icon: LayoutList,    panel: lazy(() => import("@/panels/SessionsPanel")), module: "agent", order: 1 },
-  { path: "/group",    labelKey: "group",    icon: Users,         panel: lazy(() => import("@/panels/GroupPanel")),    module: "agent", order: 2 },
+  { path: "/agents",   labelKey: "group",    icon: Users,         panel: lazy(() => import("@/panels/AgentsPanel")),   module: "agent", order: 2 },
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",     labelKey: "chat",     icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),     module: "agent", order: 99, hidden: true },
 

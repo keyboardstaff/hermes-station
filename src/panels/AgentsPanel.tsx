@@ -77,7 +77,7 @@ interface SessionsPayload {
   sessions: SessionRow[];
 }
 
-export default function GroupPanel() {
+export default function AgentsPanel() {
   const { t } = useI18n();
   const g = t.group;
   const navigate = useNavigate();

@@ -418,12 +418,12 @@ export function ModelPicker({
   );
 }
 
-/** Flyout x-position: left of the model panel, flipping to the right near the edge. */
+/** Flyout x-position: to the RIGHT of the model panel, flipping left near the edge. */
 function effortFlyoutLeft(anchorLeft: number): number {
   const FLYOUT_W = 190;
   const panelLeft = Math.min(anchorLeft, window.innerWidth - 300);
-  const leftSide = panelLeft - FLYOUT_W - 6;
-  return leftSide >= 8 ? leftSide : panelLeft + 300 + 6;
+  const rightSide = panelLeft + 300 + 6;
+  return rightSide + FLYOUT_W <= window.innerWidth - 8 ? rightSide : panelLeft - FLYOUT_W - 6;
 }
 
 function MiniSwitch({ on }: { on: boolean }) {

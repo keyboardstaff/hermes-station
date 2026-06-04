@@ -42,7 +42,7 @@ export const en: Translations = {
   nav: {
     chat: "Chat",
     sessions: "Sessions",
-    group: "Group",
+    group: "Agents",
     kanban: "Kanban",
     cron: "Cron",
     skills: "Skills",

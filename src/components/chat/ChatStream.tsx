@@ -51,29 +51,47 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
   // has landed, so the final scroll-to-end is the pleasant one.
   useEffect(() => {
     if (userScrolledUp) return;
+    if (pendingScrollMessageId != null) return; // a search jump is pending — don't fight it
     const isStreaming = messages.some((m) => m.streaming);
     bottomRef.current?.scrollIntoView({
       behavior: isStreaming ? "auto" : "smooth",
     });
-  }, [messages, userScrolledUp]);
+  }, [messages, userScrolledUp, pendingScrollMessageId]);
 
   const scrollToBottom = () => {
     setUserScrolledUp(false);
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Search → jump to a specific message. User rows render as `hist-<id>`,
-  // assistant runs as `hist-run-<firstRowId>`; try both. Retries briefly while
-  // the session history is still loading into the DOM.
+  // Search → jump to a specific message. ChatMessages carry a `data-msg-id` of
+  // `hist-<rowId>` (user) or `hist-run-<firstRowId>` (an assistant run groups
+  // several DB rows). The search hit's message_id may be ANY row id inside a
+  // run, so we scroll to the message whose numeric id is the largest one ≤ the
+  // hit — i.e. the message that contains (or immediately precedes) it. Retries
+  // briefly while the session history is still loading into the DOM.
   useEffect(() => {
     if (pendingScrollMessageId == null) return;
     const id = pendingScrollMessageId;
-    const sel = `[data-msg-id="hist-${id}"], [data-msg-id="hist-run-${id}"]`;
     let tries = 0;
     let timer = 0;
     const attempt = () => {
-      const el = scrollContainerRef.current?.querySelector<HTMLElement>(sel);
-      if (el) {
+      const container = scrollContainerRef.current;
+      const nodes = container ? container.querySelectorAll<HTMLElement>("[data-msg-id^='hist']") : [];
+      let best: HTMLElement | null = null;
+      let bestNum = -1;
+      nodes.forEach((el) => {
+        const m = el.getAttribute("data-msg-id")?.match(/(\d+)$/);
+        if (!m) return;
+        const num = Number(m[1]);
+        if (num <= id && num > bestNum) {
+          bestNum = num;
+          best = el;
+        }
+      });
+      // Fall back to the earliest message when the hit predates everything loaded.
+      if (!best && nodes.length > 0) best = nodes[0];
+      if (best) {
+        const el: HTMLElement = best;
         setUserScrolledUp(true); // hold position — don't let auto-scroll-to-bottom override
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.classList.add("hms-msg-flash");
@@ -81,7 +99,7 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
         setPendingScrollMessageId(null);
         return;
       }
-      if (tries++ < 25) timer = window.setTimeout(attempt, 120);
+      if (tries++ < 30) timer = window.setTimeout(attempt, 120);
       else setPendingScrollMessageId(null);
     };
     attempt();
