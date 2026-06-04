@@ -10,6 +10,7 @@ import IconButton from "@/components/ui/IconButton";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { usePinnedSessions } from "@/hooks/usePinnedSessions";
 import SessionActionsMenu from "@/components/chat/SessionActionsMenu";
+import { clearSessionMessages } from "@/lib/session-actions";
 
 async function exportSession(sessionId: string, format: "json" | "markdown") {
   const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`);
@@ -42,12 +43,11 @@ async function exportSession(sessionId: string, format: "json" | "markdown") {
 /**
  * ChatTitleBar — top bar for ChatPanel.
  *
- * Left: session title (truncated)
- * Right: [workspaces toggle] [··· session-actions dropdown]
- *
- * The ··· menu is the shared `SessionActionsMenu` (same item spec as the
- * SessionRecents right-click menu, via `buildSessionActions`): Rename / Pin /
- * Copy ID / Export JSON·MD·PDF / Clear local view / Archive / Delete.
+ * The session title IS the actions trigger: clicking it opens the shared
+ * `SessionActionsMenu` (same item spec as the SessionRecents right-click menu,
+ * via `buildSessionActions`): Pin / Rename / Copy ID / Export JSON·MD·PDF /
+ * Clear Session / Archive / Delete. No separate ··· button. Right side keeps
+ * only the workspaces toggle.
  */
 export default function ChatTitleBar({
   onToggleWorkspaces,
@@ -73,7 +73,6 @@ export default function ChatTitleBar({
       body: JSON.stringify({ title: next }),
     }).then((res) => {
       if (!res.ok) return;
-      // Optimistically patch the shared cache so the title bar updates instantly.
       queryClient.setQueryData<{ sessions: SessionSummary[] }>(
         ["sessions-table-all"],
         (old) =>
@@ -114,42 +113,50 @@ export default function ChatTitleBar({
     });
   };
 
+  const handleClearSession = () => {
+    if (!activeSessionId) return;
+    void clearSessionMessages(activeSessionId).then((ok) => {
+      if (ok) {
+        clearMessages();
+        invalidate();
+      }
+    });
+  };
+
   const title = activeSessionId
     ? formatSessionTitle(activeSessionTitle)
-    : "New conversation";
+    : t.nav.newSession;
 
   return (
     <PageTopBar
-      title={title}
+      title={
+        activeSessionId ? (
+          <SessionActionsMenu
+            sessionId={activeSessionId}
+            title={title}
+            pinned={pinnedIds.has(activeSessionId)}
+            onRenameSubmit={handleRenameSubmit}
+            onTogglePin={() => toggle(activeSessionId)}
+            onExportJson={() => exportSession(activeSessionId, "json")}
+            onExportMarkdown={() => exportSession(activeSessionId, "markdown")}
+            onExportPdf={() => exportSessionsToPdf([activeSessionId])}
+            onClearSession={handleClearSession}
+            onArchive={handleArchive}
+            onDelete={handleDelete}
+          />
+        ) : (
+          title
+        )
+      }
       actions={
-        <>
-          {/* Workspace context panel toggle */}
-          <IconButton
-            active={workspacesOpen}
-            onClick={onToggleWorkspaces}
-            aria-label={t.nav.workspacesDrawer}
-            aria-pressed={workspacesOpen}
-          >
-            <PanelRight size={16} />
-          </IconButton>
-
-          {/* Shared session-actions ··· menu */}
-          {activeSessionId && (
-            <SessionActionsMenu
-              sessionId={activeSessionId}
-              title={title}
-              pinned={pinnedIds.has(activeSessionId)}
-              onRenameSubmit={handleRenameSubmit}
-              onTogglePin={() => toggle(activeSessionId)}
-              onExportJson={() => exportSession(activeSessionId, "json")}
-              onExportMarkdown={() => exportSession(activeSessionId, "markdown")}
-              onExportPdf={() => exportSessionsToPdf([activeSessionId])}
-              onClearLocal={clearMessages}
-              onArchive={handleArchive}
-              onDelete={handleDelete}
-            />
-          )}
-        </>
+        <IconButton
+          active={workspacesOpen}
+          onClick={onToggleWorkspaces}
+          aria-label={t.nav.workspacesDrawer}
+          aria-pressed={workspacesOpen}
+        >
+          <PanelRight size={16} />
+        </IconButton>
       }
     />
   );

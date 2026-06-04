@@ -4,7 +4,7 @@ import { MessageSquare, ChevronRight, Zap } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useChatStore } from "@/store/chat";
-import { useThemeStore } from "@/store/app";
+import { useThemeStore, useToolViewStore } from "@/store/app";
 import { navCommands, filterCommands, type Command } from "@/lib/commands";
 
 interface MessageHit {
@@ -32,8 +32,8 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
-  const showReasoning = useChatStore((s) => s.showReasoning);
-  const setShowReasoning = useChatStore((s) => s.setShowReasoning);
+  const toolView = useToolViewStore((s) => s.toolView);
+  const setToolView = useToolViewStore((s) => s.setToolView);
   const showTokens = useChatStore((s) => s.showTokens);
   const setShowTokens = useChatStore((s) => s.setShowTokens);
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
@@ -96,8 +96,8 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
     },
     {
       id: "act:reasoning", label: t.palette.toggleReasoning, group: "action",
-      keywords: "reasoning thinking trace",
-      run: () => setShowReasoning(!showReasoning),
+      keywords: "tool detail product technical reasoning thinking trace",
+      run: () => setToolView(toolView === "technical" ? "product" : "technical"),
     },
     {
       id: "act:tokens", label: t.palette.toggleTokens, group: "action",

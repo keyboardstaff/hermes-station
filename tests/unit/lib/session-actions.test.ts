@@ -9,7 +9,7 @@ const ALL = {
   onExportJson: () => {},
   onExportMarkdown: () => {},
   onExportPdf: () => {},
-  onClearLocal: () => {},
+  onClearSession: () => {},
   onArchive: () => {},
   onDelete: () => {},
 };
@@ -18,8 +18,8 @@ describe("buildSessionActions (single source for the ··· + right-click menus)
   it("emits the canonical ordered action set when every handler is present", () => {
     const keys = buildSessionActions(en, ALL).map((i) => i.key);
     expect(keys).toEqual([
-      "rename",
       "pin",
+      "rename",
       "copyId",
       "json",
       "md",

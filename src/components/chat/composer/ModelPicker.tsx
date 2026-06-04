@@ -19,41 +19,27 @@ function modelLabel(m: string): string {
   return m.length > 36 ? m.slice(0, 34) + "…" : m;
 }
 
-// Values match upstream hermes_constants.VALID_REASONING_EFFORTS.
-// null = omit field → upstream uses config.yaml default. NEVER send "auto".
-interface ReasoningOption {
-  value: string | null;
-  label: string;
-}
-
-const REASONING_OPTIONS: ReasoningOption[] = [
-  { value: "none", label: "None" },
-  { value: null, label: "Default" },
+// Effort levels match upstream hermes_constants.VALID_REASONING_EFFORTS. The
+// Thinking toggle owns "none" (off); null = omit the field → upstream uses the
+// config.yaml default (displayed as Medium). NEVER send "auto".
+const EFFORT_OPTIONS = [
   { value: "minimal", label: "Minimal" },
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
   { value: "xhigh", label: "Max" },
-];
+] as const;
 
-/** Compact suffix for the model pill (Default → no suffix). */
-function reasoningShort(value: string | null): string {
-  switch (value) {
-    case "none":
-      return "Off";
-    case "minimal":
-      return "Min";
-    case "low":
-      return "Low";
-    case "medium":
-      return "Med";
-    case "high":
-      return "High";
-    case "xhigh":
-      return "Max";
-    default:
-      return "";
-  }
+/** Thinking is on unless explicitly "none" (null/empty = config default = on). */
+function isThinkingOn(value: string | null): boolean {
+  return (value ?? "medium").trim().toLowerCase() !== "none";
+}
+
+/** The effort radio's checked value — normalizes null/"none"/unknown → Medium. */
+function normalizedEffort(value: string | null): string {
+  const v = (value ?? "medium").trim().toLowerCase();
+  if (v === "none") return "medium";
+  return EFFORT_OPTIONS.some((o) => o.value === v) ? v : "medium";
 }
 
 export function ModelPicker({
@@ -78,6 +64,10 @@ export function ModelPicker({
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Per-row hover flyout (Thinking + Effort), desktop-style. One shared flyout
+  // (reasoning is session-global), positioned at the hovered row's top.
+  const [effortFlyout, setEffortFlyout] = useState<{ top: number } | null>(null);
+  const effortLeaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const catalogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [catalogModels, setCatalogModels] = useState<string[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
@@ -141,9 +131,9 @@ export function ModelPicker({
     setOpen((o) => !o);
   };
 
-  const baseLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
-  const effortSuffix = reasoningShort(reasoningValue);
-  const displayLabel = effortSuffix ? `${baseLabel} · ${effortSuffix}` : baseLabel;
+  // Pill shows the model name only (no effort suffix) — effort lives in the
+  // per-row hover flyout now, and the bare name keeps the toolbar pill readable.
+  const displayLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
   const panelMaxH = 340;
   const searchQuery = search.trim().toLowerCase();
   const filteredProviders = providers
@@ -179,7 +169,7 @@ export function ModelPicker({
           color: value ? "var(--hms-text)" : "var(--hms-text-muted)",
           fontSize: 'var(--hms-text-caption)',
           cursor: "pointer",
-          maxWidth: 160,
+          maxWidth: 220,
           whiteSpace: "nowrap",
           overflow: "hidden",
         }}
@@ -246,57 +236,6 @@ export function ModelPicker({
               />
             </div>
           </div>
-
-          {/* Thinking / reasoning effort — absorbed from the standalone ReasoningPicker. */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 'var(--hms-space-1)',
-              padding: "2px 12px 8px",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 'var(--hms-space-1)',
-                marginRight: 2,
-                fontSize: 'var(--hms-text-xs)',
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                color: "var(--hms-text-muted)",
-              }}
-            >
-              <Brain size={11} style={{ flexShrink: 0 }} /> {t.composer.thinking}
-            </span>
-            {REASONING_OPTIONS.map((opt) => {
-              const active = reasoningValue === opt.value;
-              return (
-                <button
-                  key={String(opt.value)}
-                  type="button"
-                  onClick={() => onReasoningChange(opt.value)}
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    border: "1px solid",
-                    borderColor: active ? "var(--hms-accent)" : "var(--hms-border)",
-                    background: active ? "var(--hms-accent-weak)" : "transparent",
-                    color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-                    fontSize: 'var(--hms-text-caption)',
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ height: 1, background: "var(--hms-border)", margin: "0 0 4px" }} />
 
           {providers.length === 0 && (
             <div style={{ padding: "8px 14px", fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
@@ -374,13 +313,24 @@ export function ModelPicker({
                           background: isSelected ? "var(--hms-selected-bg)" : "transparent",
                           transition: "background 120ms",
                         }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--hms-hover-bg)"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = isSelected ? "var(--hms-selected-bg)" : "transparent"; }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = "var(--hms-hover-bg)";
+                          if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current);
+                          const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                          setEffortFlyout({ top: r.top });
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = isSelected ? "var(--hms-selected-bg)" : "transparent";
+                          effortLeaveRef.current = setTimeout(() => setEffortFlyout(null), 160);
+                        }}
                       >
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {modelLabel(m)}
                         </span>
-                        {isSelected && <Check size={11} style={{ flexShrink: 0, color: "var(--hms-success)" }} />}
+                        <span style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexShrink: 0 }}>
+                          {isSelected && <Check size={11} style={{ color: "var(--hms-success)" }} />}
+                          <Brain size={11} style={{ color: "var(--hms-text-muted)", opacity: 0.6 }} />
+                        </span>
                       </div>
                     );
                   })}
@@ -390,6 +340,96 @@ export function ModelPicker({
           })}
         </div>
       )}
+
+      {/* Per-row hover flyout: Thinking toggle + Effort radio (session-global). */}
+      {open && effortFlyout && (
+        <div
+          onMouseEnter={() => { if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current); }}
+          onMouseLeave={() => setEffortFlyout(null)}
+          style={{
+            position: "fixed",
+            top: Math.max(8, Math.min(effortFlyout.top, window.innerHeight - 240)),
+            left: effortFlyoutLeft(pos.left),
+            width: 190,
+            background: "var(--hms-surface)",
+            border: "1px solid var(--hms-border)",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+            zIndex: 10000,
+            padding: "6px 0",
+          }}
+        >
+          <div style={{ padding: "4px 12px", fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>
+            {t.composer.options}
+          </div>
+          <button
+            type="button"
+            onClick={() => onReasoningChange(isThinkingOn(reasoningValue) ? "none" : normalizedEffort(reasoningValue))}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: "var(--hms-text)", fontSize: 'var(--hms-text-caption)' }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)' }}>
+              <Brain size={12} style={{ flexShrink: 0 }} /> {t.composer.thinking}
+            </span>
+            <MiniSwitch on={isThinkingOn(reasoningValue)} />
+          </button>
+          <div style={{ height: 1, background: "var(--hms-border)", margin: "4px 0" }} />
+          <div style={{ padding: "4px 12px", fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>
+            {t.composer.effort}
+          </div>
+          {EFFORT_OPTIONS.map((opt) => {
+            const checked = isThinkingOn(reasoningValue) && normalizedEffort(reasoningValue) === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onReasoningChange(opt.value)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: checked ? "var(--hms-text)" : "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--hms-hover-bg)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+              >
+                {opt.label}
+                {checked && <Check size={12} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </>
+  );
+}
+
+/** Flyout x-position: left of the model panel, flipping to the right near the edge. */
+function effortFlyoutLeft(anchorLeft: number): number {
+  const FLYOUT_W = 190;
+  const panelLeft = Math.min(anchorLeft, window.innerWidth - 300);
+  const leftSide = panelLeft - FLYOUT_W - 6;
+  return leftSide >= 8 ? leftSide : panelLeft + 300 + 6;
+}
+
+function MiniSwitch({ on }: { on: boolean }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        width: 28,
+        height: 16,
+        borderRadius: 999,
+        background: on ? "var(--hms-accent)" : "var(--hms-border)",
+        padding: "2px",
+        flexShrink: 0,
+        transition: "background 150ms",
+      }}
+    >
+      <span
+        style={{
+          width: 12,
+          height: 12,
+          borderRadius: "50%",
+          background: "var(--hms-on-accent, #fff)",
+          transform: on ? "translateX(12px)" : "translateX(0)",
+          transition: "transform 150ms",
+        }}
+      />
+    </span>
   );
 }

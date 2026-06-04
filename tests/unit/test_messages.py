@@ -191,3 +191,56 @@ async def test_search_db_error_surfaces_500(app_server):
                 data = await r.json()
                 assert data["error"] == "db_error"
                 assert "fts kaboom" in data["detail"]
+
+
+# ── Clear session transcript (real wipe via SessionDB.clear_messages) ──
+
+
+@pytest.mark.asyncio
+async def test_clear_messages_happy_path(app_server):
+    fake_db = MagicMock()
+    with patch("server.routes.chat.db", return_value=fake_db):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/abc123/clear",
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 200, await r.text()
+                assert await r.json() == {"ok": True}
+    fake_db.clear_messages.assert_called_once_with("abc123")
+
+
+@pytest.mark.asyncio
+async def test_clear_messages_invalid_session_id(app_server):
+    fake_db = MagicMock()
+    with patch("server.routes.chat.db", return_value=fake_db):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/bad%20id/clear",
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 400
+    fake_db.clear_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_clear_messages_requires_csrf(app_server):
+    fake_db = MagicMock()
+    with patch("server.routes.chat.db", return_value=fake_db):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(f"{app_server}/api/sessions/abc/clear") as r:
+                assert r.status == 403
+    fake_db.clear_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_clear_messages_unsupported_503(app_server):
+    # A db handle without clear_messages (older upstream) ⇒ graceful 503.
+    fake_db = MagicMock(spec=["get_messages", "search_messages"])
+    with patch("server.routes.chat.db", return_value=fake_db):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/abc/clear",
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 503

@@ -466,6 +466,8 @@ export interface Translations {
     profileSwitchConfirm: string;
     manageProfiles: string;
     thinking: string;
+    options: string;
+    effort: string;
   };
 
   createProfile: {

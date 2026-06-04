@@ -15,6 +15,12 @@
   --hms-sidebar-collapsed-w: 56px;
   --hms-header-h: 48px;
 
+  /* Base accent for the default "Hermes Teal" skin — the Hermes gold from the
+     skin's preview swatch. The 5 named skins override --hms-accent per
+     [data-skin]; the default skin's block is intentionally empty, so without
+     this base every var(--hms-accent) under the default skin was undefined
+     (invisible active rings, etc.). Owner can retune this hex. */
+  --hms-accent:        #ffbd38;
   /* Derived semantic colours — resolve lazily against the active skin/theme
      accent, so they track every skin without per-skin duplication. Replace
      the inline rgba(accent) tints / #94a3b8 greys / ad-hoc shadows. */

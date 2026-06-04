@@ -21,6 +21,16 @@ import {
 } from "lucide-react";
 import type { Translations } from "@/i18n";
 
+/** Wipe a session's transcript server-side (real clear, keeps the session row).
+ *  POST /api/sessions/{id}/clear → upstream SessionDB.clear_messages. */
+export async function clearSessionMessages(sessionId: string): Promise<boolean> {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/clear`, {
+    method: "POST",
+    headers: { "X-HMS-CSRF": "1" },
+  });
+  return res.ok;
+}
+
 export interface SessionActionItem {
   key: string;
   icon: ReactNode;
@@ -38,7 +48,8 @@ export interface SessionActionHandlers {
   onExportJson?: () => void;
   onExportMarkdown?: () => void;
   onExportPdf?: () => void;
-  onClearLocal?: () => void;
+  /** Wipe the session transcript for real (server-side), not just the view. */
+  onClearSession?: () => void;
   onArchive?: () => void;
   onDelete?: () => void;
 }
@@ -52,9 +63,7 @@ export function buildSessionActions(
 ): SessionActionItem[] {
   const items: SessionActionItem[] = [];
 
-  if (h.onRename) {
-    items.push({ key: "rename", icon: <Pencil size={ICON} />, label: t.nav.renameSession, onSelect: h.onRename });
-  }
+  // Order (owner-specified): Pin / Rename / Copy ID / Export ··· / Clear / Archive / Delete.
   if (h.onTogglePin) {
     items.push({
       key: "pin",
@@ -62,6 +71,9 @@ export function buildSessionActions(
       label: h.pinned ? t.nav.unpin : t.nav.pin,
       onSelect: h.onTogglePin,
     });
+  }
+  if (h.onRename) {
+    items.push({ key: "rename", icon: <Pencil size={ICON} />, label: t.nav.renameSession, onSelect: h.onRename });
   }
   if (h.onCopyId) {
     items.push({ key: "copyId", icon: <Copy size={ICON} />, label: t.nav.copyId, onSelect: h.onCopyId });
@@ -75,8 +87,8 @@ export function buildSessionActions(
   if (h.onExportPdf) {
     items.push({ key: "pdf", icon: <Download size={ICON} />, label: t.nav.exportPdf, onSelect: h.onExportPdf });
   }
-  if (h.onClearLocal) {
-    items.push({ key: "clear", icon: <Eraser size={ICON} />, label: t.nav.clearLocal, onSelect: h.onClearLocal });
+  if (h.onClearSession) {
+    items.push({ key: "clear", icon: <Eraser size={ICON} />, label: t.nav.clearSession, onSelect: h.onClearSession });
   }
   if (h.onArchive) {
     items.push({ key: "archive", icon: <Archive size={ICON} />, label: t.nav.archiveSession, onSelect: h.onArchive });

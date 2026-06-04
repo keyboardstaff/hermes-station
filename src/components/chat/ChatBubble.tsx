@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff, Volume2, Square, Pencil, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX, GitFork, ImageOff, Volume2, Square, Pencil, RotateCcw, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,6 +12,7 @@ import MermaidDiagram from "./MermaidDiagram";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
+import { useToolViewStore } from "@/store/app";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { buildBranchHistory, precedingUserIndex, messagePlainText, type BranchTurn } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
@@ -66,6 +67,38 @@ function ApprovalNotice({ choice, command }: { choice: string; command: string }
         </code>
       )}
     </div>
+  );
+}
+
+/** Desktop-style "agent is working" indicator: a clock + live m:ss elapsed,
+ *  shown while a turn streams and gone the instant it completes (replaces the
+ *  old blinking caret). */
+function StreamingActivity() {
+  const [start] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const sec = Math.max(0, Math.floor((now - start) / 1000));
+  const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+  return (
+    <span
+      aria-label="Working"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "var(--hms-space-1)",
+        marginLeft: 2,
+        color: "var(--hms-text-muted)",
+        fontSize: "var(--hms-text-xs)",
+        fontVariantNumeric: "tabular-nums",
+        verticalAlign: "text-bottom",
+      }}
+    >
+      <Clock size={12} />
+      {label}
+    </span>
   );
 }
 
@@ -387,7 +420,9 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
-  const showReasoning = useChatStore((s) => s.showReasoning);
+  // Reasoning visibility folds into Tool Call Display: Technical shows the
+  // chain-of-thought (and raw tool payloads), Product hides both for a clean read.
+  const technical = useToolViewStore((s) => s.toolView === "technical");
   const messages = useChatStore((s) => s.messages);
   const setPendingBranchHistory = useChatStore((s) => s.setPendingBranchHistory);
   const setPendingAutoSend = useChatStore((s) => s.setPendingAutoSend);
@@ -489,7 +524,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
         ) : (
           /* Assistant: segments-based; content fallback for system notices. */
           <>
-            {showReasoning && msg.reasoning && (
+            {technical && msg.reasoning && (
               <ReasoningBlock text={msg.reasoning} streaming={msg.streaming} />
             )}
             {msg.segments && msg.segments.length > 0
@@ -502,19 +537,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
                 )
               : (msg.content && <MarkdownText content={msg.content} />)
             }
-            {msg.streaming && (
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 2,
-                  height: "1em",
-                  background: "currentColor",
-                  marginLeft: 2,
-                  verticalAlign: "text-bottom",
-                  animation: "blink 1s step-end infinite",
-                }}
-              />
-            )}
+            {msg.streaming && <StreamingActivity />}
           </>
         )}
 

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
-import { buildSessionActions } from "@/lib/session-actions";
+import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useI18n } from "@/i18n";
@@ -693,7 +693,14 @@ export default function SessionRecents({
             onExportJson: () => exportSession(menu.sessionId, "json"),
             onExportMarkdown: () => exportSession(menu.sessionId, "markdown"),
             onExportPdf: () => exportSessionsToPdf([menu.sessionId]),
-            onClearLocal: () => clearContext(menu.sessionId),
+            onClearSession: () => {
+              void clearSessionMessages(menu.sessionId).then((ok) => {
+                if (ok) {
+                  clearContext(menu.sessionId);
+                  queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
+                }
+              });
+            },
             onArchive: () => archiveSession(menu.sessionId),
             onDelete: () => deleteSession(menu.sessionId),
           }).map((item) => (

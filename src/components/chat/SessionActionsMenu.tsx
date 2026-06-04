@@ -1,20 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useI18n } from "@/i18n";
-import IconButton from "@/components/ui/IconButton";
 import { buildSessionActions, type SessionActionHandlers } from "@/lib/session-actions";
 
 /**
- * SessionActionsMenu — the ··· dropdown surface for per-session actions.
+ * SessionActionsMenu — the session title doubles as the ··· trigger.
  *
- * Shares its item spec with the SessionRecents right-click context menu via
- * `buildSessionActions` (single source). Owns its own open state, outside-click
- * close, and an inline Rename dialog so the caller only wires handlers.
+ * Clicking the title opens a dropdown of per-session actions, sharing its item
+ * spec with the SessionRecents right-click menu via `buildSessionActions`
+ * (single source). The popover is `position: fixed` (anchored to the title
+ * button's rect) so it escapes the title bar's `overflow: hidden` clip. Owns
+ * its open state, outside-click close, and an inline Rename dialog.
  */
 export interface SessionActionsMenuProps
   extends Omit<SessionActionHandlers, "onRename" | "onCopyId"> {
   sessionId: string;
-  /** Current title — seeds the Rename dialog. */
+  /** The session title — rendered as the clickable trigger + seeds Rename. */
   title: string;
   /** Persist a new title. */
   onRenameSubmit: (next: string) => void;
@@ -29,16 +30,31 @@ export default function SessionActionsMenu({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+
+  const toggle = () => {
+    if (!open) {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (r) setPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen((o) => !o);
+  };
 
   const items = buildSessionActions(t, {
     ...handlers,
@@ -53,28 +69,49 @@ export default function SessionActionsMenu({
   });
 
   return (
-    <div style={{ position: "relative" }} ref={menuRef}>
-      <IconButton
-        active={open}
-        onClick={() => setOpen((o) => !o)}
-        aria-label={t.nav.exportSession}
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
         aria-expanded={open}
+        title={title}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "var(--hms-space-1)",
+          maxWidth: "100%",
+          minWidth: 0,
+          margin: 0,
+          padding: "2px 6px",
+          borderRadius: 6,
+          border: "none",
+          background: open ? "var(--hms-surface-hover)" : "none",
+          color: "var(--hms-text)",
+          fontSize: "var(--hms-text-body)",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
       >
-        <MoreHorizontal size={16} />
-      </IconButton>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {title}
+        </span>
+        <ChevronDown size={14} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
+      </button>
 
       {open && (
         <div
+          ref={panelRef}
           style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 4px)",
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
             zIndex: 9999,
             background: "var(--hms-surface)",
             border: "1px solid var(--hms-border)",
             borderRadius: 8,
             padding: "4px 0",
-            minWidth: 180,
+            minWidth: 200,
             boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
           }}
         >
@@ -123,7 +160,7 @@ export default function SessionActionsMenu({
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Brain, Shield, Globe } from "lucide-react";
+import { Shield, Globe } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
-import { useChatStore } from "@/store/chat";
 import { useDebouncedEffect } from "@/hooks/useDebouncedValue";
 import { api, ApiError } from "@/lib/api";
 import { Section } from "@/components/settings/shared";
@@ -68,8 +67,6 @@ export function PreferencesTab() {
   }, [maxRuns, maxUploadMib, retentionDays], 600);
 
   const label = t.settings.preferences!;
-  const showReasoning = useChatStore((s) => s.showReasoning);
-  const setShowReasoning = useChatStore((s) => s.setShowReasoning);
 
   return (
     <div id="preferences" style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-4)' }}>
@@ -94,12 +91,6 @@ export function PreferencesTab() {
             </button>
           ))}
         </div>
-      </Section>
-      <Section icon={<Brain size={14} />} title={label.displaySection ?? "Display"}>
-        <label style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', cursor: "pointer", fontSize: 'var(--hms-text-sm)' }}>
-          <input type="checkbox" checked={showReasoning} onChange={(e) => setShowReasoning(e.target.checked)} />
-          {label.showReasoning ?? "Show reasoning (chain-of-thought) in chat"}
-        </label>
       </Section>
       <Section icon={<Shield size={14} />} title={label.section}>
         <AdvField label={label.maxRuns} hint={label.maxRunsHint}>

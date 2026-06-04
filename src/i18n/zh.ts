@@ -35,7 +35,7 @@ export const zh: Translations = {
     messages: "消息",
     newChat: "新建聊天",
     toggleTheme: "切换主题",
-    toggleReasoning: "切换推理显示",
+    toggleReasoning: "切换工具详情(Product / Technical)",
     toggleTokens: "切换 token 标签",
   },
 
@@ -68,7 +68,7 @@ export const zh: Translations = {
     workspacesDrawer: "工作区",
     exportSession: "导出",
     renameSession: "重命名",
-    clearSession: "清除",
+    clearSession: "清除会话",
     exportJson: "导出 JSON",
     exportMarkdown: "导出 Markdown",
     exportPdf: "导出 PDF",
@@ -442,6 +442,8 @@ export const zh: Translations = {
     profileSwitchConfirm: "切换到 Profile「{name}」吗？Gateway 将重启。",
     manageProfiles: "管理 Profile",
     thinking: "思考",
+    options: "选项",
+    effort: "思考强度",
   },
 
   createProfile: {

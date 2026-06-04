@@ -35,7 +35,7 @@ export const en: Translations = {
     messages: "Messages",
     newChat: "New chat",
     toggleTheme: "Toggle theme",
-    toggleReasoning: "Toggle reasoning display",
+    toggleReasoning: "Toggle tool detail (Product / Technical)",
     toggleTokens: "Toggle token labels",
   },
 
@@ -68,7 +68,7 @@ export const en: Translations = {
     workspacesDrawer: "Workspace",
     exportSession: "Export",
     renameSession: "Rename",
-    clearSession: "Clear",
+    clearSession: "Clear Session",
     exportJson: "Export JSON",
     exportMarkdown: "Export Markdown",
     exportPdf: "Export PDF",
@@ -443,6 +443,8 @@ export const en: Translations = {
     profileSwitchConfirm: "Switch active profile to {name}? The gateway will restart.",
     manageProfiles: "Manage profiles",
     thinking: "Thinking",
+    options: "Options",
+    effort: "Effort",
   },
 
   createProfile: {

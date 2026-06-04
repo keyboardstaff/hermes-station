@@ -20,9 +20,6 @@ interface ChatState {
   selectedProvider: string | null;
   /** Matches hermes_constants.VALID_REASONING_EFFORTS; null = use config.yaml default. */
   reasoningEffort: string | null;
-  /** Client-side display preference (upstream /reasoning show|hide) — controls
-   *  whether the assistant's chain-of-thought renders in the transcript. */
-  showReasoning: boolean;
   /** Composer context-ring: show the numeric token label (the /usage toggle). */
   showTokens: boolean;
   /** Cumulative session token usage from the last run.completed — feeds the
@@ -74,7 +71,6 @@ interface ChatState {
   setSelectedModel: (m: string | null) => void;
   setSelectedProvider: (p: string | null) => void;
   setReasoningEffort: (v: string | null) => void;
-  setShowReasoning: (v: boolean) => void;
   setShowTokens: (v: boolean) => void;
   setLastUsage: (u: ChatState["lastUsage"]) => void;
   setHistoryPending: (v: boolean) => void;
@@ -117,7 +113,6 @@ export const useChatStore = create<ChatState>()(
   selectedModel: null,
   selectedProvider: null,
   reasoningEffort: null,
-  showReasoning: true,
   showTokens: true,
   lastUsage: null,
   pendingApproval: null,
@@ -377,7 +372,6 @@ export const useChatStore = create<ChatState>()(
   setSelectedModel: (m) => set({ selectedModel: m }),
   setSelectedProvider: (p) => set({ selectedProvider: p }),
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
-  setShowReasoning: (v) => set({ showReasoning: v }),
   setShowTokens: (v) => set({ showTokens: v }),
   setLastUsage: (u) => set({ lastUsage: u }),
   setHistoryPending: (v) => set({ isHistoryPending: v }),
@@ -412,7 +406,6 @@ export const useChatStore = create<ChatState>()(
         selectedModel: state.selectedModel,
         selectedProvider: state.selectedProvider,
         reasoningEffort: state.reasoningEffort,
-        showReasoning: state.showReasoning,
         showTokens: state.showTokens,
         activeSessionId: state.activeSessionId,
         // Persisted so refresh can re-subscribe to run:<id> instead of stuck streaming.

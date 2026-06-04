@@ -204,6 +204,26 @@ async def get_session_messages(request: web.Request) -> web.Response:
     return web.json_response({"messages": sliced, "total": total, "offset": offset})
 
 
+@router.post("/api/sessions/{session_id}/clear")
+async def clear_session_messages(request: web.Request) -> web.Response:
+    """Wipe a session's transcript (upstream ``SessionDB.clear_messages``) while
+    keeping the session row — a real "start this chat over" that the local-only
+    view-clear can't do. Mutation ⇒ CSRF-gated by middleware."""
+    sid = request.match_info["session_id"]
+    if not SESSION_ID_RE.match(sid):
+        return web.json_response({"error": "invalid_session_id"}, status=400)
+    handle = db()
+    clear = getattr(handle, "clear_messages", None) if handle is not None else None
+    if clear is None:
+        return web.json_response({"error": "unsupported"}, status=503)
+    try:
+        await run_db(clear, sid)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("clear_messages failed")
+        return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
+    return web.json_response({"ok": True})
+
+
 @router.get("/api/sessions/{session_id}/interrupted")
 async def get_session_interrupted(request: web.Request) -> web.Response:
     """Crash recovery: the partial answer of a run that died mid-turn for this
