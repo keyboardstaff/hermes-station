@@ -79,7 +79,7 @@ interface SessionsPayload {
 
 export default function AgentsPanel() {
   const { t } = useI18n();
-  const g = t.group;
+  const g = t.agents;
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const openInChat = (sid: string) => {
@@ -149,7 +149,7 @@ export default function AgentsPanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <PageTopBar
-        title={t.nav.group}
+        title={t.nav.agents}
         subtitle={g?.subtitle ?? "Multi-session collaboration — parent → child hierarchies"}
         actions={
           <IconButton title={g?.refresh ?? "Refresh"} onClick={() => sessionsQuery.refetch()}>

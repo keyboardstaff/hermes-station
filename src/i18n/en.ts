@@ -42,7 +42,7 @@ export const en: Translations = {
   nav: {
     chat: "Chat",
     sessions: "Sessions",
-    group: "Agents",
+    agents: "Agents",
     kanban: "Kanban",
     cron: "Cron",
     skills: "Skills",
@@ -367,7 +367,7 @@ export const en: Translations = {
     backToChat: "Back to chat",
   },
 
-  group: {
+  agents: {
     subtitle: "Multi-session collaboration — parent → child hierarchies",
     refresh: "Refresh",
     readOnlyHint: "Read-only. Use /handoff or the `hermes` CLI to start sub-sessions.",

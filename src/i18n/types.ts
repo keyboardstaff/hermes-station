@@ -46,7 +46,7 @@ export interface Translations {
   nav: {
     chat: string;
     sessions: string;
-    group: string;
+    agents: string;
     kanban: string;
     cron: string;
     skills: string;
@@ -389,7 +389,7 @@ export interface Translations {
     backToChat: string;
   };
 
-  group: {
+  agents: {
     subtitle: string;
     refresh: string;
     readOnlyHint: string;

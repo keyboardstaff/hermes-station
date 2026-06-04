@@ -42,7 +42,7 @@ export const zh: Translations = {
   nav: {
     chat: "聊天",
     sessions: "会话",
-    group: "协作",
+    agents: "协作",
     kanban: "看板",
     cron: "计划任务",
     skills: "技能",
@@ -366,7 +366,7 @@ export const zh: Translations = {
     backToChat: "返回聊天",
   },
 
-  group: {
+  agents: {
     subtitle: "多会话协作 —— 父 → 子 层级",
     refresh: "刷新",
     readOnlyHint: "只读视图。用 /handoff 等斜杠命令或 `hermes` CLI 启动子会话。",
