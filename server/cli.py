@@ -61,11 +61,21 @@ def _run_with_reload(bind: dict[str, Any]) -> None:
         from watchdog.events import FileSystemEventHandler
         from watchdog.observers import Observer
     except ImportError:
+        # Hot reload is a dev convenience, not a hard requirement. A missing
+        # watchdog must NOT take the backend down — exiting here strands the
+        # Vite proxy on an unbound socket (the opaque
+        # `connect ENOENT …/station-dev.sock` you get when a dev dep is absent,
+        # e.g. after the host venv is rebuilt). Degrade to one no-reload run so
+        # the socket still binds; tell the operator how to restore live reload.
         print(
-            "watchdog is required for --reload (pip install watchdog).",
+            "⚠ watchdog not installed — serving without hot reload "
+            "(restore with: pip install -e '.[dev]'). Source edits need a "
+            "manual restart.",
             file=sys.stderr,
+            flush=True,
         )
-        sys.exit(2)
+        _run_once(bind)
+        return
 
     pkg_dir = Path(__file__).resolve().parent
 

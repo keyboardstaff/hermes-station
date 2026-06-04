@@ -89,6 +89,22 @@ def test_cmd_dev_reload_runs_socket_backend(monkeypatch, tmp_path):
     assert seen["bind"] == {"path": str(tmp_path / "station-dev.sock")}
 
 
+def test_run_with_reload_degrades_when_watchdog_missing(monkeypatch):
+    # A rebuilt host venv can drop Station's dev extras (watchdog). The reload
+    # path must then fall back to a plain bind — NOT sys.exit — so the dev
+    # socket still comes up and the Vite proxy never sees `ENOENT …dev.sock`.
+    import sys as _sys
+
+    # A None entry in sys.modules forces ImportError on the `import watchdog…`.
+    monkeypatch.setitem(_sys.modules, "watchdog", None)
+    monkeypatch.setitem(_sys.modules, "watchdog.observers", None)
+    monkeypatch.setitem(_sys.modules, "watchdog.events", None)
+    seen = {}
+    monkeypatch.setattr(cli, "_run_once", lambda bind: seen.update(bind=bind))
+    cli._run_with_reload({"path": "/tmp/x.sock"})  # must not raise SystemExit
+    assert seen["bind"] == {"path": "/tmp/x.sock"}
+
+
 def test_cmd_dev_explicit_port_runs_tcp(monkeypatch):
     monkeypatch.delenv("HMS_DEV_SOCK", raising=False)
     monkeypatch.setattr("server.lib.config_reader.hms_host", lambda: "127.0.0.1")
