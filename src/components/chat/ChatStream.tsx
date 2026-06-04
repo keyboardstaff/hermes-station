@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ChatThread, type ChatThreadLabels } from "./ChatThread";
 import { Loader2, ArrowDown } from "lucide-react";
 import type { ChatMessage } from "@/lib/hermes-types";
+import { useChatStore } from "@/store/chat";
 
 interface ChatStreamProps {
   messages: ChatMessage[];
@@ -23,6 +24,8 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const pendingScrollMessageId = useChatStore((s) => s.pendingScrollMessageId);
+  const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
 
   const isNearBottom = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -58,6 +61,32 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
     setUserScrolledUp(false);
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Search → jump to a specific message. User rows render as `hist-<id>`,
+  // assistant runs as `hist-run-<firstRowId>`; try both. Retries briefly while
+  // the session history is still loading into the DOM.
+  useEffect(() => {
+    if (pendingScrollMessageId == null) return;
+    const id = pendingScrollMessageId;
+    const sel = `[data-msg-id="hist-${id}"], [data-msg-id="hist-run-${id}"]`;
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => {
+      const el = scrollContainerRef.current?.querySelector<HTMLElement>(sel);
+      if (el) {
+        setUserScrolledUp(true); // hold position — don't let auto-scroll-to-bottom override
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("hms-msg-flash");
+        window.setTimeout(() => el.classList.remove("hms-msg-flash"), 1600);
+        setPendingScrollMessageId(null);
+        return;
+      }
+      if (tries++ < 25) timer = window.setTimeout(attempt, 120);
+      else setPendingScrollMessageId(null);
+    };
+    attempt();
+    return () => window.clearTimeout(timer);
+  }, [pendingScrollMessageId, messages, setPendingScrollMessageId]);
 
   const showLoading = Boolean(isLoadingHistory) || isTransitioningOut;
   const showEmpty = !showLoading && messages.length === 0;

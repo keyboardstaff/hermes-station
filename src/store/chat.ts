@@ -22,6 +22,8 @@ interface ChatState {
   reasoningEffort: string | null;
   /** Composer context-ring: show the numeric token label (the /usage toggle). */
   showTokens: boolean;
+  /** Transient: a DB message_id the chat view should scroll to (from search). */
+  pendingScrollMessageId: number | null;
   /** Cumulative session token usage from the last run.completed — feeds the
    *  Composer context ring. Reset on session switch / clear. */
   lastUsage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
@@ -72,6 +74,7 @@ interface ChatState {
   setSelectedProvider: (p: string | null) => void;
   setReasoningEffort: (v: string | null) => void;
   setShowTokens: (v: boolean) => void;
+  setPendingScrollMessageId: (id: number | null) => void;
   setLastUsage: (u: ChatState["lastUsage"]) => void;
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
@@ -114,6 +117,7 @@ export const useChatStore = create<ChatState>()(
   selectedProvider: null,
   reasoningEffort: null,
   showTokens: true,
+  pendingScrollMessageId: null,
   lastUsage: null,
   pendingApproval: null,
   provisionalTitles: {},
@@ -373,6 +377,7 @@ export const useChatStore = create<ChatState>()(
   setSelectedProvider: (p) => set({ selectedProvider: p }),
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
   setShowTokens: (v) => set({ showTokens: v }),
+  setPendingScrollMessageId: (id) => set({ pendingScrollMessageId: id }),
   setLastUsage: (u) => set({ lastUsage: u }),
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),

@@ -218,6 +218,11 @@ async def clear_session_messages(request: web.Request) -> web.Response:
         return web.json_response({"error": "unsupported"}, status=503)
     try:
         await run_db(clear, sid)
+        # Reset the title too, so the next turn's auto-title regenerates instead
+        # of keeping the now-stale title of the wiped conversation.
+        set_title = getattr(handle, "set_session_title", None)
+        if set_title is not None:
+            await run_db(set_title, sid, "")
     except Exception as exc:  # noqa: BLE001
         logger.exception("clear_messages failed")
         return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)

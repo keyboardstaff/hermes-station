@@ -32,6 +32,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
+  const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
   const toolView = useToolViewStore((s) => s.toolView);
   const setToolView = useToolViewStore((s) => s.setToolView);
   const showTokens = useChatStore((s) => s.showTokens);
@@ -120,13 +121,15 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
     return () => { cancelled = true; };
   }, [debouncedQuery]);
 
-  const openMessage = useCallback((sessionId: string) => {
+  const openMessage = useCallback((sessionId: string, messageId: number) => {
     // Open the conversation that contains the matched message (SessionsPanel
-    // doesn't honor ?id=, and the chat view is the more useful landing).
+    // doesn't honor ?id=, and the chat view is the more useful landing), then
+    // hand the chat view a scroll target so it jumps to the matched message.
     setActiveSession(sessionId);
+    setPendingScrollMessageId(messageId);
     navigate("/chat");
     requestClose();
-  }, [setActiveSession, navigate, requestClose]);
+  }, [setActiveSession, setPendingScrollMessageId, navigate, requestClose]);
 
   const rows: Row[] = [
     ...filtered.map((c) => ({
@@ -136,7 +139,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
     ...messages.map((m) => ({
       key: `msg:${m.session_id}:${m.message_id}`, kind: "message" as const, group: "messages" as const,
       label: (m.snippet || "").replace(/\s+/g, " ").trim() || "(message)",
-      onSelect: () => openMessage(m.session_id),
+      onSelect: () => openMessage(m.session_id, m.message_id),
     })),
   ];
 

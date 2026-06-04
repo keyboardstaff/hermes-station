@@ -494,6 +494,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div
       className="hms-msg-row"
+      data-msg-id={msg.id}
       style={{
         display: "flex",
         flexDirection: "column",

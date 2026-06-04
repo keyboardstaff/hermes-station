@@ -280,7 +280,7 @@ export default function SessionRecents({
   limit,
 }: SessionRecentsProps = {}) {
   const { t } = useI18n();
-  const { activeSessionId, setActiveSession, clearMessages } = useChatStore();
+  const { activeSessionId, setActiveSession, clearMessages, setProvisionalTitle } = useChatStore();
   // Every session with a live run shows a spinner — not just the focused one,
   // so concurrent runs are all visible.
   const runningBySession = useChatStore((s) => s.runningBySession);
@@ -697,6 +697,7 @@ export default function SessionRecents({
               void clearSessionMessages(menu.sessionId).then((ok) => {
                 if (ok) {
                   clearContext(menu.sessionId);
+                  setProvisionalTitle(menu.sessionId, "");
                   queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
                 }
               });

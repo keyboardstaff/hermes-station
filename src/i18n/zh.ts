@@ -306,12 +306,12 @@ export const zh: Translations = {
 
   skin: {
     sectionLabel: "主题",
-    default:   "Hermes 青绿",
+    default:   "青绿",
     midnight:  "午夜",
     ember:     "余烬",
     mono:      "灰阶",
     cyberpunk: "赛博朋克",
-    rose:      "玫瑰",
+    slate:     "石板蓝",
   },
 
   fontSize: {

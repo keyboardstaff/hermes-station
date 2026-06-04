@@ -42,6 +42,18 @@ function normalizedEffort(value: string | null): string {
   return EFFORT_OPTIONS.some((o) => o.value === v) ? v : "medium";
 }
 
+/** Compact effort tag for the model pill suffix (Off when Thinking is disabled). */
+function reasoningShort(value: string | null): string {
+  if (!isThinkingOn(value)) return "Off";
+  switch (normalizedEffort(value)) {
+    case "minimal": return "Min";
+    case "low": return "Low";
+    case "high": return "High";
+    case "xhigh": return "Max";
+    default: return "Med";
+  }
+}
+
 export function ModelPicker({
   value,
   providers,
@@ -65,9 +77,10 @@ export function ModelPicker({
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   // Per-row hover flyout (Thinking + Effort), desktop-style. One shared flyout
-  // (reasoning is session-global), positioned at the hovered row's top.
-  const [effortFlyout, setEffortFlyout] = useState<{ top: number } | null>(null);
+  // (reasoning is session-global), bottom-flush with the model panel.
+  const [effortFlyout, setEffortFlyout] = useState(false);
   const effortLeaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
   const catalogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [catalogModels, setCatalogModels] = useState<string[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
@@ -77,7 +90,8 @@ export function ModelPicker({
     const handler = (e: MouseEvent) => {
       if (
         panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        (!flyoutRef.current || !flyoutRef.current.contains(e.target as Node))
       ) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -131,9 +145,10 @@ export function ModelPicker({
     setOpen((o) => !o);
   };
 
-  // Pill shows the model name only (no effort suffix) — effort lives in the
-  // per-row hover flyout now, and the bare name keeps the toolbar pill readable.
-  const displayLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
+  // Pill = the selected model name (same modelLabel as the dropdown rows) + a
+  // compact effort suffix (· Med / · Off). maxWidth lets it grow with the name.
+  const baseLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
+  const displayLabel = `${baseLabel} · ${reasoningShort(reasoningValue)}`;
   const panelMaxH = 340;
   const searchQuery = search.trim().toLowerCase();
   const filteredProviders = providers
@@ -169,7 +184,7 @@ export function ModelPicker({
           color: value ? "var(--hms-text)" : "var(--hms-text-muted)",
           fontSize: 'var(--hms-text-caption)',
           cursor: "pointer",
-          maxWidth: 220,
+          maxWidth: 260,
           whiteSpace: "nowrap",
           overflow: "hidden",
         }}
@@ -191,7 +206,9 @@ export function ModelPicker({
             left: Math.min(pos.left, window.innerWidth - 300) + "px",
             width: 300,
             maxHeight: panelMaxH,
-            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             background: "var(--hms-surface)",
             border: "1px solid var(--hms-border)",
             borderRadius: 10,
@@ -202,9 +219,7 @@ export function ModelPicker({
         >
           <div
             style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 1,
+              flexShrink: 0,
               padding: "0 10px 8px",
               background: "var(--hms-surface)",
             }}
@@ -237,6 +252,7 @@ export function ModelPicker({
             </div>
           </div>
 
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {providers.length === 0 && (
             <div style={{ padding: "8px 14px", fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
               No providers configured
@@ -316,12 +332,11 @@ export function ModelPicker({
                         onMouseEnter={(e) => {
                           (e.currentTarget as HTMLDivElement).style.background = "var(--hms-hover-bg)";
                           if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current);
-                          const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                          setEffortFlyout({ top: r.top });
+                          setEffortFlyout(true);
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLDivElement).style.background = isSelected ? "var(--hms-selected-bg)" : "transparent";
-                          effortLeaveRef.current = setTimeout(() => setEffortFlyout(null), 160);
+                          effortLeaveRef.current = setTimeout(() => setEffortFlyout(false), 160);
                         }}
                       >
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -338,19 +353,24 @@ export function ModelPicker({
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
-      {/* Per-row hover flyout: Thinking toggle + Effort radio (session-global). */}
+      {/* Per-row hover flyout: Thinking toggle + Effort radio (session-global).
+          Bottom-flush with the model panel so the two line up. */}
       {open && effortFlyout && (
         <div
+          ref={flyoutRef}
           onMouseEnter={() => { if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current); }}
-          onMouseLeave={() => setEffortFlyout(null)}
+          onMouseLeave={() => setEffortFlyout(false)}
           style={{
             position: "fixed",
-            top: Math.max(8, Math.min(effortFlyout.top, window.innerHeight - 240)),
+            bottom: `${window.innerHeight - pos.top + 6}px`,
             left: effortFlyoutLeft(pos.left),
             width: 190,
+            maxHeight: panelMaxH,
+            overflowY: "auto",
             background: "var(--hms-surface)",
             border: "1px solid var(--hms-border)",
             borderRadius: 10,

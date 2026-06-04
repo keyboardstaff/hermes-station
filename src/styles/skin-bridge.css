@@ -34,9 +34,9 @@
 :root[data-skin="cyberpunk"]                      { --hms-accent: #059669; --hms-surface: color-mix(in srgb, #00ff88 3%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #00ff88 10%, transparent); }
 :root[data-theme="dark"][data-skin="cyberpunk"]   { --hms-accent: #00ff88; --hms-surface: color-mix(in srgb, #00ff88 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #00ff88 14%, transparent); }
 
-/* ── Rosé — soft pink + warm ivory ───────────────────────────────────── */
-:root[data-skin="rose"]                           { --hms-accent: #db2777; --hms-surface: color-mix(in srgb, #ec4899 4%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #ec4899 10%, transparent); }
-:root[data-theme="dark"][data-skin="rose"]        { --hms-accent: #ec4899; --hms-surface: color-mix(in srgb, #ec4899 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #ec4899 14%, transparent); }
+/* ── Slate — cool slate blue (upstream desktop Slate) ────────────────── */
+:root[data-skin="slate"]                          { --hms-accent: #2f81f7; --hms-surface: color-mix(in srgb, #58a6ff 4%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #58a6ff 10%, transparent); }
+:root[data-theme="dark"][data-skin="slate"]       { --hms-accent: #58a6ff; --hms-surface: color-mix(in srgb, #58a6ff 6%, var(--hms-bg)); --hms-selected-bg: color-mix(in srgb, #58a6ff 14%, transparent); }
 
 /*
  * Font size — root rem cascade.

@@ -21,6 +21,7 @@
      this base every var(--hms-accent) under the default skin was undefined
      (invisible active rings, etc.). Owner can retune this hex. */
   --hms-accent:        #ffbd38;
+  /* (see `.hms-msg-flash` below — search "jump to message" highlight) */
   /* Derived semantic colours — resolve lazily against the active skin/theme
      accent, so they track every skin without per-skin duplication. Replace
      the inline rgba(accent) tints / #94a3b8 greys / ad-hoc shadows. */
@@ -603,4 +604,15 @@ body,
 }
 .hms-sidebar-row:hover .hms-shortcut-hint {
   opacity: 1;
+}
+
+/* Search "jump to message" — brief highlight when the chat view scrolls a
+   matched message into view (set by ChatStream via .classList.add). */
+.hms-msg-flash {
+  animation: hms-msg-flash 1.6s ease;
+  border-radius: 8px;
+}
+@keyframes hms-msg-flash {
+  0%, 100% { background: transparent; }
+  12% { background: var(--hms-accent-weak); }
 }

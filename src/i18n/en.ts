@@ -307,12 +307,12 @@ export const en: Translations = {
   skin: {
     sectionLabel: "Theme",
     // Per-skin labels — keyed by name in `src/styles/skins.ts`. Mirrors upstream's _BUILTIN_DASHBOARD_THEMES.
-    default:   "Hermes Teal",
+    default:   "Teal",
     midnight:  "Midnight",
     ember:     "Ember",
     mono:      "Mono",
     cyberpunk: "Cyberpunk",
-    rose:      "Rosé",
+    slate:     "Slate",
   },
 
   fontSize: {

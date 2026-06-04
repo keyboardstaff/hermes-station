@@ -57,7 +57,7 @@ export default function ChatTitleBar({
   workspacesOpen?: boolean;
 }) {
   const { t } = useI18n();
-  const { activeSessionId, clearMessages, setActiveSession } = useChatStore();
+  const { activeSessionId, clearMessages, setActiveSession, setProvisionalTitle } = useChatStore();
   const activeSessionTitle = useActiveSessionTitle();
   const queryClient = useQueryClient();
   const { pinnedIds, toggle } = usePinnedSessions();
@@ -118,6 +118,9 @@ export default function ChatTitleBar({
     void clearSessionMessages(activeSessionId).then((ok) => {
       if (ok) {
         clearMessages();
+        // Drop the stale provisional title so the bar shows a fresh session and
+        // the next turn's auto-title regenerates (backend reset the DB title too).
+        setProvisionalTitle(activeSessionId, "");
         invalidate();
       }
     });

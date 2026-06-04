@@ -106,8 +106,8 @@ export const useSkinStore = create<SkinStore>((set) => {
 
 // ── Tool-call display ─────────────────────────────────────────────
 // Product = concise summary (raw payloads hidden); Technical = full
-// input/output. Mirrors upstream desktop's $toolViewMode. Defaults to
-// Product so chat reads clean; power users opt into Technical once.
+// input/output + reasoning. Mirrors upstream desktop's $toolViewMode.
+// Defaults to Technical (owner pref): full detail out of the box.
 
 export type ToolViewMode = "product" | "technical";
 
@@ -118,7 +118,7 @@ function readStoredToolView(): ToolViewMode {
     const v = localStorage.getItem(TOOL_VIEW_KEY);
     if (v === "product" || v === "technical") return v;
   } catch { /* localStorage disabled */ }
-  return "product";
+  return "technical";
 }
 
 interface ToolViewStore {

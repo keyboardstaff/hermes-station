@@ -16,8 +16,8 @@ export function AppearanceTab() {
   const { toolView, setToolView } = useToolViewStore();
 
   const toolOptions: { id: ToolViewMode; label: string; hint: string }[] = [
-    { id: "product", label: t.theme.product, hint: t.theme.productHint },
     { id: "technical", label: t.theme.technical, hint: t.theme.technicalHint },
+    { id: "product", label: t.theme.product, hint: t.theme.productHint },
   ];
 
   return (
