@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 /**
  * Square icon button — the single home for the 26/32px transparent icon
  * buttons that were hand-rolled across ChatTitleBar, FilesSideTree,
- * SkillsSideList, Channels, Group, etc. Token-only styling.
+ * SkillsSideList, Channels, Agents, etc. Token-only styling.
  */
 export default function IconButton({
   size = "md",

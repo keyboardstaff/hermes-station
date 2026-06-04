@@ -521,10 +521,22 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
         }}
       >
         {isUser ? (
-          <UserMessageContent msg={msg} />
+          <>
+            {msg.agent ? (
+              <span style={{ display: "block", marginBottom: 4, fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>
+                → @{msg.agent}
+              </span>
+            ) : null}
+            <UserMessageContent msg={msg} />
+          </>
         ) : (
           /* Assistant: segments-based; content fallback for system notices. */
           <>
+            {msg.agent ? (
+              <span style={{ display: "block", marginBottom: 4, fontSize: 'var(--hms-text-xs)', fontWeight: 600, color: "var(--hms-accent)" }}>
+                @{msg.agent}
+              </span>
+            ) : null}
             {technical && msg.reasoning && (
               <ReasoningBlock text={msg.reasoning} streaming={msg.streaming} />
             )}

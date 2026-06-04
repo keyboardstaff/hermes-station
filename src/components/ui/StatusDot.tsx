@@ -1,6 +1,6 @@
 /**
  * Status dot + optional label — the single home for the running/stopped/
- * enabled indicators repeated across Profile (gateway), Skills, Cron, Group.
+ * enabled indicators repeated across Profile (gateway), Skills, Cron, Agents.
  * `tone` maps to a semantic token; `filled` shows ● vs ○.
  */
 export type StatusTone = "success" | "warning" | "error" | "accent" | "muted";

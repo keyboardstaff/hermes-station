@@ -368,17 +368,15 @@ export const en: Translations = {
   },
 
   agents: {
-    subtitle: "Multi-session collaboration — parent → child hierarchies",
-    refresh: "Refresh",
-    readOnlyHint: "Read-only. Use /handoff or the `hermes` CLI to start sub-sessions.",
+    subtitle: "Chat with several profile-agents in one room — @mention to route a turn",
+    addAgent: "Add agent",
+    noMembers: "No agents yet",
+    noMembersHint: "Add one or more profiles as agents, then @mention them to chat.",
+    respondsLabel: "Replies",
+    placeholder: "Message the room…",
+    remove: "Remove",
     loading: "Loading…",
-    errorLoading: "Failed to load sessions.",
-    noGroups: "No multi-session groups in the recent history. Sub-agent sessions / handoffs will appear here.",
-    untitled: "(untitled)",
-    openSession: "Open",
-    childOne: "child",
-    children: "children",
-    footnote: "{groups} group(s) across {total} recent sessions.",
+    errorLoading: "Failed to load.",
   },
 
   channels: {

@@ -391,16 +391,14 @@ export interface Translations {
 
   agents: {
     subtitle: string;
-    refresh: string;
-    readOnlyHint: string;
+    addAgent: string;
+    noMembers: string;
+    noMembersHint: string;
+    respondsLabel: string;
+    placeholder: string;
+    remove: string;
     loading: string;
     errorLoading: string;
-    noGroups: string;
-    untitled: string;
-    openSession: string;
-    childOne: string;
-    children: string;
-    footnote: string;
   };
 
   channels: {

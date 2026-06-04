@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 /**
  * Bordered surface container — the single home for the
  * `border + radius + surface` blocks repeated across Models / Analytics /
- * Channels / Group / Skills cards. Token-only.
+ * Channels / Agents / Skills cards. Token-only.
  */
 export default function Card({
   children,

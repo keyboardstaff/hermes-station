@@ -90,6 +90,8 @@ export interface ChatMessage {
   kind?: "approval_notice";
   approvalCommand?: string;
   approvalChoice?: string;
+  /** Agents room: the profile-agent this turn was routed to (@mention). */
+  agent?: string;
   createdAt: number;
   streaming?: boolean;
 }

@@ -25,6 +25,7 @@ export function useRunsStream() {
     clearRunningForSession,
     renameMessageId,
     updateActiveSessionId,
+    setAgentForRun,
     selectedModel,
     selectedProvider,
     reasoningEffort,
@@ -371,7 +372,7 @@ export function useRunsStream() {
   }, []);
 
   const sendMessage = useCallback(
-    async (input: string, attachments?: ComposerAttachment[]) => {
+    async (input: string, attachments?: ComposerAttachment[], opts?: { profileOverride?: string }) => {
       const currentSessionId = useChatStore.getState().activeSessionId;
 
       // Optimistic user bubble with a collision-free temp id; rebound to
@@ -388,6 +389,7 @@ export function useRunsStream() {
           name: a.name, content: a.content,
           isImage: a.isImage, isAudio: a.isAudio, isVideo: a.isVideo,
         })),
+        ...(opts?.profileOverride ? { agent: opts.profileOverride } : {}),
         createdAt: Date.now(),
       });
 
@@ -412,6 +414,8 @@ export function useRunsStream() {
       // that profile's HERMES_HOME in-process, no restart.
       // Omit "default" — that's the process home already.
       const activeProfile = queryClient.getQueryData<{ sticky?: string }>(["profile-active"])?.sticky;
+      // Agents room @mention routes THIS turn to a specific profile-agent's home.
+      const runProfile = opts?.profileOverride ?? activeProfile;
 
       // Branch context (edit / regenerate / branch from a message): seed this
       // fresh run with prior turns as the agent's history. Consume-once, and
@@ -425,7 +429,7 @@ export function useRunsStream() {
         ...(selectedModel ? { model: selectedModel } : {}),
         ...(selectedProvider ? { provider: selectedProvider } : {}),
         ...(reasoningEffort !== null && reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
-        ...(activeProfile && activeProfile !== "default" ? { profile: activeProfile } : {}),
+        ...(runProfile && runProfile !== "default" ? { profile: runProfile } : {}),
         ...(!currentSessionId && branchHistory && branchHistory.length > 0
           ? { conversation_history: branchHistory } : {}),
       };
@@ -440,6 +444,9 @@ export function useRunsStream() {
         if (!res.ok) throw new Error(`POST /api/runs failed: ${res.status}`);
         const data = await res.json();
         runId = data.run_id;
+        // Agents room: remember which agent this run belongs to so the streaming
+        // assistant bubble (turn-<runId>-assistant) gets attributed.
+        if (opts?.profileOverride) setAgentForRun(runId, opts.profileOverride);
       } catch (err) {
         appendMessage({
           id: `error-${Date.now()}`,
@@ -493,7 +500,7 @@ export function useRunsStream() {
       attachRun(runId);
     },
     [appendMessage, renameMessageId, setRunningForSession, updateActiveSessionId, queryClient,
-      selectedModel, selectedProvider, reasoningEffort, setActiveRunId, attachRun]
+      selectedModel, selectedProvider, reasoningEffort, setActiveRunId, attachRun, setAgentForRun]
   );
 
   const stopRun = useCallback(async () => {

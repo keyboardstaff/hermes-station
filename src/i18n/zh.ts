@@ -367,17 +367,15 @@ export const zh: Translations = {
   },
 
   agents: {
-    subtitle: "多会话协作 —— 父 → 子 层级",
-    refresh: "刷新",
-    readOnlyHint: "只读视图。用 /handoff 等斜杠命令或 `hermes` CLI 启动子会话。",
+    subtitle: "在一个房间里与多个 profile 智能体协作 —— @提及把某一轮路由给它",
+    addAgent: "添加智能体",
+    noMembers: "还没有智能体",
+    noMembersHint: "把一个或多个 profile 添加为智能体,然后 @提及它们对话。",
+    respondsLabel: "回复者",
+    placeholder: "向房间发消息…",
+    remove: "移除",
     loading: "加载中…",
-    errorLoading: "加载会话失败。",
-    noGroups: "近期没有多会话组合，子智能体 / handoff 会话将出现在此处。",
-    untitled: "（未命名）",
-    openSession: "打开",
-    childOne: "个子会话",
-    children: "个子会话",
-    footnote: "{groups} 组，共 {total} 条最近会话。",
+    errorLoading: "加载失败。",
   },
 
   channels: {

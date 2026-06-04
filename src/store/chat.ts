@@ -24,6 +24,8 @@ interface ChatState {
   showTokens: boolean;
   /** Transient: a DB message_id the chat view should scroll to (from search). */
   pendingScrollMessageId: number | null;
+  /** Agents room: runId → the profile-agent that turn was routed to (attribution). */
+  agentByRun: Record<string, string>;
   /** Cumulative session token usage from the last run.completed — feeds the
    *  Composer context ring. Reset on session switch / clear. */
   lastUsage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
@@ -75,6 +77,7 @@ interface ChatState {
   setReasoningEffort: (v: string | null) => void;
   setShowTokens: (v: boolean) => void;
   setPendingScrollMessageId: (id: number | null) => void;
+  setAgentForRun: (runId: string, agent: string) => void;
   setLastUsage: (u: ChatState["lastUsage"]) => void;
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
@@ -118,6 +121,7 @@ export const useChatStore = create<ChatState>()(
   reasoningEffort: null,
   showTokens: true,
   pendingScrollMessageId: null,
+  agentByRun: {},
   lastUsage: null,
   pendingApproval: null,
   provisionalTitles: {},
@@ -167,6 +171,7 @@ export const useChatStore = create<ChatState>()(
           role: "assistant",
           content: "",
           segments: [{ type: "text", content: delta }],
+          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -204,6 +209,7 @@ export const useChatStore = create<ChatState>()(
           content: "",
           segments: [],
           reasoning: text,
+          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -227,6 +233,7 @@ export const useChatStore = create<ChatState>()(
           role: "assistant",
           content: "",
           segments: [toolSeg],
+          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -378,6 +385,7 @@ export const useChatStore = create<ChatState>()(
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
   setShowTokens: (v) => set({ showTokens: v }),
   setPendingScrollMessageId: (id) => set({ pendingScrollMessageId: id }),
+  setAgentForRun: (runId, agent) => set((s) => ({ agentByRun: { ...s.agentByRun, [runId]: agent } })),
   setLastUsage: (u) => set({ lastUsage: u }),
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),
