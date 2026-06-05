@@ -29,7 +29,20 @@ export default function AgentsPanel() {
   const members = useAgentRoomStore((s) => s.members);
   const responder = useAgentRoomStore((s) => s.responder);
   const activeRunId = useAgentRoomStore((s) => s.activeRunId);
+  const sessionIds = useAgentRoomStore((s) => s.sessionIds);
   const { addMember, removeMember, setResponder, clearConversation } = useAgentRoomStore();
+
+  // Clearing the room also deletes its run sessions server-side, so they don't
+  // resurface in /chat Recents once the local filter list is cleared.
+  const handleClearRoom = () => {
+    for (const sid of sessionIds) {
+      void fetch(`/api/dashboard/sessions/${encodeURIComponent(sid)}`, {
+        method: "DELETE",
+        headers: { "X-HMS-CSRF": "1" },
+      }).catch(() => { /* best-effort */ });
+    }
+    clearConversation();
+  };
   const { send, stop } = useAgentRoomStream();
   const profilesQuery = useProfiles();
   const profileNames: string[] = (profilesQuery.data?.profiles ?? []).map((p) => p.name);
@@ -60,7 +73,7 @@ export default function AgentsPanel() {
             {messages.length > 0 && (
               <button
                 type="button"
-                onClick={clearConversation}
+                onClick={handleClearRoom}
                 title={g.clearRoom}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',

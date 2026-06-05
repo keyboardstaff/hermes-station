@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, MessageSquare, MoreHorizontal, Trash2, X, Check, Loader2, ChevronDown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
+import { useAgentRoomStore } from "@/store/agentRoom";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useI18n } from "@/i18n";
@@ -291,6 +292,11 @@ export default function SessionRecents({
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
   const [containerHovered, setContainerHovered] = useState(false);
   const navigate = useNavigate();
+  // The "active" row only reads as active on the chat page (where that session
+  // is actually open). Elsewhere (e.g. the isolated /agents room) a stale active
+  // highlight is misleading.
+  const activeOnChat = useLocation().pathname === "/chat";
+  const roomSessionIds = new Set(useAgentRoomStore((s) => s.sessionIds));
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -436,9 +442,10 @@ export default function SessionRecents({
   const inflightSessionIds = new Set(inflightRows.map((r) => r.session_id));
   // Fall back to the provisional (first-prompt) title while the DB row still has
   // none — so a just-completed session shows the prompt, never "Untitled".
-  const sessions = [...inflightRows, ...dbSessions].map((s) =>
-    s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] },
-  );
+  const sessions = [...inflightRows, ...dbSessions]
+    // Hide the isolated /agents room's own run sessions from /chat Recents.
+    .filter((s) => !roomSessionIds.has(s.session_id))
+    .map((s) => (s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] }));
 
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
@@ -505,7 +512,7 @@ export default function SessionRecents({
                 <SessionItem
                   key={s.session_id}
                   session={s}
-                  isActive={activeSessionId === s.session_id}
+                  isActive={activeOnChat && activeSessionId === s.session_id}
                   isRunning={inflightSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
                   isRenaming={renamingId === s.session_id}
                   renameValue={renameValue}
@@ -645,7 +652,7 @@ export default function SessionRecents({
           <SessionItem
             key={s.session_id}
             session={s}
-            isActive={activeSessionId === s.session_id}
+            isActive={activeOnChat && activeSessionId === s.session_id}
             isRunning={inflightSessionIds.has(s.session_id) || !!runningBySession[s.session_id]}
             isRenaming={renamingId === s.session_id}
             renameValue={renameValue}

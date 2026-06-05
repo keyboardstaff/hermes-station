@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ReactElement } from "react";
-import { highlightComposerTokens } from "@/lib/composer-tokens";
+import { highlightComposerTokens, composerCurrentToken } from "@/lib/composer-tokens";
 
 /** Pull the highlighted token strings out of the mixed string/element output. */
 function tokens(nodes: ReturnType<typeof highlightComposerTokens>): unknown[] {
@@ -28,5 +28,27 @@ describe("highlightComposerTokens", () => {
 
   it("does not treat a mid-word slash as a command", () => {
     expect(tokens(highlightComposerTokens("a/b path"))).toEqual([]);
+  });
+
+  it("does not highlight an @ embedded in a word (email)", () => {
+    expect(tokens(highlightComposerTokens("mail me at a@b.com"))).toEqual([]);
+  });
+});
+
+describe("composerCurrentToken (cursor-aware autocomplete)", () => {
+  it("detects a slash token at the cursor", () => {
+    expect(composerCurrentToken("/top", 4)).toEqual({ kind: "slash", query: "top", start: 0 });
+  });
+
+  it("detects a mid-text @mention at the cursor (multiple mentions)", () => {
+    expect(composerCurrentToken("hi @co", 6)).toEqual({ kind: "mention", query: "co", start: 3 });
+  });
+
+  it("returns null when the cursor isn't in a token", () => {
+    expect(composerCurrentToken("hello world", 11)).toBeNull();
+  });
+
+  it("ignores an @ embedded in a word", () => {
+    expect(composerCurrentToken("a@b", 3)).toBeNull();
   });
 });

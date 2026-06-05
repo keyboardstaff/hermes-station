@@ -204,6 +204,12 @@ class RunCapExceeded(RuntimeError):
     pass
 
 
+class SlashUnavailable(RuntimeError):
+    """A gateway slash command was dispatched but the adapter isn't connected
+    (e.g. `hms dev` runs the backend standalone, with no gateway). Slash
+    commands work when Station runs as the real gateway plugin."""
+
+
 def _terminal_frame(handle: RunHandle, event: str, **fields: Any) -> dict:
     """Build + stamp a terminal ``run.event`` frame — the single definition of
     the run-completion contract shared by *both* run paths (AIAgent + slash).
@@ -359,8 +365,9 @@ async def start_slash_run(
     registry = get_registry()
     handler = getattr(adapter, "_message_handler", None) if adapter is not None else None
     if handler is None:
-        raise RuntimeError(
-            "upstream gateway message handler not bound — station adapter not connected"
+        raise SlashUnavailable(
+            "Slash commands need the running gateway — they're unavailable when "
+            "the backend runs standalone (e.g. `hms dev`)."
         )
 
     run_id = f"run_{uuid.uuid4().hex}"

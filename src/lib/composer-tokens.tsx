@@ -1,9 +1,31 @@
 import type { ReactNode } from "react";
 
+export interface ComposerToken {
+  kind: "slash" | "mention";
+  /** Text after the / or @ (the autocomplete query). */
+  query: string;
+  /** Index of the / or @ char in the value. */
+  start: number;
+}
+
+/** The `/command` or `@mention` token the cursor is currently inside (after a
+ *  start-of-input or whitespace), or null. Enables autocomplete anywhere in the
+ *  text (e.g. a second @mention), not just at the start. */
+export function composerCurrentToken(value: string, cursor: number): ComposerToken | null {
+  const before = value.slice(0, Math.max(0, cursor));
+  const m = before.match(/(?:^|\s)([/@])(\S*)$/);
+  if (!m) return null;
+  const char = m[1];
+  const query = m[2];
+  return { kind: char === "/" ? "slash" : "mention", query, start: cursor - query.length - 1 };
+}
+
 // Highlight a leading `/command` (per line) and `@mention` tokens anywhere —
 // used by the Composer's syntax-highlight backdrop (a div mirrored behind a
 // transparent textarea). Returns interleaved plain strings + accent spans.
-const TOKEN_RE = /(^[ \t]*\/[^\s]+)|(@[\w-]+)/gm;
+// A leading /command (per line) or an @mention that follows start-of-line or
+// whitespace (so `email@host` isn't mistaken for a mention).
+const TOKEN_RE = /(^[ \t]*\/[^\s]+)|((?<=^|\s)@[\w-]+)/gm;
 
 export function highlightComposerTokens(text: string): ReactNode[] {
   const out: ReactNode[] = [];

@@ -13,6 +13,7 @@ import type { ChatMessage, MessageSegment, ToolCall } from "@/lib/hermes-types";
 const MEMBERS_KEY = "hms_agent_room_members";
 const RESPONDER_KEY = "hms_agent_room_responder";
 const MSGS_KEY = "hms_agent_room_messages";
+const SIDS_KEY = "hms_agent_room_session_ids";
 const MAX_PERSISTED = 80; // cap the stored transcript so localStorage can't overflow
 
 function readJSON<T>(key: string, fallback: T): T {
@@ -58,6 +59,8 @@ interface AgentRoomStore {
   activeTurnId: string | null;
   /** The agent the in-flight turn is routed to (stamps the assistant bubble). */
   turnAgent: string | null;
+  /** Hermes session ids the room's runs created — hidden from /chat Recents. */
+  sessionIds: string[];
 
   addMember: (name: string) => void;
   removeMember: (name: string) => void;
@@ -72,6 +75,7 @@ interface AgentRoomStore {
   setFinalContent: (text: string) => void;
   beginTurn: (runId: string, agent: string) => void;
   finishTurn: () => void;
+  addSessionId: (id: string) => void;
   clearConversation: () => void;
 }
 
@@ -82,6 +86,7 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
   activeRunId: null,
   activeTurnId: null,
   turnAgent: null,
+  sessionIds: readJSON<string[]>(SIDS_KEY, []),
 
   addMember: (name) => {
     const next = Array.from(new Set([...get().members, name]));
@@ -240,6 +245,14 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
 
   beginTurn: (runId, agent) => set({ activeRunId: runId, activeTurnId: runId, turnAgent: agent }),
 
+  addSessionId: (id) =>
+    set((s) => {
+      if (s.sessionIds.includes(id)) return {};
+      const sessionIds = [...s.sessionIds, id];
+      writeJSON(SIDS_KEY, sessionIds);
+      return { sessionIds };
+    }),
+
   finishTurn: () =>
     set((s) => {
       const messages = s.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m));
@@ -249,6 +262,7 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
 
   clearConversation: () => {
     writeJSON(MSGS_KEY, []);
-    set({ messages: [], activeRunId: null, activeTurnId: null, turnAgent: null });
+    writeJSON(SIDS_KEY, []);
+    set({ messages: [], activeRunId: null, activeTurnId: null, turnAgent: null, sessionIds: [] });
   },
 }));

@@ -200,6 +200,10 @@ async def create_run(request: web.Request) -> web.Response:
         return web.json_response(
             {"error": "rate_limit_exceeded", "detail": str(exc)}, status=429
         )
+    except runs.SlashUnavailable as exc:
+        return web.json_response(
+            {"error": "slash_unavailable", "detail": str(exc)}, status=503
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception("[hms.runs] start_run failed")
         return web.json_response({"error": "internal_error", "detail": str(exc)}, status=500)

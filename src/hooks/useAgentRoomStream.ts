@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useWSStore } from "@/store/ws";
 import { useChatStore } from "@/store/chat";
 import { useAgentRoomStore } from "@/store/agentRoom";
@@ -7,15 +7,22 @@ import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
 import type { RunEventMessage } from "@/lib/ws-types";
 import type { ComposerAttachment, ContentPart } from "@/lib/hermes-types";
 
-/** Parse a leading `@member` route from the draft. Returns the matched agent
- *  (or null) and the body with the mention stripped. */
+/** Route the turn to the FIRST `@member` token anywhere in the draft (not just
+ *  the leading one), returning that agent and the body with the mention removed.
+ *  Falls back to no agent (caller uses the responder) when none match. */
 export function parseMention(
   text: string,
   members: string[],
 ): { agent: string | null; body: string } {
-  const m = text.match(/^@(\S+)\s*/);
-  if (m && members.includes(m[1])) {
-    return { agent: m[1], body: text.slice(m[0].length) };
+  const re = /(?:^|\s)@([\w-]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (members.includes(m[1])) {
+      const body = (text.slice(0, m.index) + " " + text.slice(re.lastIndex))
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      return { agent: m[1], body };
+    }
   }
   return { agent: null, body: text };
 }
@@ -30,9 +37,14 @@ export function useAgentRoomStream() {
   const subscribe = useWSStore((s) => s.subscribe);
   const unsubscribe = useWSStore((s) => s.unsubscribe);
   const on = useWSStore((s) => s.on);
+  const connect = useWSStore((s) => s.connect);
   const offRef = useRef<(() => void) | null>(null);
   const channelRef = useRef<string | null>(null);
   const seqRef = useRef(0);
+
+  // The WS is otherwise only connected by /chat + /sessions; a direct landing
+  // on /agents needs its own connect so room runs actually stream back.
+  useEffect(() => { connect(); }, [connect]);
 
   const detach = useCallback(() => {
     offRef.current?.();
@@ -76,6 +88,7 @@ export function useAgentRoomStream() {
       const chat = useChatStore.getState();
 
       let runId: string;
+      let errText = "⚠ Failed to start the run.";
       try {
         const res = await fetch("/api/runs", {
           method: "POST",
@@ -89,16 +102,25 @@ export function useAgentRoomStream() {
             ...(chat.reasoningEffort != null ? { reasoning_effort: chat.reasoningEffort } : {}),
           }),
         });
-        if (!res.ok) throw new Error(String(res.status));
+        if (!res.ok) {
+          try {
+            const eb = await res.json();
+            if (typeof eb?.detail === "string") errText = "⚠ " + eb.detail;
+          } catch { /* non-JSON */ }
+          throw new Error("bad status");
+        }
         runId = (await res.json()).run_id;
       } catch {
         const rs = useAgentRoomStore.getState();
         rs.beginTurn(`err-${Date.now()}`, agent);
-        rs.setFinalContent("⚠ Failed to start the run.");
+        rs.setFinalContent(errText);
         rs.finishTurn();
         return;
       }
 
+      // The room run has no session_id, so session_id === run_id; track it so
+      // /chat's Recents can hide these room-only sessions.
+      useAgentRoomStore.getState().addSessionId(runId);
       useAgentRoomStore.getState().beginTurn(runId, agent);
       detach();
       seqRef.current = 0;

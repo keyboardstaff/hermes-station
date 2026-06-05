@@ -441,7 +441,16 @@ export function useRunsStream() {
           headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`POST /api/runs failed: ${res.status}`);
+        if (!res.ok) {
+          // Friendly message for the dev-only slash limitation (503) instead of
+          // a raw "failed: 500" — the gateway adapter binds slash dispatch.
+          let detail = `POST /api/runs failed: ${res.status}`;
+          try {
+            const errBody = await res.json();
+            if (typeof errBody?.detail === "string") detail = errBody.detail;
+          } catch { /* non-JSON body */ }
+          throw new Error(detail);
+        }
         const data = await res.json();
         runId = data.run_id;
         // Agents room: remember which agent this run belongs to so the streaming

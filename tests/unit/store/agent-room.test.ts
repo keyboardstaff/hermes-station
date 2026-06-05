@@ -73,4 +73,12 @@ describe("parseMention (@member routing)", () => {
   it("no mention → null agent + full body", () => {
     expect(parseMention("hello there", ["coder"])).toEqual({ agent: null, body: "hello there" });
   });
+
+  it("routes a mention found mid-text (not only at the start)", () => {
+    expect(parseMention("do X @writer", ["coder", "writer"])).toEqual({ agent: "writer", body: "do X" });
+  });
+
+  it("skips a non-member @ and routes the first @member", () => {
+    expect(parseMention("@ghost @coder hi", ["coder"])).toEqual({ agent: "coder", body: "@ghost hi" });
+  });
 });

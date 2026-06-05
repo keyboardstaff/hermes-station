@@ -17,7 +17,7 @@ import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
 import { AttachmentChips } from "./composer/AttachmentChips";
 import { useVoiceInput } from "./composer/useVoiceInput";
 import { useComposerAttachments } from "./composer/useComposerAttachments";
-import { highlightComposerTokens } from "@/lib/composer-tokens";
+import { highlightComposerTokens, composerCurrentToken, type ComposerToken } from "@/lib/composer-tokens";
 
 interface ComposerProps {
   onSend: (text: string, attachments?: ComposerAttachment[]) => void;
@@ -42,10 +42,10 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   ref,
 ) {
   const [value, setValue] = useState("");
-  const [showSlash, setShowSlash] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
-  const [showMention, setShowMention] = useState(false);
   const [mentionIndex, setMentionIndex] = useState(0);
+  // The `/command` / `@mention` token the cursor is in (autocomplete anywhere).
+  const [token, setToken] = useState<ComposerToken | null>(null);
 
   const { caps } = useCapabilityStore();
   const { t } = useI18n();
@@ -160,26 +160,30 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelDefault, firstModel]);
 
-  const slashQuery = value.split("\n").at(-1) ?? "";
+  // Autocomplete keys off the token the cursor is in (anywhere, not just the
+  // line start), so a second @mention or a mid-text /command also completes.
+  const slashQuery = token?.kind === "slash" ? token.query : "";
+  const mentionQuery = token?.kind === "mention" ? token.query.toLowerCase() : "";
   const { data: discoveredSlash } = useDiscoverSlashCommands();
   const filteredCmds = useMemo<SlashCommand[]>(() => {
+    if (token?.kind !== "slash") return [];
     const all: SlashCommand[] = (discoveredSlash?.commands ?? []).map((c) => ({
       name: c.name,
       description: c.description,
     }));
-    const prefix = slashQuery.replace(/^\//, "");
-    return all.filter((c) => c.name.startsWith(prefix));
-  }, [discoveredSlash, slashQuery]);
+    return all.filter((c) => c.name.startsWith(slashQuery));
+  }, [discoveredSlash, slashQuery, token]);
 
   // @member autocomplete (the /agents room passes its roster as mentionNames).
-  const mentionQuery = (value.split("\n").at(-1) ?? "").replace(/^@/, "").toLowerCase();
-  const filteredMentions = useMemo<SlashCommand[]>(
-    () =>
-      (mentionNames ?? [])
-        .filter((n) => n.toLowerCase().startsWith(mentionQuery))
-        .map((n) => ({ name: n, description: "" })),
-    [mentionNames, mentionQuery],
-  );
+  const filteredMentions = useMemo<SlashCommand[]>(() => {
+    if (token?.kind !== "mention") return [];
+    return (mentionNames ?? [])
+      .filter((n) => n.toLowerCase().startsWith(mentionQuery))
+      .map((n) => ({ name: n, description: "" }));
+  }, [mentionNames, mentionQuery, token]);
+
+  const showSlash = token?.kind === "slash" && filteredCmds.length > 0;
+  const showMention = token?.kind === "mention" && filteredMentions.length > 0;
 
   const send = useCallback(() => {
     const trimmed = value.trim();
@@ -187,7 +191,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     onSend(trimmed, attachments.length > 0 ? attachments : undefined);
     setValue("");
     clearAttachments();
-    setShowSlash(false);
+    setToken(null);
     setSlashIndex(0);
   }, [value, attachments, isRunning, disabled, onSend, clearAttachments]);
 
@@ -213,7 +217,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
       }
       if (e.key === "Escape") {
         e.preventDefault();
-        setShowSlash(false);
+        setToken(null);
         return;
       }
     }
@@ -235,7 +239,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
       }
       if (e.key === "Escape") {
         e.preventDefault();
-        setShowMention(false);
+        setToken(null);
         return;
       }
     }
@@ -245,31 +249,40 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     }
   };
 
+  /** Recompute the cursor token (drives both autocomplete menus). */
+  const syncToken = (v: string, cursor: number | null) => {
+    const next = composerCurrentToken(v, cursor ?? v.length);
+    setToken(next);
+    if (next) { setSlashIndex(0); setMentionIndex(0); }
+  };
+
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     setValue(v);
-    const lastLine = v.split("\n").at(-1) ?? "";
-    const shouldShow = lastLine.startsWith("/") && !lastLine.includes(" ");
-    setShowSlash(shouldShow);
-    if (shouldShow) setSlashIndex(0);
-    const showM = !!mentionNames && lastLine.startsWith("@") && !lastLine.includes(" ");
-    setShowMention(showM);
-    if (showM) setMentionIndex(0);
+    syncToken(v, e.target.selectionStart);
   };
 
-  const onSlashSelect = (cmd: SlashCommand) => {
-    setValue("/" + cmd.name + (cmd.args ? " " : ""));
-    setShowSlash(false);
-    setSlashIndex(0);
-    textRef.current?.focus();
+  // Replace just the cursor's `/`/`@` token with the picked completion + a
+  // trailing space (so multiple @mentions / mid-text completions work), then
+  // restore the caret right after it.
+  const replaceToken = (char: "/" | "@", name: string) => {
+    const insert = char + name + " ";
+    setValue((prev) => {
+      if (!token) return insert;
+      const before = prev.slice(0, token.start);
+      const after = prev.slice(token.start + 1 + token.query.length);
+      const caret = before.length + insert.length;
+      requestAnimationFrame(() => {
+        const el = textRef.current;
+        if (el) { el.focus(); el.setSelectionRange(caret, caret); }
+      });
+      return before + insert + after;
+    });
+    setToken(null);
   };
 
-  const onMentionSelect = (cmd: SlashCommand) => {
-    setValue("@" + cmd.name + " ");
-    setShowMention(false);
-    setMentionIndex(0);
-    textRef.current?.focus();
-  };
+  const onSlashSelect = (cmd: SlashCommand) => replaceToken("/", cmd.name);
+  const onMentionSelect = (cmd: SlashCommand) => replaceToken("@", cmd.name);
 
   const autoResize = () => {
     const el = textRef.current;
@@ -330,7 +343,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
               query={slashQuery}
               selectedIndex={slashIndex}
               onSelect={onSlashSelect}
-              onClose={() => setShowSlash(false)}
+              onClose={() => setToken(null)}
               commands={filteredCmds}
             />
           </div>
@@ -342,7 +355,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
               query={mentionQuery}
               selectedIndex={mentionIndex}
               onSelect={onMentionSelect}
-              onClose={() => setShowMention(false)}
+              onClose={() => setToken(null)}
               commands={filteredMentions}
               prefix="@"
             />
