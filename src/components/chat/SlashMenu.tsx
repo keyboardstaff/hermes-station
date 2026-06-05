@@ -13,6 +13,9 @@ interface SlashMenuProps {
    *  avoid recomputing. When omitted, this component fetches & filters on
    *  its own (used by tests / Storybook). */
   commands?: SlashCommand[];
+  /** Token prefix shown before each name ("/" for commands, "@" for the
+   *  /agents room's member mentions). */
+  prefix?: string;
 }
 
 /**slash command menu sourced from /api/discover/slash-commands.
@@ -23,7 +26,7 @@ interface SlashMenuProps {
  *  the ``slash.<name>`` i18n key, then falls back to whatever the
  *  backend provided.
  */
-export default function SlashMenu({ query, selectedIndex, onSelect, onClose, commands }: SlashMenuProps) {
+export default function SlashMenu({ query, selectedIndex, onSelect, onClose, commands, prefix = "/" }: SlashMenuProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { data } = useDiscoverSlashCommands();
@@ -116,7 +119,7 @@ export default function SlashMenu({ query, selectedIndex, onSelect, onClose, com
               (e.currentTarget as HTMLDivElement).style.background = "transparent";
           }}
         >
-          <span style={{ fontFamily: "monospace", fontSize: 'var(--hms-text-sm)', color: "var(--hms-text)", flexShrink: 0 }}>/{cmd.name}</span>
+          <span style={{ fontFamily: "monospace", fontSize: 'var(--hms-text-sm)', color: "var(--hms-text)", flexShrink: 0 }}>{prefix}{cmd.name}</span>
           {cmd.args && (
             <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", flexShrink: 0 }}>{cmd.args}</span>
           )}

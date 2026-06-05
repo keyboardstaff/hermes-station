@@ -17,6 +17,7 @@ import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
 import { AttachmentChips } from "./composer/AttachmentChips";
 import { useVoiceInput } from "./composer/useVoiceInput";
 import { useComposerAttachments } from "./composer/useComposerAttachments";
+import { highlightComposerTokens } from "@/lib/composer-tokens";
 
 interface ComposerProps {
   onSend: (text: string, attachments?: ComposerAttachment[]) => void;
@@ -27,6 +28,9 @@ interface ComposerProps {
   /** Override the running state (the /agents room tracks its own run, not the
    *  chat store's activeRunId). Defaults to the chat store's activeRunId. */
   running?: boolean;
+  /** When set (the /agents room), a leading `@partial` autocompletes these
+   *  member names; they also get syntax-highlighted in the input. */
+  mentionNames?: string[];
 }
 
 export interface ComposerHandle {
@@ -34,12 +38,14 @@ export interface ComposerHandle {
 }
 
 const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { onSend, onStop, disabled, sessionId, running }: ComposerProps,
+  { onSend, onStop, disabled, sessionId, running, mentionNames }: ComposerProps,
   ref,
 ) {
   const [value, setValue] = useState("");
   const [showSlash, setShowSlash] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
+  const [showMention, setShowMention] = useState(false);
+  const [mentionIndex, setMentionIndex] = useState(0);
 
   const { caps } = useCapabilityStore();
   const { t } = useI18n();
@@ -165,6 +171,16 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     return all.filter((c) => c.name.startsWith(prefix));
   }, [discoveredSlash, slashQuery]);
 
+  // @member autocomplete (the /agents room passes its roster as mentionNames).
+  const mentionQuery = (value.split("\n").at(-1) ?? "").replace(/^@/, "").toLowerCase();
+  const filteredMentions = useMemo<SlashCommand[]>(
+    () =>
+      (mentionNames ?? [])
+        .filter((n) => n.toLowerCase().startsWith(mentionQuery))
+        .map((n) => ({ name: n, description: "" })),
+    [mentionNames, mentionQuery],
+  );
+
   const send = useCallback(() => {
     const trimmed = value.trim();
     if ((!trimmed && attachments.length === 0) || isRunning || disabled) return;
@@ -201,6 +217,28 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         return;
       }
     }
+    if (showMention && filteredMentions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((i) => Math.min(i + 1, filteredMentions.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" && !composing && filteredMentions[mentionIndex]) {
+        e.preventDefault();
+        onMentionSelect(filteredMentions[mentionIndex]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowMention(false);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey && !composing) {
       e.preventDefault();
       send();
@@ -214,12 +252,22 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     const shouldShow = lastLine.startsWith("/") && !lastLine.includes(" ");
     setShowSlash(shouldShow);
     if (shouldShow) setSlashIndex(0);
+    const showM = !!mentionNames && lastLine.startsWith("@") && !lastLine.includes(" ");
+    setShowMention(showM);
+    if (showM) setMentionIndex(0);
   };
 
   const onSlashSelect = (cmd: SlashCommand) => {
     setValue("/" + cmd.name + (cmd.args ? " " : ""));
     setShowSlash(false);
     setSlashIndex(0);
+    textRef.current?.focus();
+  };
+
+  const onMentionSelect = (cmd: SlashCommand) => {
+    setValue("@" + cmd.name + " ");
+    setShowMention(false);
+    setMentionIndex(0);
     textRef.current?.focus();
   };
 
@@ -287,6 +335,19 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             />
           </div>
         )}
+        {/* @member mention menu (the /agents room) */}
+        {showMention && filteredMentions.length > 0 && (
+          <div style={{ position: "relative" }}>
+            <SlashMenu
+              query={mentionQuery}
+              selectedIndex={mentionIndex}
+              onSelect={onMentionSelect}
+              onClose={() => setShowMention(false)}
+              commands={filteredMentions}
+              prefix="@"
+            />
+          </div>
+        )}
 
         {uploadError && (
           <div
@@ -309,31 +370,59 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         {/* Attachment chips */}
         <AttachmentChips attachments={attachments} onRemove={removeAttachment} />
 
-        {/* Text area */}
-        <textarea
-          ref={textRef}
-          value={value}
-          onChange={(e) => { onChange(e); autoResize(); }}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          placeholder="Message… (/ for commands, Shift+Enter for newline)"
-          disabled={disabled}
-          rows={1}
-          style={{
-            width: "100%",
-            resize: "none",
-            border: "none",
-            background: "transparent",
-            padding: "12px 14px 4px",
-            fontSize: 'var(--hms-text-body)',
-            lineHeight: 1.6,
-            color: "var(--hms-text)",
-            outline: "none",
-            fontFamily: "inherit",
-            boxSizing: "border-box",
-            minHeight: 44,
-          }}
-        />
+        {/* Text area + a syntax-highlight backdrop (mirrors the text behind a
+            transparent textarea so /commands and @mentions are coloured). */}
+        <div style={{ position: "relative" }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: "12px 14px 4px",
+              fontSize: 'var(--hms-text-body)',
+              lineHeight: 1.6,
+              fontFamily: "inherit",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+              color: "var(--hms-text)",
+              pointerEvents: "none",
+              overflow: "hidden",
+              minHeight: 44,
+              boxSizing: "border-box",
+            }}
+          >
+            {highlightComposerTokens(value)}
+          </div>
+          <textarea
+            ref={textRef}
+            value={value}
+            onChange={(e) => { onChange(e); autoResize(); }}
+            onKeyDown={onKeyDown}
+            onPaste={onPaste}
+            placeholder="Message… (/ for commands, Shift+Enter for newline)"
+            disabled={disabled}
+            rows={1}
+            style={{
+              position: "relative",
+              width: "100%",
+              resize: "none",
+              border: "none",
+              background: "transparent",
+              padding: "12px 14px 4px",
+              fontSize: 'var(--hms-text-body)',
+              lineHeight: 1.6,
+              // Transparent text reveals the highlighted backdrop while typing;
+              // keep it opaque when empty so the placeholder stays visible.
+              color: value ? "transparent" : "var(--hms-text)",
+              caretColor: "var(--hms-text)",
+              outline: "none",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+              minHeight: 44,
+            }}
+          />
+        </div>
 
         {/* Toolbar: [attach][voice] | [profile][model+thinking] | [~tok] | [■/▶] */}
         <div

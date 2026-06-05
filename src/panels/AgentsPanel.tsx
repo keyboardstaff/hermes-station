@@ -187,6 +187,7 @@ export default function AgentsPanel() {
             onStop={() => void stop()}
             running={running}
             sessionId={null}
+            mentionNames={members}
           />
         </>
       )}
