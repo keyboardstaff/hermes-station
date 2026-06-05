@@ -64,7 +64,7 @@ interface AgentRoomStore {
   setResponder: (name: string | null) => void;
 
   /** Append the user's message, tagged with the agent it's routed to. */
-  appendUser: (text: string, agent: string) => void;
+  appendUser: (text: string, agent: string, attachments?: ChatMessage["attachments"]) => void;
   appendDelta: (delta: string) => void;
   appendReasoning: (text: string) => void;
   appendToolCallPart: (tc: ToolCall) => void;
@@ -106,11 +106,18 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
     set({ responder: name });
   },
 
-  appendUser: (text, agent) =>
+  appendUser: (text, agent, attachments) =>
     set((s) => {
       const messages = [
         ...s.messages,
-        { id: `room-user-${Date.now()}`, role: "user" as const, content: text, agent, createdAt: Date.now() },
+        {
+          id: `room-user-${Date.now()}`,
+          role: "user" as const,
+          content: text,
+          agent,
+          ...(attachments && attachments.length ? { attachments } : {}),
+          createdAt: Date.now(),
+        },
       ];
       persistMessages(messages);
       return { messages };

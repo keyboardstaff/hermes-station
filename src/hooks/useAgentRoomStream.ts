@@ -1,9 +1,11 @@
 import { useCallback, useRef } from "react";
 import { useWSStore } from "@/store/ws";
+import { useChatStore } from "@/store/chat";
 import { useAgentRoomStore } from "@/store/agentRoom";
 import { messagePlainText } from "@/lib/branch";
 import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
 import type { RunEventMessage } from "@/lib/ws-types";
+import type { ComposerAttachment, ContentPart } from "@/lib/hermes-types";
 
 /** Parse a leading `@member` route from the draft. Returns the matched agent
  *  (or null) and the body with the mention stripped. */
@@ -42,12 +44,13 @@ export function useAgentRoomStream() {
   }, [unsubscribe]);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, attachments?: ComposerAttachment[]) => {
       const room = useAgentRoomStore.getState();
       if (room.activeRunId) return; // one turn at a time in the MVP room
       const { agent: mentioned, body } = parseMention(text.trim(), room.members);
       const agent = mentioned ?? room.responder ?? room.members[0] ?? null;
-      if (!agent || !body.trim()) return;
+      const hasAttach = !!attachments && attachments.length > 0;
+      if (!agent || (!body.trim() && !hasAttach)) return;
 
       // Context = the room's completed turns (before this one).
       const history = room.messages
@@ -55,14 +58,36 @@ export function useAgentRoomStream() {
         .map((m) => ({ role: m.role, content: messagePlainText(m) }))
         .filter((tn) => tn.content.trim().length > 0);
 
-      room.appendUser(body, agent);
+      room.appendUser(body, agent, attachments);
+
+      // Run input = text, or structured ContentPart[] when there are attachments
+      // (mirrors /chat's sendMessage so images/files reach the agent).
+      let runInput: string | ContentPart[] = body;
+      if (hasAttach) {
+        const parts: ContentPart[] = [{ type: "text", text: body }];
+        for (const att of attachments!) {
+          if (att.isImage) parts.push({ type: "image_url", image_url: { url: att.content } });
+          else parts.push({ type: "text", text: `\`\`\`${att.name}\n${att.content}\n\`\`\`` });
+        }
+        runInput = parts;
+      }
+
+      // Model / reasoning come from the shared Composer selection (chat store).
+      const chat = useChatStore.getState();
 
       let runId: string;
       try {
         const res = await fetch("/api/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-          body: JSON.stringify({ input: body, profile: agent, conversation_history: history }),
+          body: JSON.stringify({
+            input: runInput,
+            conversation_history: history,
+            ...(agent !== "default" ? { profile: agent } : {}),
+            ...(chat.selectedModel ? { model: chat.selectedModel } : {}),
+            ...(chat.selectedProvider ? { provider: chat.selectedProvider } : {}),
+            ...(chat.reasoningEffort != null ? { reasoning_effort: chat.reasoningEffort } : {}),
+          }),
         });
         if (!res.ok) throw new Error(String(res.status));
         runId = (await res.json()).run_id;

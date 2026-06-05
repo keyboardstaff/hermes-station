@@ -24,6 +24,9 @@ interface ComposerProps {
   disabled?: boolean;
   /** Forwarded to upload API so images can be recovered after refresh. */
   sessionId?: string | null;
+  /** Override the running state (the /agents room tracks its own run, not the
+   *  chat store's activeRunId). Defaults to the chat store's activeRunId. */
+  running?: boolean;
 }
 
 export interface ComposerHandle {
@@ -31,7 +34,7 @@ export interface ComposerHandle {
 }
 
 const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { onSend, onStop, disabled, sessionId }: ComposerProps,
+  { onSend, onStop, disabled, sessionId, running }: ComposerProps,
   ref,
 ) {
   const [value, setValue] = useState("");
@@ -50,7 +53,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     reasoningEffort: reasoning, setReasoningEffort: setReasoning,
     lastUsage, showTokens, setShowTokens,
   } = useChatStore();
-  const isRunning = !!activeRunId;
+  const isRunning = running ?? !!activeRunId;
   const queryClient = useQueryClient();
 
   // Attachment state + every ingest path (picker / paste / drag / imperative).
