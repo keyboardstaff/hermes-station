@@ -418,6 +418,9 @@ export interface Translations {
     filterLinks: string;
     empty: string;
     emptyHint: string;
+    noMatches: string;
+    noMatchesHint: string;
+    noPreview: string;
     openInChat: string;
     open: string;
     copy: string;

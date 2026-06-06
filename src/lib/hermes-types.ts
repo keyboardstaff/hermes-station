@@ -106,5 +106,8 @@ export interface SessionSummary {
   input_tokens?: number;
   output_tokens?: number;
   started_at?: number;
+  /** Last activity (upstream field). The `/api/sessions` rows carry this, not
+   *  `updated_at` — use it for recency ordering / "most recent" selection. */
+  last_active?: number;
   updated_at?: number;
 }

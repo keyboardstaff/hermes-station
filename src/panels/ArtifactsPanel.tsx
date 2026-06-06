@@ -42,11 +42,17 @@ function isWebOpenable(href: string): boolean {
   return /^(https?:|data:)/i.test(href);
 }
 
+function recencyOf(s: SessionSummary): number {
+  return s.last_active ?? s.updated_at ?? s.started_at ?? 0;
+}
+
 async function buildArtifactIndex(): Promise<ArtifactRecord[]> {
-  const { sessions } = await api.get<{ sessions: SessionSummary[] }>("/api/sessions?limit=200");
-  const recent = [...sessions]
-    .sort((x, y) => (y.updated_at ?? y.started_at ?? 0) - (x.updated_at ?? x.started_at ?? 0))
-    .slice(0, RECENT_SESSIONS);
+  // The server orders by last activity when asked — grab the most-recently-active
+  // sessions (the index spans them, like upstream desktop's `listSessions(30)`).
+  const { sessions } = await api.get<{ sessions: SessionSummary[] }>(
+    `/api/sessions?sort=last_active&limit=${RECENT_SESSIONS}`,
+  );
+  const recent = [...sessions].sort((x, y) => recencyOf(y) - recencyOf(x)).slice(0, RECENT_SESSIONS);
 
   const results = await Promise.allSettled(
     recent.map((s) =>
@@ -59,7 +65,7 @@ async function buildArtifactIndex(): Promise<ArtifactRecord[]> {
     if (r.status !== "fulfilled") return;
     const s = recent[i];
     out.push(...collectArtifactsForSession(
-      { id: s.session_id, title: formatSessionTitle(s.title), updated_at: s.updated_at, started_at: s.started_at },
+      { id: s.session_id, title: formatSessionTitle(s.title), updated_at: recencyOf(s), started_at: s.started_at },
       (r.value.messages ?? []) as ArtifactMessage[],
     ));
   });
@@ -88,6 +94,9 @@ export default function ArtifactsPanel() {
   const [lightbox, setLightbox] = useState<{ images: LightboxImage[]; index: number } | null>(null);
 
   useEffect(() => { setImagePage(1); setFilePage(1); }, [artifacts, kind, query]);
+  // A fresh index is a clean slate — don't carry stale "broken image" marks
+  // (a transient load failure shouldn't permanently hide a thumbnail).
+  useEffect(() => { setFailed(new Set()); }, [artifacts]);
 
   const counts = useMemo(() => {
     const all = artifacts ?? [];
@@ -194,7 +203,9 @@ export default function ArtifactsPanel() {
         {isLoading || artifacts == null ? (
           <div style={{ padding: 'var(--hms-space-6)', color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-sm)' }}>{a.indexing}</div>
         ) : visible.length === 0 ? (
-          <EmptyState title={a.empty} hint={a.emptyHint} />
+          counts.all > 0
+            ? <EmptyState title={a.noMatches} hint={a.noMatchesHint} />
+            : <EmptyState title={a.empty} hint={a.emptyHint} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-5)' }}>
             {images.length > 0 && (
@@ -273,7 +284,7 @@ export default function ArtifactsPanel() {
 
 type ArtifactT = {
   kindImage: string; kindFile: string; kindLink: string;
-  openInChat: string; open: string; copy: string;
+  openInChat: string; open: string; copy: string; noPreview: string;
 };
 
 function SectionHeader({
@@ -335,19 +346,22 @@ function ImageCard({
   art: ArtifactRecord; t: ArtifactT; failed: boolean;
   onFail: () => void; onOpenImage: () => void; onOpenChat: () => void;
 }) {
+  // A web client can only render http(s)/data images. `file://` local paths
+  // (the common case for agent-written images) can't load, so show a clear
+  // "no preview" placeholder instead of firing a doomed request per card.
+  const previewable = isWebOpenable(art.href) && !failed;
   return (
     <article style={{ display: "flex", flexDirection: "column", borderRadius: 'var(--hms-radius-md)', border: "1px solid var(--hms-border)", background: "var(--hms-surface)", overflow: "hidden" }}>
       <div
-        onClick={failed ? undefined : onOpenImage}
+        onClick={previewable ? onOpenImage : undefined}
+        title={previewable ? art.label : t.noPreview}
         style={{
           height: 150, display: "flex", alignItems: "center", justifyContent: "center",
           background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)",
-          borderBottom: "1px solid var(--hms-border)", cursor: failed ? "default" : "zoom-in",
+          borderBottom: "1px solid var(--hms-border)", cursor: previewable ? "zoom-in" : "default",
         }}
       >
-        {failed ? (
-          <ImageOff size={22} />
-        ) : (
+        {previewable ? (
           <img
             src={art.href}
             alt={art.label}
@@ -356,22 +370,25 @@ function ImageCard({
             onError={onFail}
             style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
           />
+        ) : (
+          <ImageOff size={22} />
         )}
       </div>
       <div style={{ padding: 'var(--hms-space-2)', display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)', minWidth: 0 }}>
         <div style={{ fontSize: 'var(--hms-text-xs)', textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--hms-text-muted)" }}>{t.kindImage}</div>
-        <div style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
-        <div style={{ fontSize: 'var(--hms-text-xs)', fontFamily: "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
+        <div title={art.label} style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
+        <div title={art.value} style={{ fontSize: 'var(--hms-text-xs)', fontFamily: "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
         <button
           type="button"
           onClick={onOpenChat}
+          title={t.openInChat}
           style={{
             marginTop: 'var(--hms-space-1)', display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
             border: "none", background: "none", cursor: "pointer", padding: 0,
-            color: "var(--hms-accent)", fontSize: 'var(--hms-text-xs)', textAlign: "left",
+            color: "var(--hms-accent)", fontSize: 'var(--hms-text-xs)', textAlign: "left", minWidth: 0,
           }}
         >
-          <FolderOpen size={12} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.sessionTitle}</span>
+          <FolderOpen size={12} style={{ flexShrink: 0 }} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.sessionTitle}</span>
         </button>
       </div>
     </article>
@@ -388,8 +405,10 @@ function FileRow({ art, t, onOpenChat }: { art: ArtifactRecord; t: ArtifactT; on
       style={{
         display: "flex", alignItems: "center", gap: 'var(--hms-space-3)',
         padding: "8px 10px", borderTop: "1px solid var(--hms-border)",
+        transition: "background var(--hms-duration-fast) var(--hms-ease-standard)",
       }}
-      className="hms-room-row"
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, flexShrink: 0, borderRadius: 6, background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)" }}>
         <Icon size={14} />
@@ -398,13 +417,13 @@ function FileRow({ art, t, onOpenChat }: { art: ArtifactRecord; t: ArtifactT; on
       {/* Name + location */}
       <div style={{ minWidth: 0, flex: 1 }}>
         {webOpen ? (
-          <a href={art.href} target="_blank" rel="noreferrer" title={t.open} style={{ display: "block", fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <a href={art.href} target="_blank" rel="noreferrer" title={art.label} style={{ display: "block", fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {art.label}
           </a>
         ) : (
-          <div style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
+          <div title={art.label} style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
         )}
-        <div style={{ fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
+        <div title={art.value} style={{ fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
       </div>
 
       {/* Session attribution → jump to chat */}
