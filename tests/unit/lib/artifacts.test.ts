@@ -1,104 +1,103 @@
 import { describe, it, expect } from "vitest";
-import { extractArtifacts, classifyUrl } from "@/lib/artifacts";
-import type { ChatMessage } from "@/lib/hermes-types";
+import {
+  collectArtifactsForSession,
+  artifactKind,
+  artifactLabel,
+  looksLikeArtifact,
+  type ArtifactMessage,
+  type ArtifactSession,
+} from "@/lib/artifacts";
 
-const msg = (over: Partial<ChatMessage>): ChatMessage => ({
-  id: "hist-1",
-  role: "assistant",
-  content: "",
-  createdAt: 0,
-  ...over,
+const SESSION: ArtifactSession = { id: "s1", title: "My Session", updated_at: 1000 };
+const collect = (messages: ArtifactMessage[]) => collectArtifactsForSession(SESSION, messages);
+
+describe("classification helpers", () => {
+  it("artifactKind: images by extension / data-url, paths as files, else links", () => {
+    expect(artifactKind("https://x/a.png")).toBe("image");
+    expect(artifactKind("data:image/png;base64,AA")).toBe("image");
+    expect(artifactKind("/Users/me/report.pdf")).toBe("file");
+    expect(artifactKind("./notes.txt")).toBe("file");
+    expect(artifactKind("https://example.com/docs")).toBe("link");
+  });
+
+  it("looksLikeArtifact gates on scheme / extension / absolute-dotted path", () => {
+    expect(looksLikeArtifact("https://example.com/page")).toBe(true);
+    expect(looksLikeArtifact("/tmp/out.json")).toBe(true);
+    expect(looksLikeArtifact("just words")).toBe(false);
+    expect(looksLikeArtifact("/tmp/dir")).toBe(false); // no dot
+  });
+
+  it("artifactLabel uses the last url/path segment", () => {
+    expect(artifactLabel("https://x.com/a/b/chart.png")).toBe("chart.png");
+    expect(artifactLabel("/Users/me/deep/report.pdf")).toBe("report.pdf");
+  });
 });
 
-describe("classifyUrl", () => {
-  it("classifies images by extension", () => {
-    expect(classifyUrl("https://x.com/a.png")).toBe("image");
-    expect(classifyUrl("/api/upload/abc/photo.JPG")).toBe("image");
-    expect(classifyUrl("data:image/png;base64,AAAA")).toBe("image");
-  });
-  it("classifies scheme URLs as links", () => {
-    expect(classifyUrl("https://example.com/docs")).toBe("link");
-    expect(classifyUrl("mailto:a@b.com")).toBe("link");
-  });
-  it("classifies bare paths as files", () => {
-    expect(classifyUrl("./server/config.yaml")).toBe("file");
-    expect(classifyUrl("/Users/me/notes.txt")).toBe("file");
-  });
-});
-
-describe("extractArtifacts", () => {
-  it("returns nothing for empty / plain text", () => {
-    expect(extractArtifacts([msg({ content: "just some words" })])).toEqual([]);
+describe("collectArtifactsForSession", () => {
+  it("ignores user messages (only assistant + tool)", () => {
+    expect(collect([{ role: "user", content: "see https://x/a.png" }])).toEqual([]);
   });
 
-  it("extracts a markdown image with its alt as the label", () => {
-    const a = extractArtifacts([msg({ content: "see ![a chart](https://x/chart.png)" })]);
+  it("extracts a markdown image from an assistant message", () => {
+    const a = collect([{ role: "assistant", content: "here ![chart](https://x/chart.png)" }]);
     expect(a).toHaveLength(1);
-    expect(a[0]).toMatchObject({ kind: "image", url: "https://x/chart.png", label: "a chart" });
+    expect(a[0]).toMatchObject({ kind: "image", value: "https://x/chart.png", label: "chart.png" });
   });
 
-  it("classifies markdown links by URL (link vs local file)", () => {
-    const a = extractArtifacts([
-      msg({ content: "[docs](https://example.com/x) and [cfg](./a.yaml)" }),
-    ]);
-    expect(a.find((x) => x.url === "https://example.com/x")?.kind).toBe("link");
-    expect(a.find((x) => x.url === "./a.yaml")?.kind).toBe("file");
+  it("classifies http URLs as links (scheme wins) but image-extension URLs as images", () => {
+    const a = collect([{ role: "assistant", content: "[docs](https://example.com/x.pdf) and https://z/y.gif" }]);
+    // A remote .pdf over http is a *link* (only local paths become files).
+    expect(a.find((x) => x.value === "https://example.com/x.pdf")?.kind).toBe("link");
+    expect(a.find((x) => x.value === "https://z/y.gif")?.kind).toBe("image");
   });
 
-  it("extracts bare URLs and classifies image extensions", () => {
-    const a = extractArtifacts([msg({ content: "raw https://x/y.gif and https://z/page" })]);
-    expect(a.find((x) => x.url === "https://x/y.gif")?.kind).toBe("image");
-    expect(a.find((x) => x.url === "https://z/page")?.kind).toBe("link");
+  it("collects any bare http URL as a link", () => {
+    const a = collect([{ role: "assistant", content: "visit https://example.com/about" }]);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ kind: "link", value: "https://example.com/about" });
   });
 
-  it("does not let a bare-URL match swallow a trailing paren", () => {
-    const a = extractArtifacts([msg({ content: "(see https://x/y.png)" })]);
-    expect(a[0].url).toBe("https://x/y.png");
+  it("extracts absolute file paths from text", () => {
+    const a = collect([{ role: "assistant", content: "wrote /tmp/out/result.json now" }]);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ kind: "file", value: "/tmp/out/result.json" });
   });
 
-  it("dedupes the same url across markdown-link and bare-url (md label wins)", () => {
-    const a = extractArtifacts([
-      msg({ content: "[Docs](https://example.com/d) then https://example.com/d again" }),
+  it("pulls path/url values out of tool-call args under artifact-ish keys", () => {
+    const a = collect([
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [{ function: { name: "write_file", arguments: { path: "/src/app.ts", note: "ignore me" } } }],
+      },
     ]);
     expect(a).toHaveLength(1);
-    expect(a[0].label).toBe("Docs");
+    expect(a[0]).toMatchObject({ kind: "file", value: "/src/app.ts" });
   });
 
-  it("extracts image + file attachments, skipping empty placeholders", () => {
-    const a = extractArtifacts([
-      msg({
-        role: "user",
-        id: "hist-7",
-        attachments: [
-          { name: "shot.png", content: "/api/upload/abc/shot.png", isImage: true },
-          { name: "report.pdf", content: "/api/upload/abc/report.pdf", isImage: false },
-          { name: "ghost", content: "", isImage: true },
-        ],
-      }),
-    ]);
-    expect(a.map((x) => x.kind).sort()).toEqual(["file", "image"]);
-    expect(a.every((x) => x.url !== "")).toBe(true);
-  });
-
-  it("extracts written paths from file-writing tool calls", () => {
-    const a = extractArtifacts([
-      msg({
-        segments: [
-          { type: "tool", tc: { id: "t1", toolName: "write_file", status: "done", preview: "src/app.ts" } },
-          { type: "tool", tc: { id: "t2", toolName: "read_file", status: "done", preview: "src/other.ts" } },
-        ],
-      }),
+  it("mines artifact-shaped strings from a tool-result JSON body", () => {
+    const a = collect([
+      { role: "tool", content: JSON.stringify({ output_path: "/out/render.png", count: 3 }) },
     ]);
     expect(a).toHaveLength(1);
-    expect(a[0]).toMatchObject({ kind: "file", url: "src/app.ts" });
+    expect(a[0]).toMatchObject({ kind: "image", value: "/out/render.png" });
   });
 
-  it("carries the numeric row id for jump-to-chat (user + run ids)", () => {
-    const a = extractArtifacts([
-      msg({ id: "hist-12", role: "user", content: "look https://x/y.png" }),
-      msg({ id: "hist-run-34", content: "[ref](https://z/page)" }),
+  it("dedupes the same value within a session and carries session attribution", () => {
+    const a = collect([
+      { role: "assistant", content: "![a](https://x/a.png) and again https://x/a.png", timestamp: 2000 },
     ]);
-    expect(a.find((x) => x.url === "https://x/y.png")?.messageRowId).toBe(12);
-    expect(a.find((x) => x.url === "https://z/page")?.messageRowId).toBe(34);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ sessionId: "s1", sessionTitle: "My Session", timestamp: 2_000_000 });
+  });
+
+  it("falls back to the session timestamp (ms) when a message has none", () => {
+    const a = collect([{ role: "assistant", content: "![a](https://x/a.png)" }]);
+    expect(a[0].timestamp).toBe(1_000_000); // session.updated_at (1000s) → ms
+  });
+
+  it("carries the numeric message row id for jump-to-chat", () => {
+    const a = collect([{ id: 42, role: "assistant", content: "![a](https://x/a.png)" }]);
+    expect(a[0].messageRowId).toBe(42);
   });
 });

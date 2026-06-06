@@ -408,20 +408,22 @@ export interface Translations {
   };
 
   artifacts: {
-    subtitle: string;
+    search: string;
+    refresh: string;
+    refreshing: string;
+    indexing: string;
     filterAll: string;
     filterImages: string;
     filterFiles: string;
     filterLinks: string;
-    pickSession: string;
-    noSessions: string;
-    noSession: string;
-    noSessionHint: string;
     empty: string;
     emptyHint: string;
-    loading: string;
     openInChat: string;
     open: string;
+    copy: string;
+    kindImage: string;
+    kindFile: string;
+    kindLink: string;
     prev: string;
     next: string;
   };

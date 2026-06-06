@@ -1,132 +1,237 @@
 /**
- * Artifacts projection — derive a session's images / files / links purely from
- * its messages. No new storage: a read-only projection over the same
- * `ChatMessage[]` the chat renders (mirrors Station's "chat store is a
- * projection" model). Used by `ArtifactsPanel`.
+ * Artifacts projection — collect images / files / links from sessions' messages,
+ * a read-only projection over existing transcripts (no new storage). Ported from
+ * upstream desktop's `collectArtifactsForSession` so the extraction logic stays
+ * 1:1 with it: scan only assistant + tool messages, pull markdown images / links,
+ * bare URLs and file paths from the text, and recurse tool-call args / tool-result
+ * JSON for path/url-shaped values under artifact-ish keys.
  *
- * Sources, per message:
- *   • attachments        — uploaded images (→ image) / docs·audio·video (→ file)
- *   • markdown images    — `![alt](url)`                       (→ image)
- *   • markdown links     — `[text](url)`        classified by url
- *   • bare URLs          — `https://…`          classified by url
- *   • file-writing tools — write_file / edit_file / …          (→ file, path)
- *
- * Pure + deterministic so it can be unit-tested without the DOM or network.
+ * Pure + deterministic — unit-tested without the DOM or network.
  */
-
-import type { ChatMessage } from "@/lib/hermes-types";
 
 export type ArtifactKind = "image" | "file" | "link";
 
-export interface SessionArtifact {
-  /** Dedup + React key — `${kind}:${url}`. */
-  key: string;
+export interface ArtifactRecord {
+  /** Dedup + React key — `${sessionId}:${value}`. */
+  id: string;
   kind: ArtifactKind;
-  /** href / src / file path. */
-  url: string;
-  /** Display text (alt / link text / filename). */
+  /** Raw extracted value (path / url). */
+  value: string;
+  /** Openable href (`file://` for absolute paths, else the value). */
+  href: string;
+  /** Display label — filename / last url segment. */
   label: string;
-  /** The ChatMessage this came from (for jump-to-chat). */
-  messageId: string;
-  /** Numeric DB row id parsed from `messageId` (`hist-12` / `hist-run-12` → 12),
-   *  or null — feeds `pendingScrollMessageId` for the chat scroll-to. */
+  sessionId: string;
+  sessionTitle: string;
+  /** Epoch ms (for sort + display). */
+  timestamp: number;
+  /** Numeric DB row id of the first message it came from — feeds the chat
+   *  scroll-to (`pendingScrollMessageId`). Null when unknown. */
   messageRowId: number | null;
-  role: ChatMessage["role"];
-  createdAt: number;
 }
 
-const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico|heic)(?:[?#].*)?$/i;
-// File-writing tool names (case-insensitive partial match) — their `preview`
-// carries the written path. Mirrors useSessionArtifacts' FILE_OP_RE.
-const FILE_OP_RE = /write_file|edit_file|create_file|str_replace|apply_patch|patch_file|delete_file|move_file|save_file/i;
-
-// `![alt](url "title")` — capture alt + url (drop any title / angle brackets).
-const MD_IMAGE_RE = /!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?[^)]*\)/g;
-// `[text](url)` — NOT preceded by `!` (that's an image).
-const MD_LINK_RE = /(?<!!)\[([^\]]+)\]\(\s*<?([^)\s>]+)>?[^)]*\)/g;
-// Bare http(s) URL — stop before whitespace / closing punctuation / quotes.
-const BARE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'`]+/gi;
-
-/** Filename (last path segment, query/hash stripped) for a label fallback. */
-function basename(u: string): string {
-  const clean = u.split(/[?#]/)[0].replace(/\/+$/, "");
-  const seg = clean.slice(clean.lastIndexOf("/") + 1);
-  return seg || u;
+/** Minimal message shape (a superset of `MessageRow` + upstream `SessionMessage`). */
+export interface ArtifactMessage {
+  id?: number;
+  role: string;
+  content?: unknown;
+  text?: unknown;
+  context?: unknown;
+  tool_calls?: unknown;
+  timestamp?: number;
 }
 
-function parseRowId(id: string): number | null {
-  const m = id.match(/(\d+)$/);
-  return m ? Number(m[1]) : null;
+export interface ArtifactSession {
+  id: string;
+  title: string;
+  updated_at?: number;
+  started_at?: number;
 }
 
-/** image (by data-URL or extension) · link (has a scheme) · file (a bare path). */
-export function classifyUrl(url: string): ArtifactKind {
-  if (url.startsWith("data:image/") || IMAGE_EXT_RE.test(url)) return "image";
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url) || url.startsWith("mailto:") || url.startsWith("//")) {
-    return "link";
+const MARKDOWN_IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+const MARKDOWN_LINK_RE = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+const URL_RE = /https?:\/\/[^\s<>"')]+/g;
+const PATH_RE = /(^|[\s("'`])((?:\/|~\/|\.\.?\/)[^\s"'`<>]+(?:\.[a-z0-9]{1,8})?)/gi;
+const IMAGE_EXT_RE = /\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*)?$/i;
+const FILE_EXT_RE = /\.(?:png|jpe?g|gif|webp|svg|bmp|pdf|txt|json|md|csv|zip|tar|gz|mp3|wav|mp4|mov)(?:\?.*)?$/i;
+const KEY_HINT_RE = /(path|file|url|image|artifact|output|download|result|target)/i;
+
+function normalizeValue(value: string): string {
+  return value.trim().replace(/[),.;]+$/, "");
+}
+
+function parseMaybeJson(value: string): unknown {
+  if (!value.trim()) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
   }
-  return "file";
 }
 
-export function extractArtifacts(messages: ChatMessage[]): SessionArtifact[] {
-  const out: SessionArtifact[] = [];
-  const seen = new Set<string>();
+function looksLikePathOrUrl(value: string): boolean {
+  return (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("file://") ||
+    value.startsWith("data:image/") ||
+    value.startsWith("/") ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith("~/")
+  );
+}
 
-  const push = (
-    kind: ArtifactKind,
-    url: string,
-    label: string,
-    msg: ChatMessage,
-  ) => {
-    if (!url) return;
-    const key = `${kind}:${url}`;
-    if (seen.has(key)) return; // first occurrence wins (earliest message)
-    seen.add(key);
-    out.push({
-      key,
-      kind,
-      url,
-      label: label.trim() || basename(url),
-      messageId: msg.id,
-      messageRowId: parseRowId(msg.id),
-      role: msg.role,
-      createdAt: msg.createdAt ?? 0,
+export function looksLikeArtifact(value: string): boolean {
+  if (/^(?:https?:\/\/|data:image\/)/.test(value)) return true;
+  if (looksLikePathOrUrl(value) && (IMAGE_EXT_RE.test(value) || FILE_EXT_RE.test(value))) return true;
+  return value.startsWith("/") && value.includes(".");
+}
+
+export function artifactKind(value: string): ArtifactKind {
+  if (value.startsWith("data:image/") || IMAGE_EXT_RE.test(value)) return "image";
+  if (
+    value.startsWith("/") ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith("~/") ||
+    value.startsWith("file://")
+  ) {
+    return "file";
+  }
+  return "link";
+}
+
+function artifactHref(value: string): string {
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("file://") ||
+    value.startsWith("data:")
+  ) {
+    return value;
+  }
+  if (value.startsWith("/")) return `file://${encodeURI(value)}`;
+  return value;
+}
+
+export function artifactLabel(value: string): string {
+  try {
+    const url = new URL(value);
+    const item = url.pathname.split("/").filter(Boolean).pop();
+    return item || value;
+  } catch {
+    const parts = value.split(/[\\/]/).filter(Boolean);
+    return parts.pop() || value;
+  }
+}
+
+function messageText(message: ArtifactMessage): string {
+  if (typeof message.content === "string" && message.content.trim()) return message.content;
+  if (typeof message.text === "string" && message.text.trim()) return message.text;
+  if (typeof message.context === "string" && message.context.trim()) return message.context;
+  return "";
+}
+
+function collectStringValues(
+  value: unknown,
+  keyPath: string,
+  collector: (value: string, keyPath: string) => void,
+): void {
+  if (typeof value === "string") {
+    collector(value, keyPath);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectStringValues(entry, `${keyPath}.${index}`, collector));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    collectStringValues(child, keyPath ? `${keyPath}.${key}` : key, collector);
+  }
+}
+
+function collectArtifactsFromText(text: string, pushValue: (value: string) => void): void {
+  for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
+    pushValue(match[2] || "");
+  }
+  for (const match of text.matchAll(MARKDOWN_LINK_RE)) {
+    const start = match.index ?? 0;
+    if (start > 0 && text[start - 1] === "!") continue; // that's a markdown image
+    const value = match[2] || "";
+    if (looksLikeArtifact(value)) pushValue(value);
+  }
+  for (const match of text.matchAll(URL_RE)) {
+    const value = match[0] || "";
+    if (looksLikeArtifact(value)) pushValue(value);
+  }
+  for (const match of text.matchAll(PATH_RE)) {
+    pushValue(match[2] || "");
+  }
+}
+
+function collectArtifactsFromMessage(message: ArtifactMessage, pushValue: (value: string) => void): void {
+  const text = messageText(message);
+  if (text) collectArtifactsFromText(text, pushValue);
+
+  if (message.role !== "tool" && !Array.isArray(message.tool_calls)) return;
+
+  if (Array.isArray(message.tool_calls)) {
+    for (const call of message.tool_calls) {
+      collectStringValues(call, "tool_call", (value, keyPath) => {
+        const normalized = normalizeValue(value);
+        if (!normalized) return;
+        if (KEY_HINT_RE.test(keyPath) && (looksLikePathOrUrl(normalized) || FILE_EXT_RE.test(normalized))) {
+          pushValue(normalized);
+        }
+      });
+    }
+  }
+
+  const parsed = parseMaybeJson(text);
+  if (parsed !== null) {
+    collectStringValues(parsed, "tool_result", (value, keyPath) => {
+      const normalized = normalizeValue(value);
+      if (!normalized) return;
+      if ((KEY_HINT_RE.test(keyPath) || looksLikePathOrUrl(normalized)) && looksLikeArtifact(normalized)) {
+        pushValue(normalized);
+      }
     });
-  };
+  }
+}
 
-  for (const msg of messages) {
-    // 1. Attachments (uploaded images / docs / audio / video). Empty content =
-    //    an unrecoverable placeholder ghost — skip.
-    for (const att of msg.attachments ?? []) {
-      if (!att.content) continue;
-      push(att.isImage ? "image" : "file", att.content, att.name, msg);
-    }
+export function collectArtifactsForSession(
+  session: ArtifactSession,
+  messages: ArtifactMessage[],
+): ArtifactRecord[] {
+  const found = new Map<string, ArtifactRecord>();
+  const fallbackSec = session.updated_at || session.started_at || Math.floor(Date.now() / 1000);
 
-    // 2. Markdown + bare URLs in the text content.
-    const text = msg.content ?? "";
-    if (text) {
-      for (const m of text.matchAll(MD_IMAGE_RE)) {
-        push("image", m[2], m[1] || basename(m[2]), msg);
-      }
-      for (const m of text.matchAll(MD_LINK_RE)) {
-        const url = m[2];
-        push(classifyUrl(url), url, m[1] || basename(url), msg);
-      }
-      for (const m of text.matchAll(BARE_URL_RE)) {
-        const url = m[0];
-        push(classifyUrl(url), url, basename(url), msg);
-      }
-    }
+  for (const message of messages) {
+    if (message.role !== "assistant" && message.role !== "tool") continue;
 
-    // 3. File-writing tool calls — the written path lives in `preview`.
-    const segs = msg.segments ?? msg.toolCalls?.map((tc) => ({ type: "tool" as const, tc })) ?? [];
-    for (const seg of segs) {
-      if (seg.type !== "tool") continue;
-      const { tc } = seg;
-      if (!FILE_OP_RE.test(tc.toolName) || !tc.preview) continue;
-      push("file", tc.preview, tc.preview, msg);
-    }
+    collectArtifactsFromMessage(message, (candidate) => {
+      const value = normalizeValue(candidate);
+      if (!value || !looksLikeArtifact(value)) return;
+
+      const key = `${session.id}:${value}`;
+      if (found.has(key)) return;
+
+      const tsSec = message.timestamp || fallbackSec;
+      found.set(key, {
+        id: key,
+        kind: artifactKind(value),
+        value,
+        href: artifactHref(value),
+        label: artifactLabel(value),
+        sessionId: session.id,
+        sessionTitle: session.title,
+        timestamp: tsSec * 1000,
+        messageRowId: typeof message.id === "number" ? message.id : null,
+      });
+    });
   }
 
-  return out;
+  return Array.from(found.values());
 }
