@@ -14,6 +14,11 @@ const MEMBERS_KEY = "hms_agent_room_members";
 const RESPONDER_KEY = "hms_agent_room_responder";
 const MSGS_KEY = "hms_agent_room_messages";
 const SIDS_KEY = "hms_agent_room_session_ids";
+const RUN_KEY = "hms_agent_room_run";
+
+function readRun(): { runId: string | null; agent: string | null } {
+  return readJSON<{ runId: string | null; agent: string | null }>(RUN_KEY, { runId: null, agent: null });
+}
 const MAX_PERSISTED = 80; // cap the stored transcript so localStorage can't overflow
 
 function readJSON<T>(key: string, fallback: T): T {
@@ -83,9 +88,11 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
   members: readMembers(),
   responder: readJSON<string | null>(RESPONDER_KEY, null) ?? readMembers()[0] ?? null,
   messages: readJSON<ChatMessage[]>(MSGS_KEY, []),
-  activeRunId: null,
-  activeTurnId: null,
-  turnAgent: null,
+  // Persisted so a refresh during a run can re-attach to it (resume the
+  // streaming reply that's otherwise lost when the WS subscription drops).
+  activeRunId: readRun().runId,
+  activeTurnId: readRun().runId,
+  turnAgent: readRun().agent,
   sessionIds: readJSON<string[]>(SIDS_KEY, []),
 
   addMember: (name) => {
@@ -243,7 +250,10 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
       return { messages: msgs };
     }),
 
-  beginTurn: (runId, agent) => set({ activeRunId: runId, activeTurnId: runId, turnAgent: agent }),
+  beginTurn: (runId, agent) => {
+    writeJSON(RUN_KEY, { runId, agent });
+    set({ activeRunId: runId, activeTurnId: runId, turnAgent: agent });
+  },
 
   addSessionId: (id) =>
     set((s) => {
@@ -257,12 +267,14 @@ export const useAgentRoomStore = create<AgentRoomStore>((set, get) => ({
     set((s) => {
       const messages = s.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m));
       persistMessages(messages);
+      writeJSON(RUN_KEY, { runId: null, agent: null });
       return { messages, activeRunId: null, activeTurnId: null, turnAgent: null };
     }),
 
   clearConversation: () => {
     writeJSON(MSGS_KEY, []);
     writeJSON(SIDS_KEY, []);
+    writeJSON(RUN_KEY, { runId: null, agent: null });
     set({ messages: [], activeRunId: null, activeTurnId: null, turnAgent: null, sessionIds: [] });
   },
 }));

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useAgentRoomStore } from "@/store/agentRoom";
-import { parseMention } from "@/hooks/useAgentRoomStream";
+import { parseMentions } from "@/hooks/useAgentRoomStream";
 
 describe("useAgentRoomStore (agents room roster)", () => {
   beforeEach(() => {
@@ -61,24 +61,34 @@ describe("useAgentRoomStore (agents room roster)", () => {
   });
 });
 
-describe("parseMention (@member routing)", () => {
-  it("routes a leading @member and strips it from the body", () => {
-    expect(parseMention("@coder do X", ["coder", "writer"])).toEqual({ agent: "coder", body: "do X" });
+describe("parseMentions (multi-@member routing)", () => {
+  it("collects ALL mentioned members and strips them from the body", () => {
+    expect(parseMentions("@coder @writer do X", ["coder", "writer"])).toEqual({
+      agents: ["coder", "writer"],
+      body: "do X",
+    });
   });
 
-  it("ignores an @mention that isn't a member", () => {
-    expect(parseMention("@ghost hi", ["coder"])).toEqual({ agent: null, body: "@ghost hi" });
+  it("collects a single leading @member", () => {
+    expect(parseMentions("@coder do X", ["coder", "writer"])).toEqual({ agents: ["coder"], body: "do X" });
   });
 
-  it("no mention → null agent + full body", () => {
-    expect(parseMention("hello there", ["coder"])).toEqual({ agent: null, body: "hello there" });
+  it("ignores @mentions that aren't members", () => {
+    expect(parseMentions("@ghost hi", ["coder"])).toEqual({ agents: [], body: "@ghost hi" });
   });
 
-  it("routes a mention found mid-text (not only at the start)", () => {
-    expect(parseMention("do X @writer", ["coder", "writer"])).toEqual({ agent: "writer", body: "do X" });
+  it("no mention → empty agents + full body", () => {
+    expect(parseMentions("hello there", ["coder"])).toEqual({ agents: [], body: "hello there" });
   });
 
-  it("skips a non-member @ and routes the first @member", () => {
-    expect(parseMention("@ghost @coder hi", ["coder"])).toEqual({ agent: "coder", body: "@ghost hi" });
+  it("collects mentions found mid-text (not only the start)", () => {
+    expect(parseMentions("ping @coder then @writer", ["coder", "writer"])).toEqual({
+      agents: ["coder", "writer"],
+      body: "ping then",
+    });
+  });
+
+  it("dedupes repeated mentions of the same member", () => {
+    expect(parseMentions("@coder @coder hi", ["coder"])).toEqual({ agents: ["coder"], body: "hi" });
   });
 });
