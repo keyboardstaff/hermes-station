@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Wrench, ExternalLink } from "lucide-react";
+import { X, ExternalLink, Image as ImageIcon, FileText, Link2, GitBranch, FilePen } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useThemeStore } from "@/store/app";
-import { useSessionArtifacts, type Artifact } from "@/hooks/useSessionArtifacts";
+import { useChatStore } from "@/store/chat";
+import {
+  collectArtifactsForSession,
+  type ArtifactMessage, type ArtifactRecord,
+} from "@/lib/artifacts";
+import type { ChatMessage } from "@/lib/hermes-types";
 import { useFilesSelection } from "@/store/panel-selection";
 import FilesSideTree from "@/components/files/FilesSideTree";
 import FileEditor from "@/components/files/FileEditor";
@@ -26,18 +31,8 @@ import FileBreadcrumb from "@/components/files/FileBreadcrumb";
  * page, so "Open full Files page" hands off the same selection.
  */
 
-const WIDTH_KEY = "hms:chat:workspace:w";
-const WIDTH_MIN = 280;
-const WIDTH_MAX = 640;
-const WIDTH_DEFAULT = 380;
-
-function readStoredWidth(): number {
-  try {
-    const n = parseInt(localStorage.getItem(WIDTH_KEY) ?? "", 10);
-    if (!isNaN(n)) return Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, n));
-  } catch { /* private browsing */ }
-  return WIDTH_DEFAULT;
-}
+// Fixed inline width — the panel no longer drag-resizes (owner: fixed width).
+const WIDTH = 380;
 
 export default function WorkspaceContextPanel({
   onClose,
@@ -53,38 +48,24 @@ export default function WorkspaceContextPanel({
   const f = t.files;
   const navigate = useNavigate();
   const [tab, setTab] = useState<"files" | "artifacts">("files");
-  const artifacts = useSessionArtifacts();
+  // Artifacts for THIS session — the same projection the cross-session
+  // /artifacts page uses (`collectArtifactsForSession`), scoped to the live
+  // chat-store messages so the chat tab and the page classify identically.
+  const messages = useChatStore((s) => s.messages);
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const artifacts = useMemo(
+    () => collectArtifactsForSession(
+      { id: activeSessionId ?? "current", title: "" },
+      chatToArtifactMessages(messages),
+    ),
+    [messages, activeSessionId],
+  );
   const selected = useFilesSelection((s) => s.selected);
   const setSelected = useFilesSelection((s) => s.setSelected);
   const { resolvedTheme } = useThemeStore();
   const monacoTheme = resolvedTheme === "dark" ? "vs-dark" : "vs";
 
   const inEditor = tab === "files" && selected !== null;
-
-  // Width (inline only) — drag the left edge to resize, persisted.
-  const [width, setWidth] = useState(readStoredWidth);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(0);
-
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    dragging.current = true;
-    startX.current = e.clientX;
-    startW.current = width;
-    (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
-    e.preventDefault();
-  }, [width]);
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    // Dragging the left edge: leftward (negative delta) widens the panel.
-    const next = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, startW.current - (e.clientX - startX.current)));
-    setWidth(next);
-  }, []);
-  const onPointerUp = useCallback(() => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* ignore */ }
-  }, [width]);
 
   // Overlay: ESC to close (inline stays open — it's part of the layout).
   useEffect(() => {
@@ -150,6 +131,19 @@ export default function WorkspaceContextPanel({
           onClick={() => navigate("/files", { state: { from: "chat" } })}
           title={f.openFullPage ?? "Open full Files page"}
           aria-label={f.openFullPage ?? "Open full Files page"}
+          style={iconBtn}
+        >
+          <ExternalLink size={15} />
+        </button>
+      )}
+      {/* Jump to the cross-session Artifacts page (same projection, all sessions).
+          Uses the same icon as the Files tab's "open full page" button. */}
+      {tab === "artifacts" && !inEditor && (
+        <button
+          type="button"
+          onClick={() => navigate("/artifacts")}
+          title={f.seeAllArtifacts ?? "See all artifacts"}
+          aria-label={f.seeAllArtifacts ?? "See all artifacts"}
           style={iconBtn}
         >
           <ExternalLink size={15} />
@@ -221,53 +215,29 @@ export default function WorkspaceContextPanel({
     );
   }
 
-  // Inline variant — in-flow right column with a drag-to-resize left edge.
+  // Inline variant — in-flow right column at a fixed width (no drag-resize).
   // Stays mounted and animates its width to 0 on close for a smooth slide.
   return (
     <div
+      role="complementary"
+      aria-label={t.nav.workspacesDrawer}
       style={{
         display: "flex",
+        flexDirection: "column",
         flexShrink: 0,
         height: "100%",
         minHeight: 0,
-        width: open ? width + 5 : 0,
+        width: open ? WIDTH : 0,
         opacity: open ? 1 : 0,
         overflow: "hidden",
         pointerEvents: open ? "auto" : "none",
+        borderLeft: "1px solid var(--hms-border)",
+        background: "var(--hms-surface)",
         transition: "width 220ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 180ms ease",
       }}
     >
-      <div
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        style={{
-          width: 5,
-          flexShrink: 0,
-          cursor: "col-resize",
-          background: "transparent",
-          borderLeft: "1px solid var(--hms-border)",
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--hms-hover-bg)"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-        aria-hidden="true"
-      />
-      <div
-        role="complementary"
-        aria-label={t.nav.workspacesDrawer}
-        style={{
-          width,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          background: "var(--hms-surface)",
-          overflow: "hidden",
-        }}
-      >
-        {header}
-        {body}
-      </div>
+      {header}
+      {body}
     </div>
   );
 }
@@ -288,19 +258,41 @@ const iconBtn: React.CSSProperties = {
 
 // ── Artifacts list ────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<string, string> = {
-  done: "var(--hms-success-text, #16a34a)",
-  running: "var(--hms-accent)",
-  error: "var(--hms-error-text, #dc2626)",
-};
+/** Adapt live chat-store messages to the extractor's message shape: assistant
+ *  text + a synthetic tool_call per tool segment (name + its path/command from
+ *  `preview`, so file-edit & git changes are detected) + each tool result.
+ *  Mirrors the /artifacts page's raw DB feed, so classification is identical. */
+function chatToArtifactMessages(messages: ChatMessage[]): ArtifactMessage[] {
+  const out: ArtifactMessage[] = [];
+  for (const m of messages) {
+    if (m.role === "user") continue;
+    const toolCalls: Array<{ function: { name: string; arguments: Record<string, unknown> } }> = [];
+    for (const seg of m.segments ?? []) {
+      if (seg.type !== "tool") continue;
+      const p = seg.tc.preview;
+      toolCalls.push({ function: { name: seg.tc.toolName, arguments: p ? { path: p, command: p } : {} } });
+      if (seg.tc.result) out.push({ role: "tool", content: seg.tc.result });
+    }
+    out.push({ role: "assistant", content: m.content ?? "", tool_calls: toolCalls.length ? toolCalls : undefined });
+  }
+  return out;
+}
+
+const KIND_ICON = { image: ImageIcon, file: FileText, link: Link2 } as const;
+
+function isWebOpenable(href: string): boolean {
+  return /^(https?:|data:)/i.test(href);
+}
 
 function ArtifactsList({
   artifacts,
   noArtifactsLabel,
 }: {
-  artifacts: Artifact[];
+  artifacts: ArtifactRecord[];
   noArtifactsLabel: string;
 }) {
+  const { t } = useI18n();
+  const a = t.artifacts;
   if (artifacts.length === 0) {
     return (
       <div style={{ padding: 24, textAlign: "center", color: "var(--hms-text-muted)", fontSize: "var(--hms-text-sm)" }}>
@@ -309,34 +301,60 @@ function ArtifactsList({
     );
   }
 
+  const edits = artifacts.filter((x) => x.group === "edit");
+  const gits = artifacts.filter((x) => x.group === "git");
+  const refs = artifacts.filter((x) => x.group === "ref");
+
   return (
-    <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", height: "100%" }}>
-      {artifacts.map((a) => (
-        <div
-          key={a.id}
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "6px 8px",
-            borderRadius: 6,
-            background: "var(--hms-surface)",
-            border: "1px solid var(--hms-border)",
-          }}
-        >
-          <Wrench size={13} style={{ color: STATUS_COLOR[a.status] ?? "var(--hms-text-muted)", flexShrink: 0, marginTop: 2 }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: "var(--hms-text-xs)", fontFamily: "monospace", fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {a.toolName}
-            </div>
-            {a.preview && (
-              <div style={{ fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {a.preview}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+    <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 'var(--hms-space-3)', overflowY: "auto", height: "100%" }}>
+      <ArtifactGroupSection title={a.groupChanges} items={edits} />
+      <ArtifactGroupSection title={a.groupGit} items={gits} />
+      <ArtifactGroupSection title={a.groupReferences} items={refs} />
     </div>
   );
+}
+
+function ArtifactGroupSection({ title, items }: { title: string; items: ArtifactRecord[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)' }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', fontSize: "var(--hms-text-xs)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)", padding: "2px 2px" }}>
+        {title} <span style={{ opacity: 0.7 }}>{items.length}</span>
+      </div>
+      {items.map((a) => <ArtifactRow key={a.id} a={a} />)}
+    </section>
+  );
+}
+
+function ArtifactRow({ a }: { a: ArtifactRecord }) {
+  const openable = isWebOpenable(a.href);
+  const Icon = a.group === "git" ? GitBranch : a.group === "edit" ? FilePen : KIND_ICON[a.kind];
+  const inner = (
+    <>
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: 6, overflow: "hidden", background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)" }}>
+        {a.group === "ref" && a.kind === "image" && openable
+          ? <img src={a.href} alt={a.label} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <Icon size={13} />}
+      </span>
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span style={{ display: "block", fontSize: "var(--hms-text-xs)", fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {a.label}
+        </span>
+        {a.group !== "git" && (
+          <span style={{ display: "block", fontSize: "var(--hms-text-xs)", fontFamily: a.kind === "link" ? undefined : "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {a.value}
+          </span>
+        )}
+      </span>
+      {openable && <ExternalLink size={12} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />}
+    </>
+  );
+  const rowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
+    borderRadius: 6, background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
+    textDecoration: "none", color: "var(--hms-text)",
+  };
+  return openable
+    ? <a href={a.href} target="_blank" rel="noreferrer" title={a.value} style={rowStyle}>{inner}</a>
+    : <div title={a.value} style={rowStyle}>{inner}</div>;
 }

@@ -101,3 +101,44 @@ describe("collectArtifactsForSession", () => {
     expect(a[0].messageRowId).toBe(42);
   });
 });
+
+describe("collectArtifactsForSession (groups: changes / git / refs)", () => {
+  it("classifies a file-write tool call as an edit (not a passive ref)", () => {
+    const a = collect([
+      { role: "assistant", content: "", tool_calls: [{ function: { name: "write_file", arguments: { path: "/src/app.ts" } } }] },
+    ]);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ group: "edit", value: "/src/app.ts", tool: "write_file" });
+  });
+
+  it("parses tool-call arguments given as a JSON string", () => {
+    const a = collect([
+      { role: "assistant", content: "", tool_calls: [{ function: { name: "edit_file", arguments: JSON.stringify({ path: "/a/b.ts" }) } }] },
+    ]);
+    expect(a[0]).toMatchObject({ group: "edit", value: "/a/b.ts" });
+  });
+
+  it("a tool-written path shows once as a change, never also as a reference", () => {
+    const a = collect([
+      { role: "assistant", content: "wrote /src/app.ts", tool_calls: [{ function: { name: "write_file", arguments: { path: "/src/app.ts" } } }] },
+    ]);
+    const forPath = a.filter((x) => x.value === "/src/app.ts");
+    expect(forPath).toHaveLength(1);
+    expect(forPath[0].group).toBe("edit");
+  });
+
+  it("classifies a git shell command as a git change", () => {
+    const a = collect([
+      { role: "assistant", content: "", tool_calls: [{ function: { name: "bash", arguments: { command: "git commit -m hello" } } }] },
+    ]);
+    const git = a.find((x) => x.group === "git");
+    expect(git).toMatchObject({ group: "git", tool: "git" });
+    expect(git?.value).toContain("git commit");
+  });
+
+  it("keeps text images / links as references", () => {
+    const a = collect([{ role: "assistant", content: "![c](https://x/c.png) and [d](https://y/d)" }]);
+    expect(a.length).toBeGreaterThan(0);
+    expect(a.every((x) => x.group === "ref")).toBe(true);
+  });
+});

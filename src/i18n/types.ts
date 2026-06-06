@@ -386,6 +386,7 @@ export interface Translations {
     backToFile: string;
     /** Chat workspace context panel → open the full /files page. */
     openFullPage: string;
+    seeAllArtifacts: string;
     /** /files top bar → return to chat when deep-linked from the workspace. */
     backToChat: string;
   };
@@ -413,9 +414,14 @@ export interface Translations {
     refreshing: string;
     indexing: string;
     filterAll: string;
+    filterChanges: string;
+    filterGit: string;
     filterImages: string;
     filterFiles: string;
     filterLinks: string;
+    groupChanges: string;
+    groupGit: string;
+    groupReferences: string;
     empty: string;
     emptyHint: string;
     noMatches: string;

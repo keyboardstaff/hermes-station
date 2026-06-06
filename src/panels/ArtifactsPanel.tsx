@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  FileText, Link2, ExternalLink, FolderOpen, ImageOff,
+  FileText, Link2, ExternalLink, FolderOpen, ImageOff, GitBranch, FilePen,
   ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Layers,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
@@ -12,7 +12,7 @@ import { useFilesSelection } from "@/store/panel-selection";
 import { formatSessionTitle } from "@/lib/session-title";
 import {
   collectArtifactsForSession,
-  type ArtifactRecord, type ArtifactKind, type ArtifactMessage,
+  type ArtifactRecord, type ArtifactMessage,
 } from "@/lib/artifacts";
 import { resolveFileTarget, hasFileExtension, type FileTarget, type WorkspaceDir } from "@/lib/file-target";
 import type { SessionSummary } from "@/lib/hermes-types";
@@ -39,6 +39,9 @@ const TABLE_COLS = "minmax(0, 1fr) minmax(120px, 200px)";
 const RECENT_SESSIONS = 30;
 const IMAGE_PAGE = 24;
 const FILE_PAGE = 100;
+
+type ArtifactFilter = "all" | "edit" | "git" | "image" | "file" | "link";
+const FILTERS: ArtifactFilter[] = ["all", "edit", "git", "image", "file", "link"];
 
 const TIME_FMT = new Intl.DateTimeFormat(undefined, {
   month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
@@ -104,7 +107,7 @@ export default function ArtifactsPanel() {
   const workspaces = useMemo(() => wsData?.workspaces ?? [], [wsData]);
 
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<ArtifactKind | "all">("all");
+  const [kind, setKind] = useState<ArtifactFilter>("all");
   const [imagePage, setImagePage] = useState(1);
   const [filePage, setFilePage] = useState(1);
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -118,19 +121,28 @@ export default function ArtifactsPanel() {
 
   const counts = useMemo(() => {
     const all = artifacts ?? [];
+    const ref = all.filter((x) => x.group === "ref");
     return {
       all: all.length,
-      image: all.filter((x) => x.kind === "image").length,
-      file: all.filter((x) => x.kind === "file").length,
-      link: all.filter((x) => x.kind === "link").length,
+      edit: all.filter((x) => x.group === "edit").length,
+      git: all.filter((x) => x.group === "git").length,
+      image: ref.filter((x) => x.kind === "image").length,
+      file: ref.filter((x) => x.kind === "file").length,
+      link: ref.filter((x) => x.kind === "link").length,
     };
   }, [artifacts]);
+
+  const matchesFilter = (art: ArtifactRecord): boolean => {
+    if (kind === "all") return true;
+    if (kind === "edit" || kind === "git") return art.group === kind;
+    return art.group === "ref" && art.kind === kind;
+  };
 
   const visible = useMemo(() => {
     const list = artifacts ?? [];
     const q = query.trim().toLowerCase();
     return list.filter((art) => {
-      if (kind !== "all" && art.kind !== kind) return false;
+      if (!matchesFilter(art)) return false;
       if (!q) return true;
       return (
         art.label.toLowerCase().includes(q) ||
@@ -138,10 +150,13 @@ export default function ArtifactsPanel() {
         art.sessionTitle.toLowerCase().includes(q)
       );
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artifacts, kind, query]);
 
-  const images = useMemo(() => visible.filter((x) => x.kind === "image"), [visible]);
-  const files = useMemo(() => visible.filter((x) => x.kind !== "image"), [visible]);
+  const changes = useMemo(() => visible.filter((x) => x.group === "edit"), [visible]);
+  const gits = useMemo(() => visible.filter((x) => x.group === "git"), [visible]);
+  const images = useMemo(() => visible.filter((x) => x.group === "ref" && x.kind === "image"), [visible]);
+  const files = useMemo(() => visible.filter((x) => x.group === "ref" && x.kind !== "image"), [visible]);
 
   const imagePageCount = Math.max(1, Math.ceil(images.length / IMAGE_PAGE));
   const filePageCount = Math.max(1, Math.ceil(files.length / FILE_PAGE));
@@ -187,9 +202,11 @@ export default function ArtifactsPanel() {
         context={
           <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)', padding: "6px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flex: 1, minWidth: 0, flexWrap: "wrap" }}>
-              {(["all", "image", "file", "link"] as const).map((k) => {
+              {FILTERS.map((k) => {
                 const active = kind === k;
-                const label = k === "all" ? a.filterAll : k === "image" ? a.filterImages : k === "file" ? a.filterFiles : a.filterLinks;
+                const label = k === "all" ? a.filterAll
+                  : k === "edit" ? a.filterChanges : k === "git" ? a.filterGit
+                  : k === "image" ? a.filterImages : k === "file" ? a.filterFiles : a.filterLinks;
                 return (
                   <button
                     key={k}
@@ -231,6 +248,36 @@ export default function ArtifactsPanel() {
             : <EmptyState title={a.empty} hint={a.emptyHint} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-5)' }}>
+            {changes.length > 0 && (
+              <GroupTable title={a.groupChanges} count={changes.length} colName={a.colName} colSession={a.colSession}>
+                {changes.map((art) => (
+                  <FileRow
+                    key={art.id}
+                    art={art}
+                    t={a}
+                    fileTarget={hasFileExtension(art.value) ? resolveFileTarget(art.value, workspaces, art.sessionCwd) : null}
+                    onPreviewFile={(target) => setDocPreview({ target, label: art.label })}
+                    onOpenChat={() => openChat(art)}
+                  />
+                ))}
+              </GroupTable>
+            )}
+
+            {gits.length > 0 && (
+              <GroupTable title={a.groupGit} count={gits.length} colName={a.colName} colSession={a.colSession}>
+                {gits.map((art) => (
+                  <FileRow
+                    key={art.id}
+                    art={art}
+                    t={a}
+                    fileTarget={null}
+                    onPreviewFile={() => { /* git has no file target */ }}
+                    onOpenChat={() => openChat(art)}
+                  />
+                ))}
+              </GroupTable>
+            )}
+
             {images.length > 0 && (
               <section>
                 <SectionHeader
@@ -375,6 +422,36 @@ function pagerBtn(disabled: boolean): React.CSSProperties {
   };
 }
 
+/** A titled, bordered rows table (Changes / Git) sharing the file/link layout. */
+function GroupTable({
+  title, count, colName, colSession, children,
+}: {
+  title: string; count: number; colName: string; colSession: string; children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
+        <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>{title}</span>
+        <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", opacity: 0.7 }}>{count}</span>
+      </div>
+      <div style={{ marginTop: 'var(--hms-space-2)', borderRadius: 'var(--hms-radius-md)', border: "1px solid var(--hms-border)", overflow: "hidden" }}>
+        <div
+          style={{
+            display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)',
+            padding: "6px 10px", background: "var(--hms-hover-bg)", borderBottom: "1px solid var(--hms-border)",
+            fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em",
+            textTransform: "uppercase", color: "var(--hms-text-muted)",
+          }}
+        >
+          <span>{colName}</span>
+          <span>{colSession}</span>
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div
@@ -456,7 +533,8 @@ function FileRow({
   onOpenChat: () => void;
 }) {
   const isLink = art.kind === "link";
-  const Icon = isLink ? Link2 : FileText;
+  const isGit = art.group === "git";
+  const Icon = isGit ? GitBranch : art.group === "edit" ? FilePen : isLink ? Link2 : FileText;
   const linkHref = isLink && isWebOpenable(art.href) ? art.href : null;
 
   const titleInner = (
@@ -497,12 +575,15 @@ function FileRow({
         ) : (
           <div title={art.label} style={titleStyle}>{titleInner}</div>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, paddingLeft: 'var(--hms-space-6)' }}>
-          <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
-            {art.value}
-          </span>
-          <CopyBtn text={art.value} label={t.copy} />
-        </div>
+        {/* Location line — hidden for git (the command is already the title). */}
+        {!isGit && (
+          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, paddingLeft: 'var(--hms-space-6)' }}>
+            <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
+              {art.value}
+            </span>
+            <CopyBtn text={art.value} label={t.copy} />
+          </div>
+        )}
       </div>
 
       {/* SESSION — attribution → jump to chat */}

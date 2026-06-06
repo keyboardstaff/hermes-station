@@ -11,11 +11,24 @@
 
 export type ArtifactKind = "image" | "file" | "link";
 
+/**
+ * The higher-level category an artifact belongs to, so changes (file edits) and
+ * git activity are visually distinct from passive references (image/file/link
+ * URLs & paths) and don't get confused:
+ *   • `edit` — a file the agent wrote/edited (a file-modification tool call)
+ *   • `git`  — a git operation (commit / diff / status …)
+ *   • `ref`  — an image / file / link referenced in text or tool output
+ */
+export type ArtifactGroup = "edit" | "git" | "ref";
+
 export interface ArtifactRecord {
   /** Dedup + React key — `${sessionId}:${value}`. */
   id: string;
+  group: ArtifactGroup;
   kind: ArtifactKind;
-  /** Raw extracted value (path / url). */
+  /** For `edit` / `git`: the tool / op name (e.g. `write_file`, `git`). */
+  tool?: string;
+  /** Raw extracted value (path / url / git command). */
   value: string;
   /** Openable href (`file://` for absolute paths, else the value). */
   href: string;
@@ -58,6 +71,48 @@ const PATH_RE = /(^|[\s("'`])((?:\/|~\/|\.\.?\/)[^\s"'`<>]+(?:\.[a-z0-9]{1,8})?)
 const IMAGE_EXT_RE = /\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*)?$/i;
 const FILE_EXT_RE = /\.(?:png|jpe?g|gif|webp|svg|bmp|pdf|txt|json|md|csv|zip|tar|gz|mp3|wav|mp4|mov)(?:\?.*)?$/i;
 const KEY_HINT_RE = /(path|file|url|image|artifact|output|download|result|target)/i;
+
+// File-modification tool names (case-insensitive partial match) → `edit` group.
+const FILE_OP_RE = /write_file|edit_file|create_file|str_replace|apply_patch|patch_file|delete_file|move_file|rename_file|save_file|multi_edit|new_file/i;
+// A git invocation inside a shell command → `git` group.
+const GIT_CMD_RE = /(?:^|\s|&&|;|\|)git\s+[a-z]/i;
+// Argument keys that carry a written path / a shell command.
+const EDIT_KEYS = ["path", "file_path", "filepath", "filename", "file", "target_file", "target", "abs_path"];
+const CMD_KEYS = ["command", "cmd", "script", "input", "code", "shell"];
+
+function callName(call: unknown): string | undefined {
+  if (!call || typeof call !== "object") return undefined;
+  const c = call as Record<string, unknown>;
+  const fn = c.function as Record<string, unknown> | undefined;
+  const n = (fn?.name ?? c.name) as unknown;
+  return typeof n === "string" ? n : undefined;
+}
+
+function callArgs(call: unknown): Record<string, unknown> {
+  if (!call || typeof call !== "object") return {};
+  const c = call as Record<string, unknown>;
+  const fn = c.function as Record<string, unknown> | undefined;
+  const raw = fn?.arguments ?? c.arguments ?? c.input ?? c.parameters;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
+  return {};
+}
+
+function pickStr(obj: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
+/** First git command in a (possibly chained) shell command, trimmed for display. */
+function gitSummary(command: string): string {
+  const m = command.match(/git\s+[^\n&;|]+/i);
+  return (m ? m[0] : command).trim().slice(0, 120);
+}
 
 function normalizeValue(value: string): string {
   return value.trim().replace(/[),.;]+$/, "");
@@ -174,9 +229,34 @@ function collectArtifactsFromText(text: string, pushValue: (value: string) => vo
   }
 }
 
-function collectArtifactsFromMessage(message: ArtifactMessage, pushValue: (value: string) => void): void {
+type Emit = (group: ArtifactGroup, value: string, tool?: string) => void;
+
+/** Pass 1: file-modification + git tool calls (the `edit` / `git` groups). */
+function collectChangesFromMessage(message: ArtifactMessage, emit: Emit): void {
+  if (!Array.isArray(message.tool_calls)) return;
+  for (const call of message.tool_calls) {
+    const name = callName(call) ?? "";
+    const args = callArgs(call);
+
+    if (FILE_OP_RE.test(name)) {
+      const path = pickStr(args, EDIT_KEYS);
+      if (path) emit("edit", path, name);
+      continue;
+    }
+    const cmd = pickStr(args, CMD_KEYS);
+    if (cmd && GIT_CMD_RE.test(cmd)) {
+      emit("git", gitSummary(cmd), "git");
+    } else if (/(?:^|[_-])git(?:[_-]|$)/i.test(name)) {
+      emit("git", name, "git");
+    }
+  }
+}
+
+/** Pass 2: passive references (image/file/link) from text + tool output. */
+function collectRefsFromMessage(message: ArtifactMessage, emit: Emit): void {
+  const push = (value: string) => emit("ref", value);
   const text = messageText(message);
-  if (text) collectArtifactsFromText(text, pushValue);
+  if (text) collectArtifactsFromText(text, push);
 
   if (message.role !== "tool" && !Array.isArray(message.tool_calls)) return;
 
@@ -186,7 +266,7 @@ function collectArtifactsFromMessage(message: ArtifactMessage, pushValue: (value
         const normalized = normalizeValue(value);
         if (!normalized) return;
         if (KEY_HINT_RE.test(keyPath) && (looksLikePathOrUrl(normalized) || FILE_EXT_RE.test(normalized))) {
-          pushValue(normalized);
+          push(normalized);
         }
       });
     }
@@ -198,7 +278,7 @@ function collectArtifactsFromMessage(message: ArtifactMessage, pushValue: (value
       const normalized = normalizeValue(value);
       if (!normalized) return;
       if ((KEY_HINT_RE.test(keyPath) || looksLikePathOrUrl(normalized)) && looksLikeArtifact(normalized)) {
-        pushValue(normalized);
+        push(normalized);
       }
     });
   }
@@ -211,30 +291,41 @@ export function collectArtifactsForSession(
   const found = new Map<string, ArtifactRecord>();
   const fallbackSec = session.updated_at || session.started_at || Math.floor(Date.now() / 1000);
 
+  const emitFor = (message: ArtifactMessage): Emit => (group, rawValue, tool) => {
+    const value = normalizeValue(rawValue);
+    if (!value) return;
+    // `ref` keeps the artifact-shape gate; `edit`/`git` are trusted tool signals.
+    if (group === "ref" && !looksLikeArtifact(value)) return;
+
+    const key = `${session.id}:${value}`;
+    if (found.has(key)) return; // first wins — pass 1 (changes) beats pass 2 (refs)
+
+    const tsSec = message.timestamp || fallbackSec;
+    found.set(key, {
+      id: key,
+      group,
+      kind: group === "ref" ? artifactKind(value) : "file",
+      tool,
+      value,
+      href: group === "git" ? "" : artifactHref(value),
+      label: group === "git" ? value : artifactLabel(value),
+      sessionId: session.id,
+      sessionTitle: session.title,
+      sessionCwd: session.cwd,
+      timestamp: tsSec * 1000,
+      messageRowId: typeof message.id === "number" ? message.id : null,
+    });
+  };
+
+  // Two passes over the same dedup map so a written/edited file shows once, as a
+  // change — never also as a passive "file" reference.
   for (const message of messages) {
     if (message.role !== "assistant" && message.role !== "tool") continue;
-
-    collectArtifactsFromMessage(message, (candidate) => {
-      const value = normalizeValue(candidate);
-      if (!value || !looksLikeArtifact(value)) return;
-
-      const key = `${session.id}:${value}`;
-      if (found.has(key)) return;
-
-      const tsSec = message.timestamp || fallbackSec;
-      found.set(key, {
-        id: key,
-        kind: artifactKind(value),
-        value,
-        href: artifactHref(value),
-        label: artifactLabel(value),
-        sessionId: session.id,
-        sessionTitle: session.title,
-        sessionCwd: session.cwd,
-        timestamp: tsSec * 1000,
-        messageRowId: typeof message.id === "number" ? message.id : null,
-      });
-    });
+    collectChangesFromMessage(message, emitFor(message));
+  }
+  for (const message of messages) {
+    if (message.role !== "assistant" && message.role !== "tool") continue;
+    collectRefsFromMessage(message, emitFor(message));
   }
 
   return Array.from(found.values());

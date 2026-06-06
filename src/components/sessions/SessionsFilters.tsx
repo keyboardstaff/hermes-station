@@ -4,6 +4,7 @@ import { useSessionsFilters } from "@/store/filters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useI18n } from "@/i18n";
 import SearchInput from "@/components/ui/SearchInput";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 
 interface SessionRow {
   session_id: string;
@@ -14,10 +15,10 @@ interface SessionRow {
 /**
  * Sessions toolbar — the view-controls band under the (title-only) page header.
  *
- * Left: two filter chip groups (Source · Profile). Right: a result count + the
- * shared search field (same size as the Artifacts page). The bulk-action /
- * selection controls live in a separate selection bar above the table, so the
- * header row carries only the title.
+ * Left: Profile · Source filter groups (Profile first — it's the higher-level
+ * scope) rendered with the shared `SegmentedControl`, the same control /logs
+ * uses, so the tab styling is consistent across pages. Right: a result count +
+ * the shared search field (same size as the Artifacts page).
  */
 export default function SessionsFilters({ total }: { total: number }) {
   const { t } = useI18n();
@@ -43,6 +44,8 @@ export default function SessionsFilters({ total }: { total: number }) {
   const sources = Array.from(new Set(rows.map((r) => r.source).filter(Boolean))) as string[];
   const profiles = Array.from(new Set(rows.map((r) => r.profile || "default")));
 
+  const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: v === "all" ? s.all : v }));
+
   return (
     <div
       style={{
@@ -51,21 +54,19 @@ export default function SessionsFilters({ total }: { total: number }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-4)', flex: 1, minWidth: 0, flexWrap: "wrap" }}>
-        <ChipGroup
-          label={s.source}
-          options={["all", ...sources]}
-          value={sourceFilter}
-          onChange={setSourceFilter}
-          allLabel={s.all}
-        />
-        <span style={{ width: 1, height: 18, background: "var(--hms-border)", flexShrink: 0 }} aria-hidden="true" />
-        <ChipGroup
-          label={s.profile}
-          options={["all", ...profiles]}
-          value={profileFilter}
-          onChange={setProfileFilter}
-          allLabel={s.all}
-        />
+        {/* Profile first — it's the higher-level scope. */}
+        <Group label={s.profile}>
+          <SegmentedControl<string>
+            size="sm" ariaLabel={s.profile} value={profileFilter} onChange={setProfileFilter}
+            options={opt(["all", ...profiles])}
+          />
+        </Group>
+        <Group label={s.source}>
+          <SegmentedControl<string>
+            size="sm" ariaLabel={s.source} value={sourceFilter} onChange={setSourceFilter}
+            options={opt(["all", ...sources])}
+          />
+        </Group>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)', flexShrink: 0 }}>
@@ -84,42 +85,13 @@ export default function SessionsFilters({ total }: { total: number }) {
   );
 }
 
-function ChipGroup({
-  label, options, value, onChange, allLabel,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-  allLabel: string;
-}) {
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)", flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
+      <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, color: "var(--hms-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
         {label}
       </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexWrap: "wrap" }}>
-        {options.map((opt) => {
-          const active = value === opt;
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(opt)}
-              style={{
-                padding: "3px 10px", borderRadius: 999,
-                border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
-                background: active ? "var(--hms-accent-weak)" : "var(--hms-surface)",
-                color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-                fontSize: 'var(--hms-text-caption)', cursor: "pointer",
-                fontWeight: active ? 600 : 400,
-              }}
-            >
-              {opt === "all" ? allLabel : opt}
-            </button>
-          );
-        })}
-      </div>
+      {children}
     </div>
   );
 }

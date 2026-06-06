@@ -185,45 +185,6 @@ export default function SessionsPanel() {
         context={<SessionsFilters total={total} />}
       />
 
-      {/* Selection action bar — only present when ≥1 row is selected, so the
-          header stays title-only and bulk actions appear in context. */}
-      {selected.size > 0 && (
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 'var(--hms-space-2)',
-            padding: "6px 16px", borderBottom: "1px solid var(--hms-border)",
-            background: "var(--hms-accent-weak)",
-          }}
-        >
-          <span style={{ fontSize: 'var(--hms-text-caption)', fontWeight: 600, color: "var(--hms-text)" }}>
-            {selected.size} {t.sessions.selected}
-          </span>
-          <span style={{ flex: 1 }} />
-          <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "json")}>
-            <Download size={12} /> {t.sessions.exportJson}
-          </Button>
-          <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "markdown")}>
-            <Download size={12} /> {t.sessions.exportMarkdown}
-          </Button>
-          <Button size="sm" disabled={noneSelected} onClick={() => exportSessionsPdf(Array.from(selected))}>
-            <Download size={12} /> {t.sessions.exportPdf}
-          </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={noneSelected || deleting}
-            onClick={() => {
-              if (confirm(t.sessions.deleteConfirm)) deleteSelected(Array.from(selected));
-            }}
-          >
-            <Trash2 size={12} /> {t.sessions.delete}
-          </Button>
-          <Button size="sm" onClick={() => setSelected(new Set())}>
-            <X size={12} /> {t.sessions.clear}
-          </Button>
-        </div>
-      )}
-
       {/* Body. Position relative so the preview drawer can be absolute
           and overlay 50% of the area without re-flowing the table. */}
       <div className="hms-sessions-body">
@@ -248,8 +209,8 @@ export default function SessionsPanel() {
                       />
                     </th>
                     <th className="hms-sessions-cell">{t.sessions.colTitle}</th>
-                    <th className="hms-sessions-cell">{t.sessions.colSource}</th>
                     <th className="hms-sessions-cell">{t.sessions.colProfile}</th>
+                    <th className="hms-sessions-cell">{t.sessions.colSource}</th>
                     <th className="hms-sessions-cell">{t.sessions.colModel}</th>
                     <th className="hms-sessions-cell hms-sessions-cell--time">{t.sessions.colTime}</th>
                   </tr>
@@ -273,11 +234,11 @@ export default function SessionsPanel() {
                       <td className="hms-sessions-row-cell hms-sessions-row-title">
                         {formatSessionTitle(s.title)}
                       </td>
-                      <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-source">
-                        {s.source ?? "—"}
-                      </td>
                       <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-profile">
                         {s.profile ?? "default"}
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-source">
+                        {s.source ?? "—"}
                       </td>
                       <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-model">
                         {s.model ?? "—"}
@@ -310,20 +271,52 @@ export default function SessionsPanel() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="hms-sessions-pagination">
-          <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
-            <ChevronLeft size={13} />
-          </Button>
-          <span className="hms-sessions-pagination-status">
-            {t.sessions.page} {page + 1} / {totalPages}
-          </span>
-          <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
-            <ChevronRight size={13} />
-          </Button>
-        </div>
-      )}
+      {/* Footer — pagination (left) + the selection action bar (right). The
+          bulk actions live here, enabled only when ≥1 row is selected. */}
+      <div className="hms-sessions-pagination">
+        {totalPages > 1 && (
+          <>
+            <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+              <ChevronLeft size={13} />
+            </Button>
+            <span className="hms-sessions-pagination-status">
+              {t.sessions.page} {page + 1} / {totalPages}
+            </span>
+            <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
+              <ChevronRight size={13} />
+            </Button>
+          </>
+        )}
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            fontSize: 'var(--hms-text-caption)',
+            fontWeight: noneSelected ? 400 : 600,
+            color: noneSelected ? "var(--hms-text-muted)" : "var(--hms-text)",
+          }}
+        >
+          {selected.size} {t.sessions.selected}
+        </span>
+        <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "json")}>
+          <Download size={12} /> {t.sessions.exportJson}
+        </Button>
+        <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "markdown")}>
+          <Download size={12} /> {t.sessions.exportMarkdown}
+        </Button>
+        <Button size="sm" disabled={noneSelected} onClick={() => exportSessionsPdf(Array.from(selected))}>
+          <Download size={12} /> {t.sessions.exportPdf}
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={noneSelected || deleting}
+          onClick={() => {
+            if (confirm(t.sessions.deleteConfirm)) deleteSelected(Array.from(selected));
+          }}
+        >
+          <Trash2 size={12} /> {t.sessions.delete}
+        </Button>
+      </div>
     </div>
   );
 }

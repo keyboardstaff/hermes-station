@@ -235,60 +235,65 @@ export default function ChatPanel() {
   const showOverlay = workspacesOpen && isMobile;
 
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: 0, overflow: "hidden" }}>
-      {/* Chat main column */}
-      <div
-        style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden", position: "relative" }}
-        onDragOver={onPanelDragOver}
-        onDragLeave={onPanelDragLeave}
-        onDrop={onPanelDrop}
-      >
-        {panelDragOver && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "color-mix(in srgb, var(--hms-accent) 8%, transparent)",
-            border: "2px dashed var(--hms-accent)",
-            pointerEvents: "none",
-            fontSize: 'var(--hms-text-body)', fontWeight: 600, color: "var(--hms-accent)",
-          }}>
-            Drop files to attach
-          </div>
-        )}
-        {/* Per-session actions live on the ChatTitleBar [•••] menu. */}
-        <ChatTitleBar
-          onToggleWorkspaces={toggleWorkspaces}
-          workspacesOpen={workspacesOpen}
-        />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+      {/* Full-width topbar across the chat + workspace area. The app's left nav
+          sidebar lives outside ChatPanel, so this spans the content area only —
+          the workspace panel sits BELOW it, connected (not overshooting it). */}
+      <ChatTitleBar
+        onToggleWorkspaces={toggleWorkspaces}
+        workspacesOpen={workspacesOpen}
+      />
 
-        <ChatStream
-          messages={messages}
-          isLoadingHistory={isHistoryPending}
-          isTransitioningOut={isTransitioningOut}
-        />
+      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        {/* Chat main column */}
+        <div
+          style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden", position: "relative" }}
+          onDragOver={onPanelDragOver}
+          onDragLeave={onPanelDragLeave}
+          onDrop={onPanelDrop}
+        >
+          {panelDragOver && (
+            <div style={{
+              position: "absolute", inset: 0, zIndex: 100,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "color-mix(in srgb, var(--hms-accent) 8%, transparent)",
+              border: "2px dashed var(--hms-accent)",
+              pointerEvents: "none",
+              fontSize: 'var(--hms-text-body)', fontWeight: 600, color: "var(--hms-accent)",
+            }}>
+              Drop files to attach
+            </div>
+          )}
 
-        {pendingApproval && (
-          <ApprovalDrawer
-            payload={pendingApproval}
-            // Dismiss [X] is silent — user must pick or deny to unblock event.wait().
-            onDismiss={clearPendingApproval}
-            onProceed={(choice) => {
-              if (!activeSessionId) return;
-              appendApprovalNoticeSegment(choice, pendingApproval.command);
-              resolveApproval(activeSessionId, activeRunId, choice);
-            }}
-            onDeny={() => {
-              if (!activeSessionId) return;
-              appendApprovalNoticeSegment("deny", pendingApproval.command);
-              resolveApproval(activeSessionId, activeRunId, "deny");
-            }}
+          <ChatStream
+            messages={messages}
+            isLoadingHistory={isHistoryPending}
+            isTransitioningOut={isTransitioningOut}
           />
-        )}
 
-        <Composer ref={composerRef} onSend={sendMessage} onStop={stopRun} sessionId={activeSessionId} />
+          {pendingApproval && (
+            <ApprovalDrawer
+              payload={pendingApproval}
+              // Dismiss [X] is silent — user must pick or deny to unblock event.wait().
+              onDismiss={clearPendingApproval}
+              onProceed={(choice) => {
+                if (!activeSessionId) return;
+                appendApprovalNoticeSegment(choice, pendingApproval.command);
+                resolveApproval(activeSessionId, activeRunId, choice);
+              }}
+              onDeny={() => {
+                if (!activeSessionId) return;
+                appendApprovalNoticeSegment("deny", pendingApproval.command);
+                resolveApproval(activeSessionId, activeRunId, "deny");
+              }}
+            />
+          )}
+
+          <Composer ref={composerRef} onSend={sendMessage} onStop={stopRun} sessionId={activeSessionId} />
+        </div>
+
+        {!isMobile && <WorkspaceContextPanel variant="inline" open={workspacesOpen} onClose={toggleWorkspaces} />}
       </div>
-
-      {!isMobile && <WorkspaceContextPanel variant="inline" open={workspacesOpen} onClose={toggleWorkspaces} />}
       {showOverlay && <WorkspaceContextPanel variant="overlay" onClose={toggleWorkspaces} />}
     </div>
   );
