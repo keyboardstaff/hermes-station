@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { X, ExternalLink, FileText } from "lucide-react";
 import { useFileRead } from "@/hooks/useFiles";
+import { useI18n } from "@/i18n";
 import type { FileTarget } from "@/lib/file-target";
 import CodeBlock from "@/components/chat/CodeBlock";
 
@@ -53,6 +54,8 @@ export default function DocPreview({
   onClose: () => void;
   onOpenInFiles: () => void;
 }) {
+  const { t } = useI18n();
+  const a = t.artifacts;
   const read = useFileRead(target.root, target.path, true);
 
   useEffect(() => {
@@ -67,11 +70,11 @@ export default function DocPreview({
 
   let body: React.ReactNode;
   if (read.isLoading) {
-    body = <div style={muted}>Loading…</div>;
+    body = <div style={muted}>{a.previewLoading}</div>;
   } else if (read.isError || !data) {
-    body = <div style={muted}>Failed to read this file.</div>;
+    body = <div style={muted}>{a.previewFailed}</div>;
   } else if (data.binary) {
-    body = <div style={muted}>Binary file — no text preview.</div>;
+    body = <div style={muted}>{a.previewBinary}</div>;
   } else if (isMarkdown) {
     body = (
       <div className="skill-md-content" style={{ maxWidth: "var(--hms-content-max-w, 72ch)", margin: "0 auto" }}>
@@ -113,10 +116,10 @@ export default function DocPreview({
           <span title={target.path} style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)" }}>
             {label}
           </span>
-          <button type="button" onClick={onOpenInFiles} title="Open in Files" aria-label="Open in Files" style={iconBtn}>
+          <button type="button" onClick={onOpenInFiles} title={a.openInFiles} aria-label={a.openInFiles} style={iconBtn}>
             <ExternalLink size={15} />
           </button>
-          <button type="button" onClick={onClose} aria-label="Close" style={iconBtn}>
+          <button type="button" onClick={onClose} aria-label={a.close} style={iconBtn}>
             <X size={16} />
           </button>
         </div>

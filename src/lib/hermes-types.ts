@@ -103,6 +103,8 @@ export interface SessionSummary {
   /** Which profile's state.db this session was read from (default / a named profile). */
   profile?: string;
   model?: string;
+  /** The session's working directory (resolves relative file artifacts). */
+  cwd?: string;
   input_tokens?: number;
   output_tokens?: number;
   started_at?: number;

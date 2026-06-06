@@ -429,12 +429,40 @@ export interface Translations {
     kindLink: string;
     colName: string;
     colSession: string;
+    previewLoading: string;
+    previewFailed: string;
+    previewBinary: string;
+    openInFiles: string;
+    close: string;
     items: string;
     itemsImage: string;
     itemsFile: string;
     itemsLink: string;
     prev: string;
     next: string;
+  };
+
+  sessions: {
+    search: string;
+    source: string;
+    profile: string;
+    all: string;
+    count: string;
+    selected: string;
+    exportJson: string;
+    exportMarkdown: string;
+    exportPdf: string;
+    delete: string;
+    clear: string;
+    deleteConfirm: string;
+    colTitle: string;
+    colSource: string;
+    colProfile: string;
+    colModel: string;
+    colTime: string;
+    loading: string;
+    empty: string;
+    page: string;
   };
 
   channels: {

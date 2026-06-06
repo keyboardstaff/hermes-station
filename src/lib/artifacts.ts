@@ -23,6 +23,8 @@ export interface ArtifactRecord {
   label: string;
   sessionId: string;
   sessionTitle: string;
+  /** The session's recorded working dir — resolves relative file paths. */
+  sessionCwd?: string;
   /** Epoch ms (for sort + display). */
   timestamp: number;
   /** Numeric DB row id of the first message it came from — feeds the chat
@@ -44,6 +46,7 @@ export interface ArtifactMessage {
 export interface ArtifactSession {
   id: string;
   title: string;
+  cwd?: string;
   updated_at?: number;
   started_at?: number;
 }
@@ -227,6 +230,7 @@ export function collectArtifactsForSession(
         label: artifactLabel(value),
         sessionId: session.id,
         sessionTitle: session.title,
+        sessionCwd: session.cwd,
         timestamp: tsSec * 1000,
         messageRowId: typeof message.id === "number" ? message.id : null,
       });

@@ -14,7 +14,7 @@ import {
   collectArtifactsForSession,
   type ArtifactRecord, type ArtifactKind, type ArtifactMessage,
 } from "@/lib/artifacts";
-import { resolveFileTarget, type FileTarget, type WorkspaceDir } from "@/lib/file-target";
+import { resolveFileTarget, hasFileExtension, type FileTarget, type WorkspaceDir } from "@/lib/file-target";
 import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
 import PageTopBar from "@/components/layout/PageTopBar";
@@ -72,7 +72,7 @@ async function buildArtifactIndex(): Promise<ArtifactRecord[]> {
     if (r.status !== "fulfilled") return;
     const s = recent[i];
     out.push(...collectArtifactsForSession(
-      { id: s.session_id, title: formatSessionTitle(s.title), updated_at: recencyOf(s), started_at: s.started_at },
+      { id: s.session_id, title: formatSessionTitle(s.title), cwd: s.cwd, updated_at: recencyOf(s), started_at: s.started_at },
       (r.value.messages ?? []) as ArtifactMessage[],
     ));
   });
@@ -300,7 +300,7 @@ export default function ArtifactsPanel() {
                       key={art.id}
                       art={art}
                       t={a}
-                      fileTarget={art.kind === "file" ? resolveFileTarget(art.value, workspaces) : null}
+                      fileTarget={art.kind === "file" && hasFileExtension(art.value) ? resolveFileTarget(art.value, workspaces, art.sessionCwd) : null}
                       onPreviewFile={(target) => setDocPreview({ target, label: art.label })}
                       onOpenChat={() => openChat(art)}
                     />

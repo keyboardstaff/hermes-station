@@ -21,15 +21,50 @@ export interface WorkspaceDir {
 
 const HERMES_MARK = "/.hermes/";
 
-export function resolveFileTarget(value: string, workspaces: WorkspaceDir[]): FileTarget | null {
+/** True when the last path segment has a file extension — i.e. it looks like a
+ *  file (`docs/x.md`) rather than a directory (`skills/yuanbao`). Used to gate
+ *  the document preview so a directory path never hits `/api/files/read` (400). */
+export function hasFileExtension(value: string): boolean {
+  const clean = value.split(/[?#]/)[0].replace(/\/+$/, "");
+  const seg = clean.slice(clean.lastIndexOf("/") + 1);
+  return /\.[A-Za-z0-9]+$/.test(seg);
+}
+
+/** Normalise an absolute path, collapsing `.`/`..` segments. */
+function normalizeAbs(p: string): string {
+  const stack: string[] = [];
+  for (const seg of p.split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg === "..") stack.pop();
+    else stack.push(seg);
+  }
+  return "/" + stack.join("/");
+}
+
+/**
+ * Map an artifact's path to a Files-page target. Absolute paths map directly;
+ * a relative path (`./x`, `../x`, `x/y`) resolves against `cwd` when that's a
+ * recorded absolute dir. Returns null for paths outside both whitelisted roots
+ * (`~/.hermes`, a registered workspace) — those can't be read by the file API.
+ */
+export function resolveFileTarget(
+  value: string,
+  workspaces: WorkspaceDir[],
+  cwd?: string,
+): FileTarget | null {
   let p = value;
   if (p.startsWith("file://")) {
     const rest = p.slice("file://".length);
     try { p = decodeURI(rest); } catch { p = rest; }
   }
-  // Only absolute local paths resolve to a root.
-  if (!p.startsWith("/")) return null;
-  p = p.replace(/\/+$/, "") || "/";
+
+  if (!p.startsWith("/")) {
+    // Relative — resolve against the session cwd when it's a real abs dir.
+    if (!cwd || !cwd.startsWith("/")) return null;
+    p = normalizeAbs(`${cwd.replace(/\/+$/, "")}/${p}`);
+  } else {
+    p = normalizeAbs(p);
+  }
 
   // ~/.hermes → the `hermes` root.
   if (p.endsWith("/.hermes")) return { root: "hermes", path: "" };

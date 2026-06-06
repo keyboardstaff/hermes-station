@@ -1,23 +1,30 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
 import { useSessionsFilters } from "@/store/filters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useEffect } from "react";
+import { useI18n } from "@/i18n";
+import SearchInput from "@/components/ui/SearchInput";
 
 interface SessionRow {
   session_id: string;
   source?: string;
+  profile?: string;
 }
 
 /**
- * Horizontal filters bar for /sessions — renders inline at the top of
- * the SessionsPanel. Replaces the legacy side column layout used by
- * the global SidePanel slot.
+ * Sessions toolbar — the view-controls band under the (title-only) page header.
+ *
+ * Left: two filter chip groups (Source · Profile). Right: a result count + the
+ * shared search field (same size as the Artifacts page). The bulk-action /
+ * selection controls live in a separate selection bar above the table, so the
+ * header row carries only the title.
  */
-export default function SessionsFilters() {
+export default function SessionsFilters({ total }: { total: number }) {
+  const { t } = useI18n();
+  const s = t.sessions;
   const {
-    search, sourceFilter,
-    setSearch, setDebouncedSearch, setSourceFilter,
+    search, sourceFilter, profileFilter,
+    setSearch, setDebouncedSearch, setSourceFilter, setProfileFilter,
   } = useSessionsFilters();
 
   const debounced = useDebouncedValue(search, 400);
@@ -32,74 +39,83 @@ export default function SessionsFilters() {
     },
     staleTime: 10_000,
   });
-  const sources = Array.from(
-    new Set((data?.sessions ?? []).map((s) => s.source).filter(Boolean))
-  ) as string[];
+  const rows = data?.sessions ?? [];
+  const sources = Array.from(new Set(rows.map((r) => r.source).filter(Boolean))) as string[];
+  const profiles = Array.from(new Set(rows.map((r) => r.profile || "default")));
 
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 'var(--hms-space-3)',
-        padding: "8px 16px",
-        flexShrink: 0,
-        flexWrap: "wrap",
+        display: "flex", alignItems: "center", gap: 'var(--hms-space-4)',
+        padding: "6px 16px", flexShrink: 0, flexWrap: "wrap",
       }}
     >
-      {/* Search input — fixed width so the chip row keeps a consistent line */}
-      <div style={{ position: "relative", minWidth: 200, flex: "0 1 280px" }}>
-        <Search
-          size={13}
-          style={{
-            position: "absolute",
-            left: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--hms-text-muted)",
-            pointerEvents: "none",
-          }}
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-4)', flex: 1, minWidth: 0, flexWrap: "wrap" }}>
+        <ChipGroup
+          label={s.source}
+          options={["all", ...sources]}
+          value={sourceFilter}
+          onChange={setSourceFilter}
+          allLabel={s.all}
         />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search sessions..."
-          style={{
-            width: "100%",
-            padding: "6px 8px 6px 28px",
-            borderRadius: 6,
-            border: "1px solid var(--hms-border)",
-            background: "var(--hms-bg)",
-            color: "var(--hms-text)",
-            fontSize: 'var(--hms-text-caption)',
-            outline: "none",
-            boxSizing: "border-box",
-          }}
+        <span style={{ width: 1, height: 18, background: "var(--hms-border)", flexShrink: 0 }} aria-hidden="true" />
+        <ChipGroup
+          label={s.profile}
+          options={["all", ...profiles]}
+          value={profileFilter}
+          onChange={setProfileFilter}
+          allLabel={s.all}
         />
       </div>
 
-      {/* Source chips */}
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)', flexShrink: 0 }}>
+        <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
+          {total} {s.count}
+        </span>
+        <SearchInput
+          size="sm"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={s.search}
+          style={{ width: 200 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ChipGroup({
+  label, options, value, onChange, allLabel,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  allLabel: string;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)", flexShrink: 0 }}>
+        {label}
+      </span>
       <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexWrap: "wrap" }}>
-        {["all", ...sources].map((src) => {
-          const active = sourceFilter === src;
+        {options.map((opt) => {
+          const active = value === opt;
           return (
             <button
-              key={src}
-              onClick={() => setSourceFilter(src)}
+              key={opt}
+              type="button"
+              onClick={() => onChange(opt)}
               style={{
-                padding: "4px 10px",
-                borderRadius: 999,
-                border: `1px solid ${active ? "var(--hms-text-muted)" : "var(--hms-border)"}`,
-                background: active ? "var(--hms-selected-bg)" : "transparent",
-                color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
-                fontSize: 'var(--hms-text-xs)',
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                cursor: "pointer",
+                padding: "3px 10px", borderRadius: 999,
+                border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
+                background: active ? "var(--hms-accent-weak)" : "var(--hms-surface)",
+                color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
+                fontSize: 'var(--hms-text-caption)', cursor: "pointer",
                 fontWeight: active ? 600 : 400,
               }}
             >
-              {src === "all" ? "ALL" : src.toUpperCase()}
+              {opt === "all" ? allLabel : opt}
             </button>
           );
         })}

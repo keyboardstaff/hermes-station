@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveFileTarget } from "@/lib/file-target";
+import { resolveFileTarget, hasFileExtension } from "@/lib/file-target";
 
 const WS = [{ path: "/Users/me/Deploy" }];
 
@@ -24,8 +24,20 @@ describe("resolveFileTarget", () => {
     expect(resolveFileTarget("file:///Users/me/Deploy/a%20b.md", WS)).toEqual({ root: "workspace", path: "a b.md" });
   });
 
-  it("returns null for relative paths", () => {
+  it("returns null for a relative path with no cwd", () => {
     expect(resolveFileTarget("./docs/x.md", WS)).toBeNull();
+  });
+
+  it("resolves a relative path against the session cwd", () => {
+    expect(resolveFileTarget("./docs/x.md", WS, "/Users/me/Deploy/hermes")).toEqual({ root: "workspace", path: "hermes/docs/x.md" });
+  });
+
+  it("collapses ../ when resolving against cwd", () => {
+    expect(resolveFileTarget("../README.md", WS, "/Users/me/Deploy/hermes")).toEqual({ root: "workspace", path: "README.md" });
+  });
+
+  it("returns null when the cwd is outside both roots", () => {
+    expect(resolveFileTarget("./x.md", WS, "/Users/me/elsewhere")).toBeNull();
   });
 
   it("returns null for an absolute path outside both roots", () => {
@@ -34,5 +46,16 @@ describe("resolveFileTarget", () => {
 
   it("does not partial-match a sibling dir with a shared prefix", () => {
     expect(resolveFileTarget("/Users/me/DeployOther/x.md", WS)).toBeNull();
+  });
+});
+
+describe("hasFileExtension", () => {
+  it("is true for a file with an extension", () => {
+    expect(hasFileExtension("/Users/me/.hermes/skills/foo.md")).toBe(true);
+    expect(hasFileExtension("docs/x.JSON")).toBe(true);
+  });
+  it("is false for a directory-like path (no extension)", () => {
+    expect(hasFileExtension("/Users/me/.hermes/skills/yuanbao")).toBe(false);
+    expect(hasFileExtension("/Users/me/Deploy/")).toBe(false);
   });
 });
