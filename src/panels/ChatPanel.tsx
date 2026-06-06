@@ -12,6 +12,8 @@ import { useIsMobile } from "@/hooks/useBreakpoint";
 import { useDangerousCommandApproval } from "@/hooks/useDangerousCommandApproval";
 import { AlertTriangle } from "lucide-react";
 import { loadSessionMessages } from "@/lib/load-session";
+import Card from "@/components/ui/Card";
+import HermesMark from "@/components/ui/HermesMark";
 
 const WORKSPACE_OPEN_KEY = "hms:chat:workspace:open";
 
@@ -21,17 +23,44 @@ function ChatUnavailable({ reason }: { reason: string }) {
       style={{
         flex: 1,
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 'var(--hms-space-3)',
-        color: "var(--hms-text-muted)",
-        fontSize: 'var(--hms-text-body)',
+        padding: 'var(--hms-space-6)',
       }}
     >
-      <AlertTriangle size={36} style={{ color: "var(--hms-text-muted)" }} />
-      <div style={{ fontWeight: 600, color: "var(--hms-text)" }}>Chat unavailable</div>
-      <div>{reason}</div>
+      <Card
+        style={{
+          width: "min(100%, 460px)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 'var(--hms-space-4)',
+          textAlign: "center",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)', letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <HermesMark size={22} />
+          Hermes Station
+        </div>
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: "50%",
+            background: "var(--hms-warning-weak)",
+            color: "var(--hms-warning-text)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <AlertTriangle size={24} />
+        </div>
+        <div style={{ fontWeight: 600, color: "var(--hms-text)", fontSize: 'var(--hms-text-lg)' }}>Chat unavailable</div>
+        <div style={{ color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-sm)', lineHeight: 1.6 }}>
+          {reason}
+        </div>
+      </Card>
     </div>
   );
 }

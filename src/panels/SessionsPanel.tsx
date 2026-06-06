@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Trash2, X, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
 import { formatSessionTitle } from "@/lib/session-title";
 import { useSessionsFilters } from "@/store/filters";
 import { useChatStore } from "@/store/chat";
@@ -177,7 +178,7 @@ export default function SessionsPanel() {
   const noneSelected = selected.size === 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div className="hms-sessions-panel">
       <PageTopBar
         title={t.nav.sessions}
         subtitle={
@@ -212,72 +213,71 @@ export default function SessionsPanel() {
 
       {/* Body. Position relative so the preview drawer can be absolute
           and overlay 50% of the area without re-flowing the table. */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", minWidth: 0, position: "relative" }}>
-        <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
-          {isLoading && (
-            <div style={{ padding: 'var(--hms-space-6)', fontSize: 'var(--hms-text-sm)', color: "var(--hms-text-muted)" }}>Loading...</div>
-          )}
-          {!isLoading && sessions.length === 0 && (
-            <div style={{ padding: 'var(--hms-space-6)', fontSize: 'var(--hms-text-sm)', color: "var(--hms-text-muted)" }}>No sessions found.</div>
-          )}
-          {!isLoading && sessions.length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 'var(--hms-text-sm)'}}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--hms-border)", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)', fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  <th style={{ padding: "8px 12px", textAlign: "left", width: 32 }}>
-                    <input
-                      type="checkbox"
-                      checked={selected.size === sessions.length && sessions.length > 0}
-                      onChange={toggleAll}
-                      style={{ cursor: "pointer" }}
-                    />
-                  </th>
-                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Title</th>
-                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Source</th>
-                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Profile</th>
-                  <th style={{ padding: "8px 12px", textAlign: "left" }}>Model</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <tr
-                    key={s.session_id}
-                    onClick={() => setPreview(preview === s.session_id ? null : s.session_id)}
-                    className="hms-sidebar-row"
-                    data-active={preview === s.session_id}
-                    style={{
-                      cursor: "pointer",
-                    }}
-                  >
-                    <td style={{ padding: "9px 12px" }} onClick={(e) => e.stopPropagation()}>
+      <div className="hms-sessions-body">
+        <div className="hms-sessions-table-wrap">
+          <div className="hms-sessions-table-shell">
+            {isLoading && (
+              <div className="hms-sessions-empty">Loading...</div>
+            )}
+            {!isLoading && sessions.length === 0 && (
+              <div className="hms-sessions-empty">No sessions found.</div>
+            )}
+            {!isLoading && sessions.length > 0 && (
+              <table className="hms-sessions-table">
+                <thead>
+                  <tr className="hms-sessions-table-head">
+                    <th className="hms-sessions-cell hms-sessions-cell--check">
                       <input
                         type="checkbox"
-                        checked={selected.has(s.session_id)}
-                        onChange={() => toggleSelect(s.session_id)}
+                        checked={selected.size === sessions.length && sessions.length > 0}
+                        onChange={toggleAll}
                         style={{ cursor: "pointer" }}
                       />
-                    </td>
-                    <td style={{ padding: "9px 12px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {formatSessionTitle(s.title)}
-                    </td>
-                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 'var(--hms-text-xs)'}}>
-                      {s.source ?? "—"}
-                    </td>
-                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {s.profile ?? "default"}
-                    </td>
-                    <td style={{ padding: "9px 12px", color: "var(--hms-text-muted)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {s.model ?? "—"}
-                    </td>
-                    <td style={{ padding: "9px 12px", textAlign: "right", color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
-                      {relativeTime(s.updated_at ?? s.started_at)}
-                    </td>
+                    </th>
+                    <th className="hms-sessions-cell">Title</th>
+                    <th className="hms-sessions-cell">Source</th>
+                    <th className="hms-sessions-cell">Profile</th>
+                    <th className="hms-sessions-cell">Model</th>
+                    <th className="hms-sessions-cell hms-sessions-cell--time">Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {sessions.map((s) => (
+                    <tr
+                      key={s.session_id}
+                      onClick={() => setPreview(preview === s.session_id ? null : s.session_id)}
+                      className="hms-sidebar-row hms-sessions-row"
+                      data-active={preview === s.session_id}
+                    >
+                      <td className="hms-sessions-row-cell" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(s.session_id)}
+                          onChange={() => toggleSelect(s.session_id)}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-title">
+                        {formatSessionTitle(s.title)}
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-source">
+                        {s.source ?? "—"}
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-profile">
+                        {s.profile ?? "default"}
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-muted hms-sessions-row-model">
+                        {s.model ?? "—"}
+                      </td>
+                      <td className="hms-sessions-row-cell hms-sessions-row-time hms-sessions-row-muted">
+                        {relativeTime(s.updated_at ?? s.started_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
 
         {/* Preview drawer — overlay (not flex sibling), 50% width,
@@ -299,11 +299,11 @@ export default function SessionsPanel() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ padding: "8px 16px", borderTop: "1px solid var(--hms-border)", display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
+        <div className="hms-sessions-pagination">
           <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
             <ChevronLeft size={13} />
           </Button>
-          <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
+          <span className="hms-sessions-pagination-status">
             Page {page + 1} / {totalPages}
           </span>
           <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
@@ -356,63 +356,30 @@ function PreviewDrawer({
     <>
       {/* Click-outside backdrop. Transparent so the table behind stays
           fully visible; the drawer itself sits on top. */}
-      <div
-        onClick={onClose}
-        style={{
-          position: "absolute", inset: 0,
-          zIndex: 1,
-          background: "transparent",
-          cursor: "pointer",
-        }}
-      />
+      <div onClick={onClose} className="hms-sessions-preview-backdrop" />
       <div
         // ``key`` forces a fresh node when sessionId changes, so the
         // slide-in animation re-runs.
         key={sessionId}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          position: "absolute",
-          top: 0, right: 0, bottom: 0,
-          width: "50%",
-          minWidth: 360,
-          maxWidth: "50%",
-          background: "var(--hms-bg)",
-          borderLeft: "1px solid var(--hms-border)",
-          boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          zIndex: 2,
-          animation: "hms-drawer-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-        }}
+        className="hms-sessions-preview"
       >
-        <div style={{
-          padding: "10px 14px",
-          borderBottom: "1px solid var(--hms-border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexShrink: 0,
-        }}>
-          <span style={{
-            flex: 1, minWidth: 0,
-            fontSize: 'var(--hms-text-sm)', fontWeight: 600,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{title}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexShrink: 0, marginLeft: 'var(--hms-space-2)' }}>
-            <button
+        <div className="hms-sessions-preview-toolbar">
+          <span className="hms-sessions-preview-title">{title}</span>
+          <div className="hms-sessions-preview-actions">
+            <IconButton
               onClick={openInChat}
               title="Open in chat"
               aria-label="Open in chat"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2, display: "flex" }}
             >
               <MessageSquare size={14} />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={onClose}
               aria-label="Close preview"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2, display: "flex" }}
             >
               <X size={14} />
-            </button>
+            </IconButton>
           </div>
         </div>
         <ChatThread

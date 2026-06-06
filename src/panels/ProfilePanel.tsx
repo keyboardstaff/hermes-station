@@ -3,6 +3,7 @@ import { Trash2, Pencil, User, Play, Square, Download } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
 import StatusDot from "@/components/ui/StatusDot";
+import StatusBadge from "@/components/ui/StatusBadge";
 import RenameProfileDialog from "@/components/profile/RenameProfileDialog";
 import MarkdownDocEditor from "@/components/profile/MarkdownDocEditor";
 import MemoryFacts from "@/components/profile/MemoryFacts";
@@ -25,6 +26,8 @@ import { errorMessage } from "@/lib/errors";
 import ProfileSideList from "@/components/profile/ProfileSideList";
 import PanelTwoColumn from "@/components/ui/PanelTwoColumn";
 import PageTopBar from "@/components/layout/PageTopBar";
+import SegmentedControl from "@/components/ui/SegmentedControl";
+import Card from "@/components/ui/Card";
 
 /**
  * Profile page. Owns its own list↔detail layout via PanelTwoColumn. Each
@@ -148,22 +151,9 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
             gap: "var(--hms-space-2)",
           }}
         >
-          <User size={16} style={{ color: profile.is_default ? "var(--hms-accent)" : "#94a3b8" }} />
+          <User size={16} style={{ color: profile.is_default ? "var(--hms-accent)" : "var(--hms-muted)" }} />
           {profile.name}
-          {profile.is_default && (
-            <span
-              style={{
-                fontSize: "0.625rem",
-                padding: "2px 6px",
-                borderRadius: 4,
-                background: "rgba(99,102,241,0.12)",
-                color: "#4f46e5",
-                fontWeight: 600,
-              }}
-            >
-              {pf?.defaultBadge ?? "default"}
-            </span>
-          )}
+          {profile.is_default && <StatusBadge tone="accent" uppercase={false}>{pf?.defaultBadge ?? "default"}</StatusBadge>}
         </h2>
         {profile.distribution_name && (
           <p style={{ margin: "6px 0 0", fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)" }}>
@@ -178,27 +168,13 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
       <OverviewTab profile={profile} pf={pf} />
 
       {/* Document tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--hms-border)" }}>
-        {DOC_TABS.map((tb) => (
-          <button
-            key={tb.id}
-            type="button"
-            onClick={() => setTab(tb.id)}
-            style={{
-              padding: "8px 16px",
-              fontSize: "var(--hms-text-sm)",
-              fontWeight: 500,
-              border: "none",
-              background: "transparent",
-              color: tab === tb.id ? "var(--hms-text)" : "var(--hms-text-muted)",
-              borderBottom: tab === tb.id ? "2px solid var(--hms-accent, #5c6bc0)" : "2px solid transparent",
-              cursor: "pointer",
-              marginBottom: -1,
-            }}
-          >
-            {tb.label}
-          </button>
-        ))}
+      <div style={{ display: "flex", overflowX: "auto" }}>
+        <SegmentedControl
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Profile documents"
+          options={DOC_TABS.map((tb) => ({ value: tb.id, label: tb.label }))}
+        />
       </div>
 
       {tab === "soul" ? (
@@ -280,12 +256,8 @@ function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typ
         onRenamed={(newName) => setSelected(newName)}
       />
 
-      <div
+      <Card
         style={{
-          padding: 14,
-          border: "1px solid var(--hms-border)",
-          borderRadius: 10,
-          background: "var(--hms-surface)",
           display: "grid",
           gridTemplateColumns: "auto 1fr",
           rowGap: 8,
@@ -319,10 +291,10 @@ function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typ
             <span style={{ color: "var(--hms-text-muted)" }}>○ {pf?.stopped ?? "stopped"}</span>
           )}
         </span>
-      </div>
+      </Card>
 
       {err && (
-        <div style={{ padding: "6px 10px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 6, color: "var(--hms-error-text)", fontSize: "var(--hms-text-caption)" }}>
+        <div style={{ padding: "6px 10px", background: "var(--hms-error-weak)", border: "1px solid var(--hms-error-border)", borderRadius: 6, color: "var(--hms-error-text)", fontSize: "var(--hms-text-caption)" }}>
           {err}
         </div>
       )}

@@ -28,10 +28,6 @@ export default function CostCard({ estimated, actual, sessions, labels }: Props)
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
         gap: 'var(--hms-space-3)',
-        padding: 'var(--hms-space-4)',
-        background: "var(--hms-surface)",
-        border: "1px solid var(--hms-border)",
-        borderRadius: 10,
       }}
     >
       <Metric label={labels.estimated} value={fmtCost(estimated)} />

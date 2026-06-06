@@ -3,6 +3,7 @@ import { useI18n } from "@/i18n";
 import { useThemeStore, useToolViewStore, type ToolViewMode } from "@/store/app";
 import SkinSelector from "@/components/settings/SkinSelector";
 import FontSizeSelector from "@/components/settings/FontSizeSelector";
+import { Section } from "@/components/settings/shared";
 
 const THEME_FALLBACK: Record<"light" | "dark" | "system", string> = {
   light: "Light",
@@ -14,6 +15,7 @@ export function AppearanceTab() {
   const { t } = useI18n();
   const { theme, setTheme } = useThemeStore();
   const { toolView, setToolView } = useToolViewStore();
+  const sectionMarker = <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hms-accent)", display: "inline-block" }} />;
 
   const toolOptions: { id: ToolViewMode; label: string; hint: string }[] = [
     { id: "technical", label: t.theme.technical, hint: t.theme.technicalHint },
@@ -24,10 +26,7 @@ export function AppearanceTab() {
     <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-5)' }}>
       {/* Color Mode — light/dark/system axis. data-theme on <html> stays
           "light" or "dark"; system follows prefers-color-scheme. */}
-      <div>
-        <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 8 }}>
-          {t.theme.sectionLabel}
-        </div>
+      <Section icon={sectionMarker} title={t.theme.sectionLabel}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 'var(--hms-space-2)' }}>
           {(["light", "dark", "system"] as const).map((th) => (
             <button
@@ -68,14 +67,11 @@ export function AppearanceTab() {
             </button>
           ))}
         </div>
-      </div>
+      </Section>
 
       {/* Tool Call Display — Product (concise summary) vs Technical (raw
           args/results). Mirrors upstream desktop's Appearance setting. */}
-      <div>
-        <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 2 }}>
-          {t.theme.toolCalls}
-        </div>
+      <Section icon={<Check size={14} />} title={t.theme.toolCalls}>
         <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginBottom: 8 }}>
           {t.theme.toolCallsHint}
         </div>
@@ -112,7 +108,7 @@ export function AppearanceTab() {
             );
           })}
         </div>
-      </div>
+      </Section>
 
       {/* Theme — accent palette ("skin") on top of the Color Mode baseline. */}
       <SkinSelector />

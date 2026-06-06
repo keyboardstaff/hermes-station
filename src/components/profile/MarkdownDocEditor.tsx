@@ -110,13 +110,13 @@ export default function MarkdownDocEditor({
       </div>
 
       {err && (
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)", padding: "6px 10px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 6, color: "var(--hms-error-text)", fontSize: "var(--hms-text-caption)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)", padding: "6px 10px", background: "var(--hms-error-weak)", border: "1px solid var(--hms-error-border)", borderRadius: 6, color: "var(--hms-error-text)", fontSize: "var(--hms-text-caption)" }}>
           <AlertCircle size={12} />
           {err}
         </div>
       )}
       {savedFlash && (
-        <div style={{ padding: "6px 10px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.20)", borderRadius: 6, color: "var(--hms-success-text)", fontSize: "var(--hms-text-caption)" }}>
+        <div style={{ padding: "6px 10px", background: "var(--hms-success-weak)", border: "1px solid var(--hms-success-border)", borderRadius: 6, color: "var(--hms-success-text)", fontSize: "var(--hms-text-caption)" }}>
           ✓ Saved
         </div>
       )}

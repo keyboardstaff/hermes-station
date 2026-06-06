@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import Button from "@/components/ui/Button";
 import {
   useAnalyticsUsage,
   useAnalyticsSources,
@@ -14,6 +15,7 @@ import CostCard from "@/components/analytics/CostCard";
 import ModelDistributionDonut from "@/components/analytics/ModelDistributionDonut";
 import SourceDistributionDonut from "@/components/analytics/SourceDistributionDonut";
 import TopSkillsList from "@/components/analytics/TopSkillsList";
+import Card from "@/components/ui/Card";
 
 /**
  * AnalyticsPanel — full analytics dashboard for the station.
@@ -145,7 +147,7 @@ export default function AnalyticsPanel() {
             padding: "10px 14px",
             borderRadius: 8,
             background: "var(--hms-warning-bg)",
-            border: "1px solid #f59e0b",
+            border: "1px solid var(--hms-warning-border)",
             color: "var(--hms-warning-text)",
             fontSize: 'var(--hms-text-sm)',
             marginBottom: 20,
@@ -156,37 +158,38 @@ export default function AnalyticsPanel() {
       )}
 
       {/* Overview cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: 'var(--hms-space-3)',
-          marginBottom: 24,
-        }}
-      >
-        <StatCard
-          label={a.gatewayStatus}
-          value={loading ? "…" : gatewayOk ? a.statusRunning : status?.gateway_state ?? "--"}
-          accent={loading ? neutralAccent : gatewayOk ? "var(--hms-success)" : "var(--hms-error)"}
-          onClick={goToConnection}
-          actionLabel={a.manageInSettings}
-        />
-        <StatCard
-          label={a.dashboardStatus}
-          value={loading ? "…" : dashboardOk ? a.statusRunning : statusError ? a.statusUnreachable : "--"}
-          accent={loading ? neutralAccent : dashboardOk ? "var(--hms-success)" : "var(--hms-error)"}
-          onClick={goToConnection}
-          actionLabel={a.manageInSettings}
-        />
-        <StatCard
-          label={a.activeSessions}
-          value={status?.active_sessions != null ? String(status.active_sessions) : "--"}
-        />
-        <StatCard
-          label={a.todayTokens}
-          value={todayTokens ? formatNumber(todayTokens) : "--"}
-        />
-      </div>
+      <Section>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 'var(--hms-space-3)',
+          }}
+        >
+          <StatCard
+            label={a.gatewayStatus}
+            value={loading ? "…" : gatewayOk ? a.statusRunning : status?.gateway_state ?? "--"}
+            accent={loading ? neutralAccent : gatewayOk ? "var(--hms-success)" : "var(--hms-error)"}
+            onClick={goToConnection}
+            actionLabel={a.manageInSettings}
+          />
+          <StatCard
+            label={a.dashboardStatus}
+            value={loading ? "…" : dashboardOk ? a.statusRunning : statusError ? a.statusUnreachable : "--"}
+            accent={loading ? neutralAccent : dashboardOk ? "var(--hms-success)" : "var(--hms-error)"}
+            onClick={goToConnection}
+            actionLabel={a.manageInSettings}
+          />
+          <StatCard
+            label={a.activeSessions}
+            value={status?.active_sessions != null ? String(status.active_sessions) : "--"}
+          />
+          <StatCard
+            label={a.todayTokens}
+            value={todayTokens ? formatNumber(todayTokens) : "--"}
+          />
+        </div>
+      </Section>
 
       {/* ──Charts section ───────────────────────────── */}
 
@@ -225,31 +228,32 @@ export default function AnalyticsPanel() {
       )}
 
       {/* Distribution donuts — side by side on desktop, stacked on mobile */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 'var(--hms-space-4)',
-          marginBottom: 24,
-        }}
-      >
-        {usage?.by_model?.length ? (
-          <div style={{ minWidth: 0 }}>
-            <ModelDistributionDonut
-              data={usage.by_model}
-              title={ac?.byModel ?? "By Model"}
-            />
-          </div>
-        ) : null}
-        {sources?.sources?.length ? (
-          <div style={{ minWidth: 0 }}>
-            <SourceDistributionDonut
-              data={sources.sources}
-              title={ac?.bySource ?? "By Source"}
-            />
-          </div>
-        ) : null}
-      </div>
+      <Section>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 'var(--hms-space-4)',
+          }}
+        >
+          {usage?.by_model?.length ? (
+            <div style={{ minWidth: 0 }}>
+              <ModelDistributionDonut
+                data={usage.by_model}
+                title={ac?.byModel ?? "By Model"}
+              />
+            </div>
+          ) : null}
+          {sources?.sources?.length ? (
+            <div style={{ minWidth: 0 }}>
+              <SourceDistributionDonut
+                data={sources.sources}
+                title={ac?.bySource ?? "By Source"}
+              />
+            </div>
+          ) : null}
+        </div>
+      </Section>
 
       {/* Top Skills */}
       {usage?.skills?.top_skills?.length ? (
@@ -261,31 +265,10 @@ export default function AnalyticsPanel() {
       ) : null}
 
       {/* Recent sessions table */}
-      <div style={{ marginTop: 8 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: 'var(--hms-text-base)', fontWeight: 600 }}>
-            {a.recentSessions}
-          </h2>
-          <button
-            onClick={() => navigate("/sessions")}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--hms-text-muted)",
-              cursor: "pointer",
-              fontSize: 'var(--hms-text-caption)',
-            }}
-          >
-            View all &rarr;
-          </button>
-        </div>
+      <Section
+        title={a.recentSessions}
+        actions={<Button size="sm" onClick={() => navigate("/sessions")}>View all</Button>}
+      >
 
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 'var(--hms-text-sm)'}}>
           <thead>
@@ -348,7 +331,7 @@ export default function AnalyticsPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Section>
       </div>
     </div>
   );
@@ -358,20 +341,35 @@ export default function AnalyticsPanel() {
 
 function Section({
   title,
+  actions,
   children,
 }: {
-  title: string;
+  title?: string;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      {title && (
-        <h2 style={{ margin: "0 0 12px", fontSize: 'var(--hms-text-body)', fontWeight: 600 }}>
-          {title}
-        </h2>
+    <Card style={{ marginBottom: 24 }}>
+      {(title || actions) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 'var(--hms-space-3)',
+            marginBottom: 12,
+          }}
+        >
+          {title && (
+            <h2 style={{ margin: 0, fontSize: 'var(--hms-text-body)', fontWeight: 600 }}>
+              {title}
+            </h2>
+          )}
+          {actions}
+        </div>
       )}
       {children}
-    </div>
+    </Card>
   );
 }
 

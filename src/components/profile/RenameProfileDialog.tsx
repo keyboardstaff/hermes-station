@@ -81,8 +81,8 @@ export default function RenameProfileDialog({ open, currentName, onClose, onRena
         {err && (
           <div style={{
             padding: "0.5rem 0.75rem",
-            border: "1px solid rgba(239,68,68,0.18)",
-            background: "rgba(239,68,68,0.08)",
+            border: "1px solid var(--hms-error-border)",
+            background: "var(--hms-error-weak)",
             borderRadius: "0.375rem",
             color: "var(--hms-error-text)",
             fontSize: 'var(--hms-text-caption)',

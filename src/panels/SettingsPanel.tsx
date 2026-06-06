@@ -6,6 +6,7 @@ import { PreferencesTab } from "@/components/settings/PreferencesTab";
 import { AppearanceTab } from "@/components/settings/AppearanceTab";
 import { SecurityTab } from "@/components/settings/SecurityTab";
 import { SystemTab } from "@/components/settings/SystemTab";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 
 // Preferences (Station-global knobs) · Appearance · Security · System
 // (integration + runtime status) · Advanced (the config.yaml editor).
@@ -71,25 +72,16 @@ export default function SettingsPanel() {
       <PageTopBar
         title={t.nav.settings}
         context={
-          <div style={{ display: "flex", gap: 'var(--hms-space-1)' }}>
-            {ALL_TABS.map((tabKey) => (
-              <button
-                key={tabKey}
-                onClick={() => setTab(tabKey)}
-                style={{
-                  padding: "4px 14px",
-                  border: "none",
-                  borderRadius: 6,
-                  background: tab === tabKey ? "var(--hms-surface-hover, var(--hms-surface))" : "transparent",
-                  color: tab === tabKey ? "var(--hms-text)" : "var(--hms-text-muted)",
-                  cursor: "pointer",
-                  fontSize: 'var(--hms-text-sm)',
-                  fontWeight: tab === tabKey ? 600 : 400,
-                }}
-              >
-                {t.settings.tabs[tabKey] ?? tabKey}
-              </button>
-            ))}
+          <div style={{ display: "flex", overflowX: "auto" }}>
+            <SegmentedControl
+              value={tab}
+              onChange={setTab}
+              ariaLabel={t.nav.settings}
+              options={ALL_TABS.map((tabKey) => ({
+                value: tabKey,
+                label: t.settings.tabs[tabKey] ?? tabKey,
+              }))}
+            />
           </div>
         }
       />

@@ -7,6 +7,9 @@ import { useProfiles } from "@/hooks/useProfiles";
 import ChatStream from "@/components/chat/ChatStream";
 import Composer from "@/components/chat/Composer";
 import PageTopBar from "@/components/layout/PageTopBar";
+import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
+import Card from "@/components/ui/Card";
 
 /**
  * AgentsPanel — a list of ISOLATED, persisted multi-agent rooms.
@@ -72,42 +75,26 @@ export default function AgentsPanel() {
         actions={
           <>
             {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClearRoom}
-                title={g.clearRoom}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-                  padding: "4px 10px", borderRadius: 6,
-                  border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
-                  color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)', cursor: "pointer",
-                }}
-              >
+              <Button type="button" size="sm" onClick={handleClearRoom} title={g.clearRoom}>
                 <Trash2 size={13} /> {g.clearRoom}
-              </button>
+              </Button>
             )}
             <div ref={addRef} style={{ position: "relative" }}>
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => setAddOpen((o) => !o)}
                 disabled={addable.length === 0}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-                  padding: "4px 10px", borderRadius: 6,
-                  border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
-                  color: addable.length === 0 ? "var(--hms-text-muted)" : "var(--hms-text)",
-                  fontSize: 'var(--hms-text-caption)', cursor: addable.length === 0 ? "default" : "pointer",
-                }}
               >
                 <Plus size={13} /> {g.addAgent}
-              </button>
+              </Button>
               {addOpen && addable.length > 0 && (
                 <div
                   style={{
                     position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 9999,
                     minWidth: 160, padding: "4px 0", borderRadius: 8,
                     background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                    boxShadow: "var(--hms-shadow-popover)",
                   }}
                 >
                   {addable.map((name) => (
@@ -115,13 +102,12 @@ export default function AgentsPanel() {
                       key={name}
                       type="button"
                       onClick={() => { addMember(name); setAddOpen(false); }}
+                      className="hms-sidebar-row"
                       style={{
                         display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
                         padding: "7px 14px", border: "none", background: "none",
                         color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', cursor: "pointer", textAlign: "left",
                       }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
                     >
                       <Users size={13} style={{ color: "var(--hms-accent)" }} /> {name}
                     </button>
@@ -133,12 +119,17 @@ export default function AgentsPanel() {
         }
       />
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden", padding: 'var(--hms-space-4)', gap: 'var(--hms-space-4)' }}>
         {/* Room list */}
-        <div
+        <Card
+          padding={false}
           style={{
-            width: 200, flexShrink: 0, borderRight: "1px solid var(--hms-border)",
-            display: "flex", flexDirection: "column", minHeight: 0,
+            width: 220,
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            overflow: "hidden",
           }}
         >
           <div
@@ -150,14 +141,9 @@ export default function AgentsPanel() {
             }}
           >
             {g.rooms}
-            <button
-              type="button"
-              onClick={() => createRoom()}
-              title={g.newRoom}
-              style={{ display: "inline-flex", border: "none", background: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 0 }}
-            >
+            <IconButton type="button" size="sm" onClick={() => createRoom()} title={g.newRoom} aria-label={g.newRoom}>
               <Plus size={14} />
-            </button>
+            </IconButton>
           </div>
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "4px 0" }}>
             {rooms.map((r) => {
@@ -167,15 +153,13 @@ export default function AgentsPanel() {
                   key={r.id}
                   onClick={() => selectRoom(r.id)}
                   onDoubleClick={() => handleRename(r.id, r.name)}
-                  className="hms-room-row"
+                  className="hms-sidebar-row"
+                  data-active={active}
                   style={{
                     display: "flex", alignItems: "center", gap: 'var(--hms-space-2)',
                     padding: "7px 12px", cursor: "pointer",
-                    background: active ? "var(--hms-selected-bg)" : "transparent",
                     color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
                   }}
-                  onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
-                  onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   <MessageSquare size={13} style={{ flexShrink: 0, color: active ? "var(--hms-accent)" : "var(--hms-text-muted)" }} />
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-sm)' }}>
@@ -185,24 +169,60 @@ export default function AgentsPanel() {
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--hms-accent)", flexShrink: 0 }} />
                   )}
                   {rooms.length > 1 && (
-                    <button
+                    <IconButton
                       type="button"
+                      size="sm"
                       onClick={(e) => { e.stopPropagation(); deleteRoom(r.id); }}
                       title={g.deleteRoom}
-                      className="hms-room-del"
-                      style={{ display: "inline-flex", border: "none", background: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 0 }}
                     >
                       <X size={12} />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Current room */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <Card
+          padding={false}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 'var(--hms-space-3)',
+              padding: "10px 16px",
+              borderBottom: "1px solid var(--hms-border)",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
+              <MessageSquare size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
+              <div style={{ minWidth: 0, fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {room.name}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
+              {target && (
+                <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
+                  {g.respondsLabel}: <span style={{ color: "var(--hms-text)" }}>@{target}</span>
+                </span>
+              )}
+              {running && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hms-accent)" }} />}
+            </div>
+          </div>
+
           {/* Roster — members as chips; click to set the responder. */}
           {members.length > 0 && (
             <div
@@ -231,7 +251,7 @@ export default function AgentsPanel() {
                     <button
                       type="button"
                       onClick={() => setResponder(name)}
-                      style={{ border: "none", background: "none", cursor: "pointer", color: "inherit", padding: 0, fontSize: 'var(--hms-text-caption)' }}
+                      className="hms-agents-chip-button"
                     >
                       @{name}
                     </button>
@@ -239,7 +259,7 @@ export default function AgentsPanel() {
                       type="button"
                       onClick={() => removeMember(name)}
                       title={g.remove}
-                      style={{ display: "inline-flex", border: "none", background: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 0 }}
+                      className="hms-agents-chip-remove"
                     >
                       <X size={11} />
                     </button>
@@ -272,7 +292,7 @@ export default function AgentsPanel() {
               />
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

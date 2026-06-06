@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useThemeStore } from "@/store/app";
 import { useFilesSelection } from "@/store/panel-selection";
@@ -8,6 +8,8 @@ import FileEditor from "@/components/files/FileEditor";
 import FileBreadcrumb from "@/components/files/FileBreadcrumb";
 import PanelTwoColumn from "@/components/ui/PanelTwoColumn";
 import PageTopBar from "@/components/layout/PageTopBar";
+import Card from "@/components/ui/Card";
+import IconButton from "@/components/ui/IconButton";
 
 /**
  * Files page. Owns its own list↔detail layout via PanelTwoColumn —
@@ -39,6 +41,8 @@ export default function FilesPanel() {
         maxWidth: 1400,
         margin: "0 auto",
         boxSizing: "border-box",
+        height: "100%",
+        display: "flex",
       }}
     >
       {selected ? (
@@ -50,18 +54,35 @@ export default function FilesPanel() {
           onAfterDelete={() => setSelected(null)}
         />
       ) : (
-        <div
+        <Card
           style={{
-            padding: 32,
-            border: "1px dashed var(--hms-border)",
-            borderRadius: 8,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 'var(--hms-space-3)',
             textAlign: "center",
             color: "var(--hms-text-muted)",
             fontSize: "var(--hms-text-sm)",
           }}
         >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "var(--hms-hover-bg)",
+              color: "var(--hms-text)",
+            }}
+          >
+            <FileText size={24} />
+          </div>
           {f.pickAFile}
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -72,19 +93,13 @@ export default function FilesPanel() {
         title={t.nav.files}
         leading={
           fromChat ? (
-            <button
-              type="button"
+            <IconButton
               onClick={() => navigate("/chat")}
               title={f.backToChat ?? "Back to chat"}
               aria-label={f.backToChat ?? "Back to chat"}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: 30, height: 30, border: "none", borderRadius: 6,
-                background: "transparent", color: "var(--hms-text-muted)", cursor: "pointer",
-              }}
             >
               <ArrowLeft size={16} />
-            </button>
+            </IconButton>
           ) : undefined
         }
       />

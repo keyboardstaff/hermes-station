@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Lock, ArrowRight } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { api, ApiError } from "@/lib/api";
+import Button from "@/components/ui/Button";
+import HermesMark from "@/components/ui/HermesMark";
 
 /**
  * Rendered by SetupGuard when the server reports {requiresLogin:true, loggedIn:false}.
@@ -39,14 +41,19 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        height: "100vh",
-        background: "var(--hms-bg)",
+        minHeight: "100vh",
+        padding: 'var(--hms-space-6)',
+        background: [
+          "radial-gradient(circle at top left, color-mix(in srgb, var(--hms-accent) 10%, transparent), transparent 34%)",
+          "radial-gradient(circle at bottom right, color-mix(in srgb, var(--hms-info) 10%, transparent), transparent 30%)",
+          "var(--hms-bg)",
+        ].join(", "),
       }}
     >
       <form
         onSubmit={submit}
         style={{
-          width: 340,
+          width: "min(100%, 380px)",
           padding: 28,
           borderRadius: 12,
           border: "1px solid var(--hms-border)",
@@ -54,16 +61,26 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
           display: "flex",
           flexDirection: "column",
           gap: 'var(--hms-space-4)',
-          boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+          boxShadow: "var(--hms-shadow-card)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)' }}>
-          <Lock size={18} />
-          <span style={{ fontSize: 'var(--hms-text-md)', fontWeight: 600 }}>{t.login.title}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)' }}>
+            <HermesMark size={24} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                Hermes Station
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
+                <Lock size={16} style={{ color: "var(--hms-accent)" }} />
+                <span style={{ fontSize: 'var(--hms-text-md)', fontWeight: 600 }}>{t.login.title}</span>
+              </div>
+            </div>
+          </div>
+          <p style={{ margin: 0, fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", lineHeight: 1.5 }}>
+            {t.login.subtitle}
+          </p>
         </div>
-        <p style={{ margin: 0, fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", lineHeight: 1.5 }}>
-          {t.login.subtitle}
-        </p>
 
         <div>
           <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
@@ -90,31 +107,23 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         {error && (
-          <div style={{ padding: "6px 10px", borderRadius: 6, background: "var(--hms-error-bg)", border: "1px solid #ef4444", fontSize: 'var(--hms-text-caption)', color: "var(--hms-error-dark)" }}>
+          <div style={{ padding: "6px 10px", borderRadius: 6, background: "var(--hms-error-weak)", border: "1px solid var(--hms-error-border)", fontSize: 'var(--hms-text-caption)', color: "var(--hms-error-dark)" }}>
             {error}
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
+          size="lg"
+          variant="primary"
           disabled={busy || !password}
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 'var(--hms-space-2)',
-            padding: "8px 12px",
-            borderRadius: 6,
-            border: "none",
-            background: busy || !password ? "var(--hms-border)" : "var(--hms-text)",
-            color: busy || !password ? "var(--hms-text-muted)" : "var(--hms-bg)",
-            fontSize: 'var(--hms-text-sm)',
-            cursor: busy || !password ? "not-allowed" : "pointer",
+            width: "100%",
           }}
         >
           {busy ? t.login.signingIn : t.login.signIn}
           {!busy && <ArrowRight size={13} />}
-        </button>
+        </Button>
       </form>
     </div>
   );

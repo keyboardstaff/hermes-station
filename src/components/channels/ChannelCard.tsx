@@ -76,7 +76,7 @@ export default function ChannelCard({
       ? "var(--hms-warning)"
       : isBroken
         ? "var(--hms-error)"
-        : "#94a3b8";
+        : "var(--hms-muted)";
 
   const StatusIcon = isRunning
     ? CheckCircle2
@@ -98,48 +98,19 @@ export default function ChannelCard({
 
   return (
     <div
+      className="hms-channel-card"
       style={{
-        padding: "16px",
-        background: "var(--hms-surface)",
-        border: `1px solid var(--hms-border)`,
         borderTop: `3px solid ${statusColor}`,
-        borderRadius: 10,
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--hms-space-3)",
-        minWidth: 0,
       }}
     >
       {/* Header: icon + name + kind badge */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--hms-space-2)" }}>
+      <div className="hms-channel-card-head">
         <StatusIcon size={18} style={{ color: statusColor, flexShrink: 0, marginTop: 2 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "var(--hms-text-body)",
-              fontWeight: 600,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {label}
-          </div>
-          <code style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{name}</code>
+        <div className="hms-channel-card-copy">
+          <div className="hms-channel-card-title">{label}</div>
+          <code className="hms-channel-card-id">{name}</code>
         </div>
-        <span
-          style={{
-            fontSize: "0.5625rem",
-            padding: "2px 6px",
-            borderRadius: 3,
-            background: "var(--hms-border)",
-            color: "var(--hms-text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
-        >
+        <span className="hms-channel-card-kind">
           {kind === "plugin" ? labels.plugin : labels.builtin}
         </span>
       </div>
@@ -147,17 +118,11 @@ export default function ChannelCard({
       {/* Status badge */}
       <div>
         <span
+          className="hms-channel-card-status"
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "var(--hms-space-1)",
-            fontSize: "var(--hms-text-xs)",
-            padding: "3px 8px",
-            borderRadius: 12,
             color: statusColor,
             background: `${statusColor}1a`,
             border: `1px solid ${statusColor}33`,
-            fontWeight: 600,
           }}
         >
           {statusLabel}
@@ -166,16 +131,7 @@ export default function ChannelCard({
 
       {/* Runtime details */}
       {runtime && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            rowGap: 4,
-            columnGap: 12,
-            fontSize: "var(--hms-text-xs)",
-            color: "var(--hms-text-muted)",
-          }}
-        >
+        <div className="hms-channel-card-details">
           {runtime.last_seen_at && (
             <>
               <span>{labels.lastSeen}</span>
@@ -190,26 +146,10 @@ export default function ChannelCard({
           )}
           {runtime.last_error && (
             <>
-              <span
-                style={{
-                  color: "var(--hms-error-text)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--hms-space-1)",
-                }}
-              >
+              <span className="hms-channel-card-error-label">
                 <AlertTriangle size={11} /> {labels.lastError}
               </span>
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  color: "var(--hms-error-text)",
-                  wordBreak: "break-word",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {String(runtime.last_error)}
-              </span>
+              <span className="hms-channel-card-error-copy">{String(runtime.last_error)}</span>
             </>
           )}
         </div>
@@ -217,19 +157,7 @@ export default function ChannelCard({
 
       {/* Circuit breaker hint */}
       {circuitFlag && (isCircuitOpen || isBroken) && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--hms-space-2)",
-            padding: "6px 8px",
-            background: "rgba(245,158,11,0.06)",
-            border: "1px solid rgba(245,158,11,0.18)",
-            borderRadius: 6,
-            fontSize: "var(--hms-text-xs)",
-            color: "var(--hms-warning-text)",
-          }}
-        >
+        <div className="hms-channel-card-warning">
           {isCircuitOpen ? <Pause size={11} /> : <Play size={11} />}
           <span>{labels.circuitHint}</span>
           <ExternalLink size={10} style={{ marginLeft: "auto", color: "var(--hms-text-muted)" }} />

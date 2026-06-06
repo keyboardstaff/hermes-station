@@ -46,55 +46,19 @@ export default function PageTopBar({
   style?: CSSProperties;
 }) {
   return (
-    <div style={{ flexShrink: 0, ...style }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--hms-space-2)",
-          height: "var(--hms-header-h, 48px)",
-          padding: "0 var(--hms-space-4)",
-          borderBottom: "1px solid var(--hms-border)",
-        }}
-      >
+    <div className="hms-page-topbar" style={style}>
+      <div className="hms-page-topbar-head">
         {leading}
-        <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "baseline", gap: "var(--hms-space-2)" }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "var(--hms-text-body)",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {title}
-          </h1>
+        <div className="hms-page-topbar-title">
+          <h1 className="hms-page-topbar-heading">{title}</h1>
           {subtitle && (
-            <span
-              style={{
-                fontSize: "var(--hms-text-xs)",
-                color: "var(--hms-text-muted)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {subtitle}
-            </span>
+            <span className="hms-page-topbar-subtitle">{subtitle}</span>
           )}
         </div>
-        {actions && (
-          <div style={{ display: "flex", gap: "var(--hms-space-1)", alignItems: "center", flexShrink: 0 }}>
-            {actions}
-          </div>
-        )}
+        {actions && <div className="hms-page-topbar-actions">{actions}</div>}
       </div>
       {context && (
-        <div style={{ padding: "var(--hms-space-2) var(--hms-space-4)" }}>
-          {context}
-        </div>
+        <div className="hms-page-topbar-context">{context}</div>
       )}
     </div>
   );

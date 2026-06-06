@@ -16,18 +16,12 @@ export default function SegmentedControl<T extends string | number>({
   size?: "sm" | "md";
   ariaLabel?: string;
 }) {
-  const pad = size === "sm" ? "2px 8px" : "4px 12px";
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      style={{
-        display: "inline-flex",
-        gap: 2,
-        padding: 2,
-        background: "var(--hms-hover-bg)",
-        borderRadius: "var(--hms-radius-md)",
-      }}
+      className="hms-segmented"
+      data-size={size}
     >
       {options.map((o) => {
         const selected = o.value === value;
@@ -38,17 +32,8 @@ export default function SegmentedControl<T extends string | number>({
             role="tab"
             aria-selected={selected}
             onClick={() => onChange(o.value)}
-            style={{
-              padding: pad,
-              border: "none",
-              borderRadius: "var(--hms-radius-sm)",
-              background: selected ? "var(--hms-bg)" : "transparent",
-              color: selected ? "var(--hms-text)" : "var(--hms-text-muted)",
-              fontWeight: selected ? 600 : 400,
-              fontSize: "var(--hms-text-sm)",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            className="hms-segmented-item"
+            data-active={selected}
           >
             {o.label}
           </button>

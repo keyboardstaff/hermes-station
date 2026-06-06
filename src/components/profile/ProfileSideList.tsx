@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n";
 import { useProfiles, type ProfileInfo } from "@/hooks/useProfiles";
 import { useProfileSelection } from "@/store/panel-selection";
 import { useIsMobile } from "@/hooks/useBreakpoint";
+import StatusBadge from "@/components/ui/StatusBadge";
 import CreateProfileDialog from "./CreateProfileDialog";
 
 /**
@@ -170,7 +171,7 @@ function ProfileRow({
         padding: "6px 8px",
         background: selected ? "var(--hms-border)" : "transparent",
         border: "1px solid transparent",
-        borderLeft: `3px solid ${profile.is_default ? "var(--hms-accent)" : "#94a3b8"}`,
+        borderLeft: `3px solid ${profile.is_default ? "var(--hms-accent)" : "var(--hms-muted)"}`,
         borderRadius: 6,
         cursor: "pointer",
         color: "var(--hms-text)",
@@ -178,7 +179,7 @@ function ProfileRow({
     >
       <User
         size={11}
-        style={{ color: profile.is_default ? "var(--hms-accent)" : "#94a3b8", flexShrink: 0, marginTop: 1 }}
+        style={{ color: profile.is_default ? "var(--hms-accent)" : "var(--hms-muted)", flexShrink: 0, marginTop: 1 }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -194,20 +195,7 @@ function ProfileRow({
           }}
         >
           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</span>
-          {profile.is_default && (
-            <span
-              style={{
-                fontSize: 8,
-                padding: "1px 4px",
-                borderRadius: 3,
-                background: "rgba(99,102,241,0.12)",
-                color: "#4f46e5",
-                fontWeight: 600,
-              }}
-            >
-              {defaultBadge}
-            </span>
-          )}
+          {profile.is_default && <StatusBadge tone="accent" uppercase={false}>{defaultBadge}</StatusBadge>}
         </div>
         {profile.model && (
           <div

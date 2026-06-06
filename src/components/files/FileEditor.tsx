@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
 import {
   useFileRead,
   useWriteFile,
@@ -213,7 +214,9 @@ export default function FileEditor({
           </Button>
 
           <IconButton
-            label={f.refresh}
+            size="sm"
+            aria-label={f.refresh}
+            title={f.refresh}
             onClick={() => readQuery.refetch()}
           >
             <RefreshCw size={13} />
@@ -221,7 +224,9 @@ export default function FileEditor({
 
           {historyAvailable && (
             <IconButton
-              label={f.historyTitle}
+              size="sm"
+              aria-label={f.historyTitle}
+              title={f.historyTitle}
               active={showHistory}
               onClick={() => setShowHistory((v) => !v)}
             >
@@ -243,7 +248,9 @@ export default function FileEditor({
 
           <div style={{ position: "relative" }} ref={menuRef}>
             <IconButton
-              label={f.more}
+              size="sm"
+              aria-label={f.more}
+              title={f.more}
               active={menuOpen}
               onClick={() => setMenuOpen((o) => !o)}
             >
@@ -262,7 +269,7 @@ export default function FileEditor({
                   borderRadius: 8,
                   padding: "4px 0",
                   minWidth: 160,
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  boxShadow: "var(--hms-shadow-popover)",
                 }}
               >
                 <MenuItem icon={<Download size={13} />} label={f.download} onClick={handleDownload} disabled={!readQuery.data} />
@@ -305,12 +312,11 @@ export default function FileEditor({
           <>
             <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
               {readQuery.isLoading ? (
-                <div style={loadingBox}>{f.loadingFile}</div>
+                <EditorState icon={<Loader size={24} className="hms-spin" />} text={f.loadingFile} />
+              ) : readQuery.isError ? (
+                <EditorState icon={<AlertCircle size={24} />} text={apiErrorDetail(readQuery.error)} tone="error" />
               ) : isBinary ? (
-                <div style={{ ...loadingBox, flexDirection: "column", gap: "var(--hms-space-2)" }}>
-                  <FileIcon size={32} />
-                  <div>{f.binaryHint}</div>
-                </div>
+                <EditorState icon={<FileIcon size={24} />} text={f.binaryHint} />
               ) : (
                 <Editor
                   height="100%"
@@ -357,41 +363,26 @@ export default function FileEditor({
   );
 }
 
-// ── icon-only button (Refresh / History / More) ───────────────────────
-
-function IconButton({
-  label,
-  active,
-  onClick,
-  children,
+function EditorState({
+  icon,
+  text,
+  tone = "muted",
 }: {
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  icon: React.ReactNode;
+  text: string;
+  tone?: "muted" | "error";
 }) {
+  const fg = tone === "error" ? "var(--hms-error-text)" : "var(--hms-text-muted)";
+  const bg = tone === "error" ? "var(--hms-error-weak)" : "var(--hms-hover-bg)";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 28,
-        height: 28,
-        border: "none",
-        borderRadius: 6,
-        background: active ? "var(--hms-surface-hover, var(--hms-hover-bg))" : "transparent",
-        color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
-        cursor: "pointer",
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </button>
+    <div style={loadingBox}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--hms-space-3)", textAlign: "center", padding: "var(--hms-space-6)", color: fg }}>
+        <div style={{ width: 52, height: 52, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: bg }}>
+          {icon}
+        </div>
+        <div style={{ fontSize: "var(--hms-text-sm)", lineHeight: 1.6 }}>{text}</div>
+      </div>
+    </div>
   );
 }
 
@@ -416,6 +407,7 @@ function MenuItem({
       role="menuitem"
       onClick={onClick}
       disabled={disabled}
+      className="hms-sidebar-row"
       style={{
         display: "flex",
         alignItems: "center",
@@ -424,14 +416,12 @@ function MenuItem({
         padding: "7px 12px",
         border: "none",
         background: "none",
-        color: danger ? "var(--hms-error-text, #e53e3e)" : "var(--hms-text)",
+        color: danger ? "var(--hms-error-text)" : "var(--hms-text)",
         fontSize: "var(--hms-text-sm)",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
         textAlign: "left",
       }}
-      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "var(--hms-surface-hover, var(--hms-hover-bg))"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
     >
       {icon}
       <span>{label}</span>
@@ -449,8 +439,8 @@ function StatusPill({
   children: React.ReactNode;
 }) {
   const colors = kind === "error"
-    ? { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.18)", text: "var(--hms-error-text)" }
-    : { bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.20)", text: "var(--hms-success-text)" };
+    ? { bg: "var(--hms-error-weak)", border: "var(--hms-error-border)", text: "var(--hms-error-text)" }
+    : { bg: "var(--hms-success-weak)", border: "var(--hms-success-border)", text: "var(--hms-success-text)" };
   return (
     <span
       style={{

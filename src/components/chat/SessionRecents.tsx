@@ -418,7 +418,16 @@ export default function SessionRecents({
     staleTime: 2_000,
     refetchInterval: 5_000,
   });
-  const activeRuns = activeData?.runs ?? [];
+  const activeRuns = useMemo(() => {
+    const latestBySession = new Map<string, ActiveRun>();
+    for (const run of activeData?.runs ?? []) {
+      const prev = latestBySession.get(run.session_id);
+      if (!prev || run.started_at >= prev.started_at) {
+        latestBySession.set(run.session_id, run);
+      }
+    }
+    return [...latestBySession.values()].sort((a, b) => b.started_at - a.started_at);
+  }, [activeData?.runs]);
 
   // Title is derived directly from this `sessions-table-all` cache by
   // useActiveSessionTitle (single source of truth) — no store propagation needed.
@@ -445,10 +454,18 @@ export default function SessionRecents({
   const inflightSessionIds = new Set(inflightRows.map((r) => r.session_id));
   // Fall back to the provisional (first-prompt) title while the DB row still has
   // none — so a just-completed session shows the prompt, never "Untitled".
-  const sessions = [...inflightRows, ...dbSessions]
-    // Hide the isolated /agents room's own run sessions from /chat Recents.
-    .filter((s) => !roomSessionIds.has(s.session_id))
-    .map((s) => (s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] }));
+  const sessions = (() => {
+    const seen = new Set<string>();
+    return [...inflightRows, ...dbSessions]
+      // Hide the isolated /agents room's own run sessions from /chat Recents.
+      .filter((s) => !roomSessionIds.has(s.session_id))
+      .map((s) => (s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] }))
+      .filter((s) => {
+        if (seen.has(s.session_id)) return false;
+        seen.add(s.session_id);
+        return true;
+      });
+  })();
 
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
