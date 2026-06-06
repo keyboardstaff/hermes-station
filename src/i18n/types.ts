@@ -348,6 +348,7 @@ export interface Translations {
     switchFolder: string;
     noSubfolders: string;
     useThisFolder: string;
+    deleteConfirm: string;
     loading: string;
     loadingFile: string;
     empty: string;

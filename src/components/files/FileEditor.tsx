@@ -156,7 +156,7 @@ export default function FileEditor({
 
   const rootStyle: React.CSSProperties = isDrawer
     ? { display: "flex", flexDirection: "column", gap: "var(--hms-space-2)", height: "100%", minHeight: 0 }
-    : { display: "flex", flexDirection: "column", gap: "var(--hms-space-4)" };
+    : { display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", height: "100%", minHeight: 0 };
 
   return (
     <div style={rootStyle}>
@@ -293,9 +293,11 @@ export default function FileEditor({
             : {
                 display: "flex",
                 gap: 12,
-                height: 540,
+                flex: 1,
+                minHeight: 0,
                 border: "1px solid var(--hms-border)",
-                borderRadius: 8,
+                borderRadius: "var(--hms-radius-md)",
+                background: "var(--hms-surface)",
                 overflow: "hidden",
               }
         }

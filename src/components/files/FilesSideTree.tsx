@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n";
 import {
   useWriteFile,
   useCreateDir,
+  useDeleteFile,
   useGitInfo,
   type FileRoot,
 } from "@/hooks/useFiles";
@@ -42,7 +43,14 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
 
   const writeMut = useWriteFile();
   const mkdirMut = useCreateDir();
+  const deleteMut = useDeleteFile();
   const gitInfo = useGitInfo(root);
+
+  const handleDelete = useCallback((path: string, _kind: "file" | "dir") => {
+    if (!window.confirm(f?.deleteConfirm ?? "Delete this item?")) return;
+    deleteMut.mutate({ root, path });
+    if (selected && selected.root === root && selected.path === path) setSelected(null);
+  }, [root, deleteMut, selected, setSelected, f]);
 
   const switchRoot = (r: FileRoot) => {
     if (r === root) return;
@@ -120,6 +128,7 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
     onCreateStart: handleCreateStart,
     onCreateConfirm: handleCreateConfirm,
     onCreateCancel: handleCreateCancel,
+    onDelete: handleDelete,
   };
 
   return (

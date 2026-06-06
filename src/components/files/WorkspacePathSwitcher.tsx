@@ -58,31 +58,31 @@ export function WorkspacePathSwitcher({
   };
 
   return (
-    <div ref={ref} style={{ position: "relative", display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, flex: 1 }}>
+    <div ref={ref} style={{ position: "relative", display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, flex: "0 1 auto" }}>
       <button
         type="button"
         onClick={() => onSwitchRoot("hermes")}
         title={f?.rootHermes ?? "~/.hermes"}
         style={chip(root === "hermes")}
       >
-        {f?.rootHermes ?? "~/.hermes"}
+        .hermes
       </button>
 
-      {/* Current workspace folder — click to open the folder picker. */}
+      {/* Current workspace folder — sizes to its name; click to open the picker. */}
       <button
         type="button"
         onClick={openPicker}
         title={info?.dir ?? (f?.rootWorkspace ?? "~")}
         style={{
-          ...chip(isWorkspace), flex: 1, minWidth: 0, display: "flex", alignItems: "center",
-          gap: 'var(--hms-space-1)', justifyContent: "flex-start",
+          ...chip(isWorkspace), minWidth: 0, maxWidth: 240, display: "flex", alignItems: "center",
+          gap: 'var(--hms-space-1)', justifyContent: "flex-start", height: 24,
         }}
       >
-        <Folder size={12} style={{ flexShrink: 0 }} />
+        <Folder size={13} style={{ flexShrink: 0, color: isWorkspace ? "var(--hms-accent)" : "var(--hms-text-muted)" }} />
         <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {info ? folderLabel(info.home, info.dir) : "~"}
         </span>
-        <ChevronDown size={13} style={{ flexShrink: 0, marginLeft: "auto" }} />
+        <ChevronDown size={13} style={{ flexShrink: 0 }} />
       </button>
 
       {open && (
@@ -180,10 +180,11 @@ function buildCrumbs(home: string, dir: string): Array<{ label: string; path: st
 
 function chip(active: boolean): React.CSSProperties {
   return {
-    flexShrink: 0, border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
+    flexShrink: 0, display: "inline-flex", alignItems: "center", height: 24,
+    border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
     background: active ? "var(--hms-accent-weak)" : "var(--hms-surface)",
     color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-    borderRadius: 'var(--hms-radius-sm)', padding: "2px 8px", cursor: "pointer",
+    borderRadius: 'var(--hms-radius-md)', padding: "0 8px", cursor: "pointer",
     fontSize: 'var(--hms-text-caption)', whiteSpace: "nowrap",
   };
 }

@@ -42,12 +42,12 @@ export const ROUTES: RouteRecord[] = [
   { path: "/artifacts", labelKey: "artifacts", icon: Files,        panel: lazy(() => import("@/panels/ArtifactsPanel")), module: "agent", order: 3 },
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",     labelKey: "chat",     icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),     module: "agent", order: 99, hidden: true },
+  // /files is the chat workspace's full page — reached from there + deep links.
+  { path: "/files",    labelKey: "files",    icon: FolderOpen,    panel: lazy(() => import("@/panels/FilesPanel")),    module: "agent", order: 99, hidden: true },
 
   // ── tasks ─────────────────────────────────────────────────────────
   { path: "/cron",     labelKey: "cron",     icon: Clock,         panel: lazy(() => import("@/panels/CronPanel")),     module: "tasks", order: 1 },
   { path: "/kanban",   labelKey: "kanban",   icon: Kanban,        panel: lazy(() => import("@/panels/KanbanPanel")),   module: "tasks", order: 2 },
-  // /files is reached from the chat workspace context panel + deep links.
-  { path: "/files",    labelKey: "files",    icon: FolderOpen,    panel: lazy(() => import("@/panels/FilesPanel")),    module: "tasks", order: 99, hidden: true },
 
   // ── manage ────────────────────────────────────────────────────────
   // Group A (capabilities): skills, plugins, models, channels   (order 1–4)

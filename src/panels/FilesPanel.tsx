@@ -9,7 +9,7 @@ import FileBreadcrumb from "@/components/files/FileBreadcrumb";
 import PanelTwoColumn from "@/components/ui/PanelTwoColumn";
 import PageTopBar from "@/components/layout/PageTopBar";
 import Card from "@/components/ui/Card";
-import IconButton from "@/components/ui/IconButton";
+import Button from "@/components/ui/Button";
 
 /**
  * Files page. Owns its own list↔detail layout via PanelTwoColumn —
@@ -30,6 +30,7 @@ export default function FilesPanel() {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
   const backTarget = from === "chat" ? "/chat" : from === "artifacts" ? "/artifacts" : null;
+  const backLabel = from === "artifacts" ? t.nav.artifacts : t.nav.chat;
 
   const selected = useFilesSelection((s) => s.selected);
   const setSelected = useFilesSelection((s) => s.setSelected);
@@ -37,12 +38,11 @@ export default function FilesPanel() {
   const detail = (
     <div
       style={{
-        padding: "var(--hms-space-6)",
+        padding: "var(--hms-space-4)",
         width: "100%",
-        maxWidth: 1400,
-        margin: "0 auto",
         boxSizing: "border-box",
         height: "100%",
+        minHeight: 0,
         display: "flex",
       }}
     >
@@ -94,13 +94,13 @@ export default function FilesPanel() {
         title={t.nav.files}
         actions={
           backTarget ? (
-            <IconButton
+            <Button
+              size="sm"
               onClick={() => navigate(backTarget)}
-              title={f.backToChat ?? "Back to chat"}
-              aria-label={f.backToChat ?? "Back to chat"}
+              title={f.backToChat ?? "Back"}
             >
-              <ArrowLeft size={16} />
-            </IconButton>
+              <ArrowLeft size={14} /> {backLabel}
+            </Button>
           ) : undefined
         }
       />

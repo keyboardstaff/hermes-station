@@ -13,7 +13,7 @@ describe("moduleForPath", () => {
     expect(moduleForPath("/sessions")).toBe("agent");
     expect(moduleForPath("/chat")).toBe("agent"); // hidden, still agent
     expect(moduleForPath("/cron")).toBe("tasks");
-    expect(moduleForPath("/files")).toBe("tasks"); // hidden, still tasks
+    expect(moduleForPath("/files")).toBe("agent"); // hidden, the chat workspace's full page
     expect(moduleForPath("/models")).toBe("manage");
     expect(moduleForPath("/settings")).toBe("manage"); // hidden
   });
@@ -50,7 +50,7 @@ describe("moduleNavTarget", () => {
   it("stays put when on a hidden in-module route (e.g. /chat, /files)", () => {
     // The whole point: clicking "Agent" while on /chat must not yank to /sessions.
     expect(moduleNavTarget("agent", "/chat")).toBeNull();
-    expect(moduleNavTarget("tasks", "/files")).toBeNull();
+    expect(moduleNavTarget("agent", "/files")).toBeNull();
     expect(moduleNavTarget("manage", "/settings")).toBeNull();
   });
 });

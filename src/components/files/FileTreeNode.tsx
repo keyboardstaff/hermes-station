@@ -7,6 +7,7 @@ import {
   FolderOpen,
   FilePlus,
   FolderPlus,
+  Trash2,
   Check,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export interface CreateProps {
   onCreateStart: (parentPath: string, kind: "file" | "dir") => void;
   onCreateConfirm: (name: string) => Promise<void>;
   onCreateCancel: () => void;
+  onDelete: (path: string, kind: "file" | "dir") => void;
 }
 
 interface TreeSharedProps {
@@ -165,11 +167,21 @@ function TreeEntry({
     f,
   };
 
+  const rowHoverBg = (hl: boolean): string => (hl ? "var(--hms-hover-bg)" : "transparent");
+  const iconBtn: React.CSSProperties = {
+    background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
+    lineHeight: 0, color: "var(--hms-text-muted)", flexShrink: 0,
+  };
+
   if (entry.kind === "dir") {
     return (
       <div>
         <div
-          style={{ display: "flex", alignItems: "center" }}
+          className="hms-tree-row"
+          style={{
+            display: "flex", alignItems: "center", borderRadius: 'var(--hms-radius-sm)',
+            background: rowHoverBg(hovered),
+          }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
@@ -208,16 +220,23 @@ function TreeEntry({
               <button
                 title={f?.newFile ?? "New file"}
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "file"); }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 3px", lineHeight: 0, color: "var(--hms-text-muted)", flexShrink: 0 }}
+                style={iconBtn}
               >
                 <FilePlus size={10} />
               </button>
               <button
                 title={f?.newFolder ?? "New folder"}
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "dir"); }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 3px", lineHeight: 0, color: "var(--hms-text-muted)", flexShrink: 0 }}
+                style={iconBtn}
               >
                 <FolderPlus size={10} />
+              </button>
+              <button
+                title={f?.delete ?? "Delete"}
+                onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "dir"); }}
+                style={iconBtn}
+              >
+                <Trash2 size={10} />
               </button>
             </>
           )}
@@ -234,30 +253,50 @@ function TreeEntry({
   }
 
   return (
-    <button
-      onClick={() => onSelectFile(childPath)}
+    <div
+      className="hms-tree-row"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--hms-space-1)",
-        paddingLeft: depth * 12 + 17,
-        paddingRight: 8,
-        paddingTop: 2,
-        paddingBottom: 2,
-        border: "none",
-        background: isSelected ? "var(--hms-border)" : "transparent",
-        cursor: "pointer",
-        width: "100%",
-        textAlign: "left",
-        color: "var(--hms-text)",
-        fontSize: "var(--hms-text-xs)",
+        display: "flex", alignItems: "center", borderRadius: 'var(--hms-radius-sm)',
+        background: isSelected ? "var(--hms-selected-bg)" : rowHoverBg(hovered),
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <FileIcon size={11} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {entry.name}
-      </span>
-    </button>
+      <button
+        onClick={() => onSelectFile(childPath)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--hms-space-1)",
+          paddingLeft: depth * 12 + 17,
+          paddingRight: 4,
+          paddingTop: 2,
+          paddingBottom: 2,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          flex: 1,
+          minWidth: 0,
+          textAlign: "left",
+          color: "var(--hms-text)",
+          fontSize: "var(--hms-text-xs)",
+        }}
+      >
+        <FileIcon size={11} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {entry.name}
+        </span>
+      </button>
+      {hovered && (
+        <button
+          title={f?.delete ?? "Delete"}
+          onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "file"); }}
+          style={iconBtn}
+        >
+          <Trash2 size={10} />
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -330,6 +330,7 @@ export const en: Translations = {
     switchFolder: "Switch folder",
     noSubfolders: "No subfolders",
     useThisFolder: "Use this folder",
+    deleteConfirm: "Delete this item?",
     loading: "Loading…",
     loadingFile: "Loading file…",
     empty: "Empty",
