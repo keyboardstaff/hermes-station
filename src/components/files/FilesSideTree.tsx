@@ -30,8 +30,11 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
   const setRoot = useFilesSelection((s) => s.setRoot);
   const selected = useFilesSelection((s) => s.selected);
   const setSelected = useFilesSelection((s) => s.setSelected);
+  // Tree expansion is shared (store) so the chat-workspace tree and the /files
+  // page tree render identically.
+  const expanded = useFilesSelection((s) => s.expanded);
+  const setExpanded = useFilesSelection((s) => s.setExpanded);
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState<boolean>(
     () => localStorage.getItem("hms:files-show-hidden") === "1",
   );
@@ -43,8 +46,7 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
 
   const switchRoot = (r: FileRoot) => {
     if (r === root) return;
-    setRoot(r);
-    setExpanded(new Set());
+    setRoot(r); // store resets `expanded` on a root change
     setActiveCreate(null);
   };
 
@@ -56,13 +58,11 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
     });
 
   const handleToggle = useCallback((p: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(p)) next.delete(p);
-      else next.add(p);
-      return next;
-    });
-  }, []);
+    const next = new Set(expanded);
+    if (next.has(p)) next.delete(p);
+    else next.add(p);
+    setExpanded(next);
+  }, [expanded, setExpanded]);
 
   const handleSelectFile = useCallback(
     (p: string) => setSelected({ root, path: p }),
@@ -73,17 +73,16 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
     (parentPath: string, kind: "file" | "dir") => {
       if (parentPath) {
         // auto-expand target dir so inline input appears immediately
-        setExpanded((prev) => {
-          const key = `${root}/${parentPath}`;
-          if (prev.has(key)) return prev;
-          const next = new Set(prev);
+        const key = `${root}/${parentPath}`;
+        if (!expanded.has(key)) {
+          const next = new Set(expanded);
           next.add(key);
-          return next;
-        });
+          setExpanded(next);
+        }
       }
       setActiveCreate({ parentPath, kind });
     },
-    [root],
+    [root, expanded, setExpanded],
   );
 
   const handleCreateConfirm = useCallback(

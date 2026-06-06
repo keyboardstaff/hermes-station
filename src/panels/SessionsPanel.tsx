@@ -269,54 +269,54 @@ export default function SessionsPanel() {
             error={previewError}
           />
         )}
+
+        {/* Floating contextual action bar — appears only when ≥1 row is
+            selected, centred over the table (doesn't occupy permanent space). */}
+        {!noneSelected && (
+          <div
+            className="hms-floatbar-in"
+            style={{
+              position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 5,
+              display: "flex", alignItems: "center", gap: 'var(--hms-space-2)',
+              padding: "8px 12px", borderRadius: 999,
+              background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
+              boxShadow: "0 6px 24px rgba(0,0,0,0.18)",
+            }}
+          >
+            <span style={{ fontSize: 'var(--hms-text-caption)', fontWeight: 600, color: "var(--hms-text)", paddingLeft: 'var(--hms-space-1)' }}>
+              {selected.size} {t.sessions.selected}
+            </span>
+            <span style={{ width: 1, height: 18, background: "var(--hms-border)" }} aria-hidden="true" />
+            <Button size="sm" onClick={() => exportSessions(Array.from(selected), "json")}>
+              <Download size={12} /> {t.sessions.exportJson}
+            </Button>
+            <Button size="sm" onClick={() => exportSessions(Array.from(selected), "markdown")}>
+              <Download size={12} /> {t.sessions.exportMarkdown}
+            </Button>
+            <Button size="sm" onClick={() => exportSessionsPdf(Array.from(selected))}>
+              <Download size={12} /> {t.sessions.exportPdf}
+            </Button>
+            <Button size="sm" variant="danger" disabled={deleting} onClick={() => { if (confirm(t.sessions.deleteConfirm)) deleteSelected(Array.from(selected)); }}>
+              <Trash2 size={12} /> {t.sessions.delete}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Footer — pagination (left) + the selection action bar (right). The
-          bulk actions live here, enabled only when ≥1 row is selected. */}
-      <div className="hms-sessions-pagination">
-        {totalPages > 1 && (
-          <>
-            <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
-              <ChevronLeft size={13} />
-            </Button>
-            <span className="hms-sessions-pagination-status">
-              {t.sessions.page} {page + 1} / {totalPages}
-            </span>
-            <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
-              <ChevronRight size={13} />
-            </Button>
-          </>
-        )}
-        <span style={{ flex: 1 }} />
-        <span
-          style={{
-            fontSize: 'var(--hms-text-caption)',
-            fontWeight: noneSelected ? 400 : 600,
-            color: noneSelected ? "var(--hms-text-muted)" : "var(--hms-text)",
-          }}
-        >
-          {selected.size} {t.sessions.selected}
-        </span>
-        <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "json")}>
-          <Download size={12} /> {t.sessions.exportJson}
-        </Button>
-        <Button size="sm" disabled={noneSelected} onClick={() => exportSessions(Array.from(selected), "markdown")}>
-          <Download size={12} /> {t.sessions.exportMarkdown}
-        </Button>
-        <Button size="sm" disabled={noneSelected} onClick={() => exportSessionsPdf(Array.from(selected))}>
-          <Download size={12} /> {t.sessions.exportPdf}
-        </Button>
-        <Button
-          size="sm"
-          variant="danger"
-          disabled={noneSelected || deleting}
-          onClick={() => {
-            if (confirm(t.sessions.deleteConfirm)) deleteSelected(Array.from(selected));
-          }}
-        >
-          <Trash2 size={12} /> {t.sessions.delete}
-        </Button>
-      </div>
+      {/* Footer — pagination only. Bulk actions live in the floating bar above. */}
+      {totalPages > 1 && (
+        <div className="hms-sessions-pagination" style={{ justifyContent: "center" }}>
+          <Button size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+            <ChevronLeft size={13} />
+          </Button>
+          <span className="hms-sessions-pagination-status">
+            {t.sessions.page} {page + 1} / {totalPages}
+          </span>
+          <Button size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
+            <ChevronRight size={13} />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

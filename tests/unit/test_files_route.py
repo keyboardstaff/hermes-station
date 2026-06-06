@@ -461,6 +461,9 @@ async def test_set_workspace_dir_under_home(app_server, monkeypatch, tmp_path):
     monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
     monkeypatch.setattr(files_mod, "_load_workspaces", lambda: store["data"])
     monkeypatch.setattr(files_mod, "_save_workspaces", lambda d: store.__setitem__("data", d))
+    # Switching the dir also applies it as the agent cwd — stub that side effect.
+    from server.lib import workspace_cwd
+    monkeypatch.setattr(workspace_cwd, "apply_active_workspace_cwd", lambda: str(proj.resolve()))
     async with aiohttp.ClientSession() as cs:
         async with cs.put(
             f"{base}/api/files/workspace/dir",
@@ -470,6 +473,7 @@ async def test_set_workspace_dir_under_home(app_server, monkeypatch, tmp_path):
             assert r.status == 200, await r.text()
             data = await r.json()
     assert data["dir"] == str(proj.resolve())
+    assert data["cwd"] == str(proj.resolve())
     assert store["data"]["current_dir"] == str(proj.resolve())
 
 

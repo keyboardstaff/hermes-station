@@ -28,7 +28,8 @@ export default function FilesPanel() {
   const monacoTheme = resolvedTheme === "dark" ? "vs-dark" : "vs";
   const navigate = useNavigate();
   const location = useLocation();
-  const fromChat = (location.state as { from?: string } | null)?.from === "chat";
+  const from = (location.state as { from?: string } | null)?.from;
+  const backTarget = from === "chat" ? "/chat" : from === "artifacts" ? "/artifacts" : null;
 
   const selected = useFilesSelection((s) => s.selected);
   const setSelected = useFilesSelection((s) => s.setSelected);
@@ -91,10 +92,10 @@ export default function FilesPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <PageTopBar
         title={t.nav.files}
-        leading={
-          fromChat ? (
+        actions={
+          backTarget ? (
             <IconButton
-              onClick={() => navigate("/chat")}
+              onClick={() => navigate(backTarget)}
               title={f.backToChat ?? "Back to chat"}
               aria-label={f.backToChat ?? "Back to chat"}
             >

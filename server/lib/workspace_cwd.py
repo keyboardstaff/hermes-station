@@ -22,11 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_active_cwd() -> Path:
-    """Active workspace abs path; the default (no explicit workspace) is
-    ``~/workspace``, created on demand so the agent never falls back to the
-    process cwd (which in dev is the repo, not the user's workspace).
+    """The agent's working directory. The file browser's switchable browse dir
+    (``current_dir``, confined under ``~/``) wins when explicitly set — so
+    switching the workspace path makes the LLM aware of it (the per-run "Current
+    workspace" preface + TERMINAL_CWD follow it). Otherwise: a chosen workspace,
+    else ``~/workspace`` created on demand (never the process cwd).
     """
-    from server.routes.files import active_workspace  # lazy: files owns workspaces.json
+    # lazy import: files owns workspaces.json
+    from server.routes.files import _current_dir_raw, active_workspace
+    browse = _current_dir_raw()
+    if browse is not None:
+        return browse
     _, path = active_workspace()
     if path is not None:
         return path

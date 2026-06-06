@@ -77,12 +77,17 @@ interface FilesSelectionState {
   /** Currently-open file in the main pane (null = pick-a-file empty state). */
   selected: FileSelection | null;
   setSelected: (sel: FileSelection | null) => void;
+  /** Expanded tree folders — shared so the /chat workspace tree and the /files
+   *  page tree (same component, two mounts) stay identical. */
+  expanded: Set<string>;
+  setExpanded: (next: Set<string>) => void;
 }
 
 export const useFilesSelection = create<FilesSelectionState>((set) => ({
   // Default to the `workspace` root — it now opens at the user's home (~/).
   root: "workspace",
   selected: null,
+  expanded: new Set<string>(),
   setRoot: (root) =>
     set((state) => ({
       root,
@@ -90,8 +95,11 @@ export const useFilesSelection = create<FilesSelectionState>((set) => ({
       // across roots and we don't want to surface a stale ``hermes:foo``
       // selection after the user clicked on the ``workspace`` tab.
       selected: state.selected && state.selected.root === root ? state.selected : null,
+      // Old expansion paths don't apply to the new root.
+      expanded: new Set<string>(),
     })),
   setSelected: (sel) => set({ selected: sel }),
+  setExpanded: (expanded) => set({ expanded }),
 }));
 
 // ── /plugins ─────────────────────────────────────────────────────────

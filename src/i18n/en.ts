@@ -329,6 +329,7 @@ export const en: Translations = {
     rootWorkspace: "~/workspace",
     switchFolder: "Switch folder",
     noSubfolders: "No subfolders",
+    useThisFolder: "Use this folder",
     loading: "Loading…",
     loadingFile: "Loading file…",
     empty: "Empty",

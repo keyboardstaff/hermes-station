@@ -328,6 +328,7 @@ export const zh: Translations = {
     rootWorkspace: "~/workspace",
     switchFolder: "切换目录",
     noSubfolders: "无子文件夹",
+    useThisFolder: "使用此目录",
     loading: "加载中…",
     loadingFile: "加载文件中…",
     empty: "空",

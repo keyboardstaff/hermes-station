@@ -142,6 +142,18 @@ body,
   color: var(--hms-text);
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Pin the app to the viewport — no document-level scroll or rubber-band
+     overscroll when the pointer is over a blank area; only inner panels (which
+     declare their own overflow) scroll. */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Fully fix the body to the viewport so it can't be dragged around. */
+body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 /* ── Three-column layout ──────────────────────────────────────────────────── */
@@ -838,6 +850,15 @@ body,
 
 .hms-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Floating contextual action bar entrance (e.g. /sessions selection bar). */
+@keyframes hms-floatbar-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.hms-floatbar-in {
+  animation: hms-floatbar-in 160ms var(--hms-ease-decelerate, ease-out);
 }
 
 /* Show the actions bar (fork + copy) only while hovering the message row.

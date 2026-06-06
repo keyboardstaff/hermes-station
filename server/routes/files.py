@@ -136,11 +136,10 @@ def _under_home(p: Path) -> bool:
     return p == home or home in p.parents
 
 
-def _current_dir() -> Path:
-    """The file browser's current ``workspace`` directory — defaults to the
-    user's home (``~/``) and is switchable to any directory **under** home.
-    A persisted value that's gone / not a dir / escaped home falls back to home.
-    """
+def _current_dir_raw() -> Path | None:
+    """The persisted browse directory, or ``None`` when unset/invalid/escaped.
+    ``None`` means "no explicit choice" — used by the agent-cwd resolver to fall
+    back to its legacy default instead of forcing home."""
     data = _load_workspaces()
     raw = data.get("current_dir")
     if isinstance(raw, str) and raw.strip():
@@ -148,9 +147,15 @@ def _current_dir() -> Path:
             p = Path(raw).expanduser().resolve()
             if p.is_dir() and _under_home(p):
                 return p
-        except Exception:  # noqa: S110 — best-effort; fall through to home
+        except Exception:  # noqa: S110 — best-effort; treat as unset
             pass
-    return _home()
+    return None
+
+
+def _current_dir() -> Path:
+    """The file browser's current ``workspace`` directory — the persisted choice
+    or, by default, the user's home (``~/``)."""
+    return _current_dir_raw() or _home()
 
 
 def _validate_dir_under_home(path_str: str) -> tuple[Path | None, str | None]:
@@ -805,8 +810,15 @@ async def set_workspace_dir(request: web.Request) -> web.Response:
         _save_workspaces({**data, "current_dir": str(resolved)})
 
     await asyncio.to_thread(_persist)
+    # Make the agent aware: point TERMINAL_CWD + persist terminal.cwd at the new
+    # dir, so the LLM's tools and the per-run "Current workspace" preface follow.
+    from server.lib.workspace_cwd import apply_active_workspace_cwd
+    cwd = await asyncio.to_thread(apply_active_workspace_cwd)
     return web.json_response({
-        "dir": str(resolved), "home": str(_home()), "name": resolved.name or str(resolved),
+        "dir": str(resolved),
+        "home": str(_home()),
+        "name": resolved.name or str(resolved),
+        "cwd": cwd,
     })
 
 

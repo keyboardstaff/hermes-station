@@ -347,6 +347,7 @@ export interface Translations {
     rootWorkspace: string;
     switchFolder: string;
     noSubfolders: string;
+    useThisFolder: string;
     loading: string;
     loadingFile: string;
     empty: string;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Folder, ArrowUp } from "lucide-react";
+import { ChevronDown, Folder, CornerLeftUp, Check } from "lucide-react";
 import {
   useWorkspaceDir, useWorkspaceSubdirs, useSetWorkspaceDir, type FileRoot,
 } from "@/hooks/useFiles";
@@ -8,9 +8,13 @@ import type { Translations } from "@/i18n/types";
 /**
  * WorkspacePathSwitcher — the file-browser root control. Replaces the old
  * register-a-workspace picker with upstream desktop's model: the `workspace`
- * root defaults to the user's home (`~/`) and you switch which directory you're
- * browsing by clicking a path crumb (jump up) or picking a subfolder (drill in)
- * — all confined under home (option A). A `~/.hermes` toggle sits beside it.
+ * root defaults to the user's home (`~/`); click the current folder name to open
+ * a folder picker and switch which directory you're browsing — all confined
+ * under home (option A). A `~/.hermes` toggle sits beside it.
+ *
+ * The picker is browse-then-commit: drilling into subfolders only updates the
+ * in-popover path; "Use this folder" commits it (one tree reload), so it doesn't
+ * thrash the tree on every click.
  */
 export function WorkspacePathSwitcher({
   root, onSwitchRoot, f,
@@ -22,11 +26,15 @@ export function WorkspacePathSwitcher({
   const dirQ = useWorkspaceDir();
   const setDir = useSetWorkspaceDir();
   const [open, setOpen] = useState(false);
+  const [navPath, setNavPath] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const isWorkspace = root === "workspace";
   const info = dirQ.data;
-  const crumbs = info ? buildCrumbs(info.home, info.dir) : [];
-  const subdirsQ = useWorkspaceSubdirs(open && info ? info.dir : null);
+
+  // Drive the picker off `navPath` (the path being browsed), seeded from the
+  // committed dir when opened.
+  const nav = useWorkspaceSubdirs(open ? navPath : null);
+  const crumbs = info && navPath ? buildCrumbs(info.home, navPath) : [];
 
   useEffect(() => {
     if (!open) return;
@@ -37,7 +45,13 @@ export function WorkspacePathSwitcher({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const go = (path: string) => {
+  const openPicker = () => {
+    if (!isWorkspace) onSwitchRoot("workspace");
+    setNavPath(info?.dir ?? null);
+    setOpen(true);
+  };
+
+  const commit = (path: string) => {
     setDir.mutate(path, {
       onSuccess: () => { if (!isWorkspace) onSwitchRoot("workspace"); setOpen(false); },
     });
@@ -54,77 +68,101 @@ export function WorkspacePathSwitcher({
         {f?.rootHermes ?? "~/.hermes"}
       </button>
 
-      {/* Workspace path breadcrumb (scrollable) + subfolder drill-down. */}
-      <div
-        onClick={() => { if (!isWorkspace) onSwitchRoot("workspace"); }}
+      {/* Current workspace folder — click to open the folder picker. */}
+      <button
+        type="button"
+        onClick={openPicker}
+        title={info?.dir ?? (f?.rootWorkspace ?? "~")}
         style={{
-          display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, flex: 1,
-          padding: "2px 4px", borderRadius: 'var(--hms-radius-sm)',
-          background: isWorkspace ? "var(--hms-selected-bg)" : "transparent",
-          cursor: isWorkspace ? "default" : "pointer",
+          ...chip(isWorkspace), flex: 1, minWidth: 0, display: "flex", alignItems: "center",
+          gap: 'var(--hms-space-1)', justifyContent: "flex-start",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", minWidth: 0, overflowX: "auto", whiteSpace: "nowrap" }}>
-          {crumbs.map((c, i) => (
-            <span key={c.path} style={{ display: "inline-flex", alignItems: "center" }}>
-              {i > 0 && <span style={{ color: "var(--hms-text-muted)", margin: "0 2px" }}>/</span>}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); go(c.path); }}
-                title={c.path}
-                style={{
-                  border: "none", background: "none", padding: "1px 3px", cursor: "pointer",
-                  color: i === crumbs.length - 1 ? "var(--hms-text)" : "var(--hms-text-muted)",
-                  fontSize: 'var(--hms-text-caption)', fontWeight: i === crumbs.length - 1 ? 600 : 400,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {c.label}
-              </button>
-            </span>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-          title={f?.switchFolder ?? "Switch folder"}
-          aria-label={f?.switchFolder ?? "Switch folder"}
-          style={{ display: "inline-flex", flexShrink: 0, border: "none", background: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 0 }}
-        >
-          <ChevronDown size={14} />
-        </button>
-      </div>
+        <Folder size={12} style={{ flexShrink: 0 }} />
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {info ? folderLabel(info.home, info.dir) : "~"}
+        </span>
+        <ChevronDown size={13} style={{ flexShrink: 0, marginLeft: "auto" }} />
+      </button>
 
       {open && (
         <div
           style={{
             position: "absolute", left: 0, top: "calc(100% + 4px)", zIndex: 9999,
-            minWidth: 200, maxWidth: 320, maxHeight: 320, overflowY: "auto", padding: "4px 0",
-            borderRadius: 'var(--hms-radius-md)', background: "var(--hms-surface)",
-            border: "1px solid var(--hms-border)", boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            width: 280, maxWidth: "80vw", borderRadius: 'var(--hms-radius-md)',
+            background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.16)", overflow: "hidden",
+            display: "flex", flexDirection: "column",
           }}
         >
-          {subdirsQ.data?.parent && (
-            <button type="button" onClick={() => go(subdirsQ.data!.parent!)} style={menuItem}>
-              <ArrowUp size={13} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
-              <span>..</span>
-            </button>
-          )}
-          {(subdirsQ.data?.dirs ?? []).map((d) => (
-            <button key={d.path} type="button" onClick={() => go(d.path)} style={menuItem}>
-              <Folder size={13} style={{ flexShrink: 0, color: "var(--hms-accent)" }} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
-            </button>
-          ))}
-          {subdirsQ.data && subdirsQ.data.dirs.length === 0 && !subdirsQ.data.parent && (
-            <div style={{ padding: "6px 12px", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}>
-              {f?.noSubfolders ?? "No subfolders"}
-            </div>
-          )}
+          {/* Browsing breadcrumb */}
+          <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "6px 10px", borderBottom: "1px solid var(--hms-border)", overflowX: "auto", whiteSpace: "nowrap" }}>
+            {crumbs.map((c, i) => (
+              <span key={c.path} style={{ display: "inline-flex", alignItems: "center" }}>
+                {i > 0 && <span style={{ color: "var(--hms-text-muted)", margin: "0 1px" }}>/</span>}
+                <button
+                  type="button"
+                  onClick={() => setNavPath(c.path)}
+                  title={c.path}
+                  style={{
+                    border: "none", background: "none", padding: "1px 3px", cursor: "pointer",
+                    color: i === crumbs.length - 1 ? "var(--hms-text)" : "var(--hms-text-muted)",
+                    fontSize: 'var(--hms-text-caption)', fontWeight: i === crumbs.length - 1 ? 600 : 400,
+                  }}
+                >
+                  {c.label}
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Subfolders */}
+          <div style={{ maxHeight: 260, overflowY: "auto", padding: "4px 0" }}>
+            {nav.data?.parent && (
+              <button type="button" onClick={() => setNavPath(nav.data!.parent!)} style={menuItem}>
+                <CornerLeftUp size={13} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
+                <span>..</span>
+              </button>
+            )}
+            {(nav.data?.dirs ?? []).map((d) => (
+              <button key={d.path} type="button" onClick={() => setNavPath(d.path)} style={menuItem}>
+                <Folder size={13} style={{ flexShrink: 0, color: "var(--hms-accent)" }} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
+              </button>
+            ))}
+            {nav.data && nav.data.dirs.length === 0 && (
+              <div style={{ padding: "6px 12px", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}>
+                {f?.noSubfolders ?? "No subfolders"}
+              </div>
+            )}
+          </div>
+
+          {/* Commit */}
+          <button
+            type="button"
+            onClick={() => navPath && commit(navPath)}
+            disabled={setDir.isPending || !navPath}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 'var(--hms-space-1)',
+              padding: "7px 12px", border: "none", borderTop: "1px solid var(--hms-border)",
+              background: "var(--hms-accent-weak)", color: "var(--hms-accent)",
+              fontSize: 'var(--hms-text-sm)', fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            <Check size={13} /> {f?.useThisFolder ?? "Use this folder"}
+          </button>
         </div>
       )}
     </div>
   );
+}
+
+/** A compact label for the current dir: `~` for home, else the folder name. */
+function folderLabel(home: string, dir: string): string {
+  const h = home.replace(/\/+$/, "");
+  if (dir === h) return "~";
+  const seg = dir.slice(dir.lastIndexOf("/") + 1);
+  return seg || dir;
 }
 
 function buildCrumbs(home: string, dir: string): Array<{ label: string; path: string }> {
