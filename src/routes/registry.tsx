@@ -12,8 +12,7 @@ import type { LazyExoticComponent, ComponentType } from "react";
 import {
   MessageSquare, LayoutList, Users, Kanban, Clock,
   Sparkles, Puzzle, Cpu,
-  BarChart3, Globe, FileText, FolderOpen,
-  User, Settings, Files,
+  BarChart3, Globe, FileText, FolderOpen, Files,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Translations } from "@/i18n/types";
@@ -59,9 +58,8 @@ export const ROUTES: RouteRecord[] = [
   { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), module: "manage", order: 5 },
   { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      module: "manage", order: 6 },
 
-  // ── UserButton routes (popover, not module nav) ────────────────────
-  { path: "/profile",  labelKey: "profile",  icon: User,          panel: lazy(() => import("@/panels/ProfilePanel")),  module: "manage", order: 99, hidden: true },
-  { path: "/settings", labelKey: "settings", icon: Settings,      panel: lazy(() => import("@/panels/SettingsPanel")), module: "manage", order: 99, hidden: true },
+  // Profile + Settings are NOT routes — they open as modals (see
+  // `useOverlays` / OverlayModals), so config pops in over the current view.
 ];
 
 export const DEFAULT_ROUTE = "/sessions";

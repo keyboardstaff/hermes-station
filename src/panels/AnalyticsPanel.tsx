@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
 import { useNavigate } from "react-router-dom";
+import { useOverlays } from "@/store/overlays";
 import { api } from "@/lib/api";
 import Button from "@/components/ui/Button";
 import {
@@ -73,6 +74,7 @@ function relativeTime(ts?: number): string {
 export default function AnalyticsPanel() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const openSettings = useOverlays((s) => s.openSettings);
   const [days, setDays] = useState<TimeRange>(7);
 
   // ── Status + today summary ─────────────────────────────────────
@@ -114,7 +116,7 @@ export default function AnalyticsPanel() {
 
   const loading = !statusFetched;
   const neutralAccent = "var(--hms-text-muted)";
-  const goToConnection = () => navigate("/settings#connection");
+  const goToConnection = () => openSettings("connection");
 
   // i18n — inline English fallbacks for new keys
   const a = t.analytics;

@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Paperclip, Mic, Send, Square, User, Settings as SettingsIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import SlashMenu from "./SlashMenu";
 import type { SlashCommand } from "@/lib/slash-commands";
 import { useDiscoverSlashCommands } from "@/store/discovery";
@@ -17,6 +16,7 @@ import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
 import { AttachmentChips } from "./composer/AttachmentChips";
 import { useVoiceInput } from "./composer/useVoiceInput";
 import { useComposerAttachments } from "./composer/useComposerAttachments";
+import { useOverlays } from "@/store/overlays";
 import { highlightComposerTokens, composerCurrentToken, type ComposerToken } from "@/lib/composer-tokens";
 
 interface ComposerProps {
@@ -49,7 +49,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
 
   const { caps } = useCapabilityStore();
   const { t } = useI18n();
-  const navigate = useNavigate();
+  const openProfile = useOverlays((s) => s.openProfile);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeRunId = useChatStore((s) => s.activeRunId);
@@ -474,7 +474,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             options={profileChoices}
             onChange={handleProfileChange}
             disabledHint={profileSwitching ? "switching…" : undefined}
-            footerAction={{ label: t.composer.manageProfiles, icon: <SettingsIcon size={11} />, onClick: () => navigate("/profile") }}
+            footerAction={{ label: t.composer.manageProfiles, icon: <SettingsIcon size={11} />, onClick: openProfile }}
           />
 
           {/* Separator */}

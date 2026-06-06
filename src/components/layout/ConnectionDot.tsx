@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
 import { useCapabilityStore } from "@/store/capabilities";
 import { useI18n } from "@/i18n";
+import { useOverlays } from "@/store/overlays";
 import Tooltip from "@/components/ui/Tooltip";
 
 /**
@@ -17,7 +17,7 @@ import Tooltip from "@/components/ui/Tooltip";
 export default function ConnectionDot() {
   const { caps } = useCapabilityStore();
   const { t } = useI18n();
-  const navigate = useNavigate();
+  const openSettings = useOverlays((s) => s.openSettings);
 
   const mode = caps?.mode;
   const colour =
@@ -34,7 +34,7 @@ export default function ConnectionDot() {
     <Tooltip label={tip} placement="right">
       <button
         type="button"
-        onClick={() => navigate("/settings#connection")}
+        onClick={() => openSettings("connection")}
         aria-label={tip}
         style={{
           width: 16,

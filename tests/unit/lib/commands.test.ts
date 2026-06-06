@@ -23,8 +23,8 @@ describe("navCommands", () => {
   it("run() navigates to the route's path", () => {
     const navigate = vi.fn();
     const cmds = navCommands(en, navigate);
-    cmds.find((c) => c.id === "nav:/settings")!.run();
-    expect(navigate).toHaveBeenCalledWith("/settings");
+    cmds.find((c) => c.id === "nav:/logs")!.run();
+    expect(navigate).toHaveBeenCalledWith("/logs");
   });
 });
 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DesktopShell from "@/components/layout/DesktopShell";
 import MobileShell from "@/components/layout/MobileShell";
 import CommandPalette from "@/components/search/CommandPalette";
+import OverlayModals from "@/components/layout/OverlayModals";
 import { useIsMobile } from "@/hooks/useBreakpoint";
 import { useChatStore } from "@/store/chat";
 
@@ -41,6 +42,7 @@ export default function AppShell() {
         ? <MobileShell onOpenPalette={() => setPaletteOpen(true)} />
         : <DesktopShell />}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      <OverlayModals />
     </>
   );
 }

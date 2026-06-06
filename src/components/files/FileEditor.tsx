@@ -154,44 +154,15 @@ export default function FileEditor({
   const isDrawer = variant === "drawer";
   const historyAvailable = !!gitInfo.data?.branch && !isBinary;
 
+  const fileName = path.split("/").pop() || path;
   const rootStyle: React.CSSProperties = isDrawer
     ? { display: "flex", flexDirection: "column", gap: "var(--hms-space-2)", height: "100%", minHeight: 0 }
-    : { display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", height: "100%", minHeight: 0 };
+    : { display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", flex: 1, minWidth: 0, height: "100%", minHeight: 0 };
 
   return (
     <div style={rootStyle}>
-      {!isDrawer && (
-        <div>
-          <h2
-            title={path}
-            style={{
-              margin: 0,
-              fontSize: "var(--hms-text-md)",
-              fontWeight: 600,
-              fontFamily: "monospace",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {path}
-          </h2>
-          <div style={{ fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)", marginTop: 4 }}>
-            {root}
-            {readQuery.data && (
-              <>
-                {" · "}
-                {readQuery.data.size} {f.bytes}
-                {readQuery.data.binary && <> · {f.binaryNote}</>}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* In drawer mode, hide the button row while viewing history to
-          keep the focus on the diff. Page mode keeps buttons visible
-          because the history sidebar coexists with the editor. */}
+      {/* One compact toolbar: file name + meta (page) on the left, status, and
+          the action buttons on the right. Drawer hides it while viewing history. */}
       {!(isDrawer && showHistory) && (
         <div
           style={{
@@ -200,8 +171,34 @@ export default function FileEditor({
             gap: "var(--hms-space-2)",
             padding: isDrawer ? "0 var(--hms-space-3)" : 0,
             flexShrink: 0,
+            minWidth: 0,
           }}
         >
+          {!isDrawer ? (
+            <div title={path} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: "var(--hms-space-2)", overflow: "hidden" }}>
+              <span style={{ fontSize: "var(--hms-text-sm)", fontWeight: 600, fontFamily: "monospace", color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {fileName}
+              </span>
+              <span style={{ fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                {root}{readQuery.data ? ` · ${readQuery.data.size} ${f.bytes}` : ""}
+              </span>
+            </div>
+          ) : (
+            <div style={{ flex: 1, minWidth: 0 }} />
+          )}
+
+          {(err || savedFlash) && (
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--hms-space-2)", minWidth: 0 }}>
+              {err && (
+                <StatusPill kind="error">
+                  <AlertCircle size={11} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{err}</span>
+                </StatusPill>
+              )}
+              {savedFlash && <StatusPill kind="ok">✓ {f.saved}</StatusPill>}
+            </div>
+          )}
+
           <Button
             size="sm"
             variant="primary"
@@ -233,18 +230,6 @@ export default function FileEditor({
               <History size={13} />
             </IconButton>
           )}
-
-          {/* Status messages live in the same row to save vertical space
-              in the drawer; in page mode they wrap to the next line. */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "flex-end", gap: "var(--hms-space-2)" }}>
-            {err && (
-              <StatusPill kind="error">
-                <AlertCircle size={11} />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{err}</span>
-              </StatusPill>
-            )}
-            {savedFlash && <StatusPill kind="ok">✓ {f.saved}</StatusPill>}
-          </div>
 
           <div style={{ position: "relative" }} ref={menuRef}>
             <IconButton

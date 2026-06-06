@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { User, Settings as SettingsIcon, Keyboard, LogOut } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api";
+import { useOverlays } from "@/store/overlays";
 import ShortcutsPanel from "@/components/shortcuts/ShortcutsPanel";
 
 /**
@@ -19,7 +19,8 @@ import ShortcutsPanel from "@/components/shortcuts/ShortcutsPanel";
  */
 export default function UserButton({ collapsed = false }: { collapsed?: boolean }) {
   const { t } = useI18n();
-  const navigate = useNavigate();
+  const openProfile = useOverlays((s) => s.openProfile);
+  const openSettings = useOverlays((s) => s.openSettings);
   const [open, setOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
@@ -44,7 +45,6 @@ export default function UserButton({ collapsed = false }: { collapsed?: boolean 
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const go = (to: string) => { navigate(to); setOpen(false); };
   const onShortcuts = () => { setShortcutsOpen(true); setOpen(false); };
   const onLogout = async () => {
     try { await api.json("/api/logout", "POST"); } catch { /* silent */ }
@@ -114,8 +114,8 @@ export default function UserButton({ collapsed = false }: { collapsed?: boolean 
             zIndex: 40,
           }}
         >
-          <MenuItem icon={<User size={14} />} label={t.user.profile} onClick={() => go("/profile")} />
-          <MenuItem icon={<SettingsIcon size={14} />} label={t.user.settings} onClick={() => go("/settings")} />
+          <MenuItem icon={<User size={14} />} label={t.user.profile} onClick={() => { openProfile(); setOpen(false); }} />
+          <MenuItem icon={<SettingsIcon size={14} />} label={t.user.settings} onClick={() => { openSettings(); setOpen(false); }} />
           <MenuItem icon={<Keyboard size={14} />} label={t.user.shortcuts} onClick={onShortcuts} />
           {showLogout && (
             <>

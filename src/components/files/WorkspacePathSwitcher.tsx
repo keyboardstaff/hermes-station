@@ -45,8 +45,12 @@ export function WorkspacePathSwitcher({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const openPicker = () => {
-    if (!isWorkspace) onSwitchRoot("workspace");
+  const onFolderClick = () => {
+    // From the hermes root, the first click just switches to the workspace root
+    // (browse here); on the workspace root it toggles the folder picker — so a
+    // click doesn't always force the dropdown open.
+    if (!isWorkspace) { onSwitchRoot("workspace"); return; }
+    if (open) { setOpen(false); return; }
     setNavPath(info?.dir ?? null);
     setOpen(true);
   };
@@ -71,7 +75,7 @@ export function WorkspacePathSwitcher({
       {/* Current workspace folder — sizes to its name; click to open the picker. */}
       <button
         type="button"
-        onClick={openPicker}
+        onClick={onFolderClick}
         title={info?.dir ?? (f?.rootWorkspace ?? "~")}
         style={{
           ...chip(isWorkspace), minWidth: 0, maxWidth: 240, display: "flex", alignItems: "center",
@@ -87,6 +91,7 @@ export function WorkspacePathSwitcher({
 
       {open && (
         <div
+          className="hms-pop-in"
           style={{
             position: "absolute", left: 0, top: "calc(100% + 4px)", zIndex: 9999,
             width: 280, maxWidth: "80vw", borderRadius: 'var(--hms-radius-md)',

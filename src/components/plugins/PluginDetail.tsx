@@ -9,7 +9,6 @@ import {
   Cpu,
   Wrench,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
 import {
@@ -20,6 +19,7 @@ import {
   useUpdatePlugin,
 } from "@/hooks/usePlugins";
 import { usePluginsSelection } from "@/store/panel-selection";
+import { useOverlays } from "@/store/overlays";
 
 /**
  * PluginDetail — right-column detail pane for PluginsPanel / PanelTwoColumn.
@@ -30,7 +30,7 @@ import { usePluginsSelection } from "@/store/panel-selection";
 export default function PluginDetail() {
   const { t } = useI18n();
   const p = t.plugins;
-  const navigate = useNavigate();
+  const openProfile = useOverlays((s) => s.openProfile);
   const selected = usePluginsSelection((s) => s.selectedName);
   const setSelected = usePluginsSelection((s) => s.setSelected);
   const { data } = usePlugins();
@@ -222,7 +222,7 @@ export default function PluginDetail() {
         )}
 
         {isMemoryProvider && (
-          <Button size="sm" onClick={() => navigate("/profile")}>
+          <Button size="sm" onClick={openProfile}>
             <Brain size={11} />
             {p?.manageMemory ?? "Manage memory"}
           </Button>

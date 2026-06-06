@@ -17,21 +17,20 @@ const ALL_TABS: Tab[] = ["preferences", "appearance", "security", "system", "adv
 const SETTINGS_TAB_KEY = "hms:settings:tab";
 
 /** Resolve tab from the current hash (used for deep links). */
-function readTabFromHash(): Tab {
-  if (typeof window === "undefined") return "preferences";
-  const h = window.location.hash.replace(/^#/, "");
-  // Old keys kept deep-link-compatible: connection→system, theme→appearance,
-  // config→advanced (the raw config.yaml editor is now the Advanced tab).
-  if (h === "connection") return "system";
-  if (h === "theme") return "appearance";
-  if (h === "config") return "advanced";
-  return (ALL_TABS as string[]).includes(h) ? (h as Tab) : "preferences";
+/** Normalise a requested tab key to a real tab. Legacy aliases stay supported
+ *  for callers (connection→system, theme→appearance, config→advanced). */
+function normalizeTab(key: string | undefined): Tab | null {
+  if (!key) return null;
+  if (key === "connection") return "system";
+  if (key === "theme") return "appearance";
+  if (key === "config") return "advanced";
+  return (ALL_TABS as string[]).includes(key) ? (key as Tab) : null;
 }
 
-/** Initial tab: deep-link hash > localStorage > default. */
-function readTabInitial(): Tab {
-  if (typeof window === "undefined") return "preferences";
-  if (window.location.hash.replace(/^#/, "")) return readTabFromHash();
+/** Initial tab: an explicit request (the modal's `initialTab`) > localStorage > default. */
+function readTabInitial(initialTab?: string): Tab {
+  const requested = normalizeTab(initialTab);
+  if (requested) return requested;
   try {
     const s = localStorage.getItem(SETTINGS_TAB_KEY);
     if (s && (ALL_TABS as string[]).includes(s)) return s as Tab;
@@ -39,33 +38,14 @@ function readTabInitial(): Tab {
   return "preferences";
 }
 
-export default function SettingsPanel() {
+export default function SettingsPanel({ initialTab }: { initialTab?: string } = {}) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<Tab>(readTabInitial);
+  const [tab, setTab] = useState<Tab>(() => readTabInitial(initialTab));
 
-  // Consume deep-link hash on mount so URL stays clean (/settings, not /settings#system).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-  }, []);
-
-  // Persist selected tab to localStorage (no URL changes on manual tab switch).
+  // Persist selected tab to localStorage (so the modal reopens on the last tab).
   useEffect(() => {
     try { localStorage.setItem(SETTINGS_TAB_KEY, tab); } catch { /* localStorage disabled */ }
   }, [tab]);
-
-  // Sync from in-app deep links (e.g. navigate("/settings#connection")).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onHash = () => {
-      setTab(readTabFromHash());
-      window.history.replaceState(null, "", window.location.pathname);
-    };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>

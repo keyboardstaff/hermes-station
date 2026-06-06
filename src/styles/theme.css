@@ -852,6 +852,16 @@ body {
   animation: spin 1s linear infinite;
 }
 
+/* Dropdown / popover entrance (e.g. the workspace folder picker). */
+@keyframes hms-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hms-pop-in {
+  animation: hms-pop-in 140ms var(--hms-ease-decelerate, ease-out);
+  transform-origin: top left;
+}
+
 /* Floating contextual action bar entrance (e.g. /sessions selection bar). */
 @keyframes hms-floatbar-in {
   from { opacity: 0; transform: translate(-50%, 8px); }

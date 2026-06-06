@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useChatStore } from "@/store/chat";
 import { useThemeStore, useToolViewStore } from "@/store/app";
+import { useOverlays } from "@/store/overlays";
 import { navCommands, filterCommands, type Command } from "@/lib/commands";
 
 interface MessageHit {
@@ -39,6 +40,8 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const setShowTokens = useChatStore((s) => s.setShowTokens);
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const openProfile = useOverlays((s) => s.openProfile);
+  const openSettings = useOverlays((s) => s.openSettings);
 
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<MessageHit[]>([]);
@@ -104,6 +107,16 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
       id: "act:tokens", label: t.palette.toggleTokens, group: "action",
       keywords: "tokens usage context ring",
       run: () => setShowTokens(!showTokens),
+    },
+    {
+      id: "act:profile", label: t.nav.profile, group: "action",
+      keywords: "profile soul memory personality account",
+      run: () => openProfile(),
+    },
+    {
+      id: "act:settings", label: t.nav.settings, group: "action",
+      keywords: "settings preferences appearance security system advanced",
+      run: () => openSettings(),
     },
   ];
 

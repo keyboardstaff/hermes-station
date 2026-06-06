@@ -15,7 +15,7 @@ describe("moduleForPath", () => {
     expect(moduleForPath("/cron")).toBe("tasks");
     expect(moduleForPath("/files")).toBe("agent"); // hidden, the chat workspace's full page
     expect(moduleForPath("/models")).toBe("manage");
-    expect(moduleForPath("/settings")).toBe("manage"); // hidden
+    expect(moduleForPath("/logs")).toBe("manage");
   });
 
   it("returns null for an unknown path", () => {
@@ -51,6 +51,5 @@ describe("moduleNavTarget", () => {
     // The whole point: clicking "Agent" while on /chat must not yank to /sessions.
     expect(moduleNavTarget("agent", "/chat")).toBeNull();
     expect(moduleNavTarget("agent", "/files")).toBeNull();
-    expect(moduleNavTarget("manage", "/settings")).toBeNull();
   });
 });
