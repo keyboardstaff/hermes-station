@@ -43,6 +43,7 @@ export const en: Translations = {
     chat: "Chat",
     sessions: "Sessions",
     agents: "Agents",
+    artifacts: "Artifacts",
     kanban: "Kanban",
     cron: "Cron",
     skills: "Skills",
@@ -382,6 +383,25 @@ export const en: Translations = {
     remove: "Remove",
     loading: "Loading…",
     errorLoading: "Failed to load.",
+  },
+
+  artifacts: {
+    subtitle: "Images, files and links collected from a session's messages",
+    filterAll: "All",
+    filterImages: "Images",
+    filterFiles: "Files",
+    filterLinks: "Links",
+    pickSession: "Pick a session",
+    noSessions: "No sessions yet.",
+    noSession: "No session selected",
+    noSessionHint: "Pick a session above to collect its images, files and links.",
+    empty: "No artifacts",
+    emptyHint: "This session has no images, files or links in its messages yet.",
+    loading: "Loading…",
+    openInChat: "Open in chat",
+    open: "Open",
+    prev: "Previous page",
+    next: "Next page",
   },
 
   channels: {

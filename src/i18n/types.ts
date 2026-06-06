@@ -47,6 +47,7 @@ export interface Translations {
     chat: string;
     sessions: string;
     agents: string;
+    artifacts: string;
     kanban: string;
     cron: string;
     skills: string;
@@ -404,6 +405,25 @@ export interface Translations {
     remove: string;
     loading: string;
     errorLoading: string;
+  };
+
+  artifacts: {
+    subtitle: string;
+    filterAll: string;
+    filterImages: string;
+    filterFiles: string;
+    filterLinks: string;
+    pickSession: string;
+    noSessions: string;
+    noSession: string;
+    noSessionHint: string;
+    empty: string;
+    emptyHint: string;
+    loading: string;
+    openInChat: string;
+    open: string;
+    prev: string;
+    next: string;
   };
 
   channels: {

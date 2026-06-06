@@ -43,6 +43,7 @@ export const zh: Translations = {
     chat: "聊天",
     sessions: "会话",
     agents: "协作",
+    artifacts: "产物",
     kanban: "看板",
     cron: "计划任务",
     skills: "技能",
@@ -381,6 +382,25 @@ export const zh: Translations = {
     remove: "移除",
     loading: "加载中…",
     errorLoading: "加载失败。",
+  },
+
+  artifacts: {
+    subtitle: "从会话消息中收集的图片、文件与链接",
+    filterAll: "全部",
+    filterImages: "图片",
+    filterFiles: "文件",
+    filterLinks: "链接",
+    pickSession: "选择会话",
+    noSessions: "暂无会话。",
+    noSession: "未选择会话",
+    noSessionHint: "在上方选择一个会话,收集它的图片、文件与链接。",
+    empty: "暂无产物",
+    emptyHint: "该会话的消息中尚无图片、文件或链接。",
+    loading: "加载中…",
+    openInChat: "在聊天中打开",
+    open: "打开",
+    prev: "上一页",
+    next: "下一页",
   },
 
   channels: {

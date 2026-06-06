@@ -13,7 +13,7 @@ import {
   MessageSquare, LayoutList, Users, Kanban, Clock,
   Sparkles, Puzzle, Cpu,
   BarChart3, Globe, FileText, FolderOpen,
-  User, Settings,
+  User, Settings, Image,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Translations } from "@/i18n/types";
@@ -39,6 +39,7 @@ export const ROUTES: RouteRecord[] = [
   // ── agent ─────────────────────────────────────────────────────────
   { path: "/sessions", labelKey: "sessions", icon: LayoutList,    panel: lazy(() => import("@/panels/SessionsPanel")), module: "agent", order: 1 },
   { path: "/agents",   labelKey: "agents",   icon: Users,         panel: lazy(() => import("@/panels/AgentsPanel")),   module: "agent", order: 2 },
+  { path: "/artifacts", labelKey: "artifacts", icon: Image,        panel: lazy(() => import("@/panels/ArtifactsPanel")), module: "agent", order: 3 },
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",     labelKey: "chat",     icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),     module: "agent", order: 99, hidden: true },
 
