@@ -387,3 +387,126 @@ class TestBlockedRegex:
         assert not files_mod._is_blocked("README.md")
         assert not files_mod._is_blocked("config.yaml")
         assert not files_mod._is_blocked("envfile.txt")
+
+
+# Browse directory (the workspace root) — default ~/, confined under home.
+
+
+class TestBrowseDir:
+    def test_under_home(self, monkeypatch, tmp_path):
+        home = tmp_path / "home"
+        (home / "proj").mkdir(parents=True)
+        monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+        assert files_mod._under_home(home.resolve())
+        assert files_mod._under_home((home / "proj").resolve())
+        assert not files_mod._under_home(tmp_path.resolve())  # parent of home
+
+    def test_validate_dir_under_home(self, monkeypatch, tmp_path):
+        home = tmp_path / "home"
+        home.mkdir()
+        proj = home / "proj"
+        proj.mkdir()
+        monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+        p, err = files_mod._validate_dir_under_home(str(proj))
+        assert err is None and p == proj.resolve()
+
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        assert files_mod._validate_dir_under_home(str(outside))[1] == "outside_home"
+
+        f = home / "f.txt"
+        f.write_text("x")
+        assert files_mod._validate_dir_under_home(str(f))[1] == "not_a_directory"
+        assert files_mod._validate_dir_under_home(str(home / "nope"))[1] == "not_found"
+
+    def test_current_dir_default_and_fallback(self, monkeypatch, tmp_path):
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+        monkeypatch.setattr(files_mod, "_load_workspaces", lambda: {})
+        assert files_mod._current_dir() == home.resolve()
+        # outside-home value → falls back to home
+        monkeypatch.setattr(files_mod, "_load_workspaces", lambda: {"current_dir": str(tmp_path)})
+        assert files_mod._current_dir() == home.resolve()
+        # valid under-home value
+        proj = home / "proj"
+        proj.mkdir()
+        monkeypatch.setattr(files_mod, "_load_workspaces", lambda: {"current_dir": str(proj)})
+        assert files_mod._current_dir() == proj.resolve()
+
+
+@pytest.mark.asyncio
+async def test_get_workspace_dir_defaults_home(app_server, monkeypatch, tmp_path):
+    base, _, _ = app_server
+    home = tmp_path / "home_get"
+    home.mkdir()
+    monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+    monkeypatch.setattr(files_mod, "_load_workspaces", lambda: {})
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/files/workspace/dir") as r:
+            assert r.status == 200, await r.text()
+            data = await r.json()
+    assert data["dir"] == str(home.resolve())
+    assert data["home"] == str(home.resolve())
+
+
+@pytest.mark.asyncio
+async def test_set_workspace_dir_under_home(app_server, monkeypatch, tmp_path):
+    base, _, _ = app_server
+    home = tmp_path / "home_set"
+    home.mkdir()
+    proj = home / "proj"
+    proj.mkdir()
+    store = {"data": {}}
+    monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+    monkeypatch.setattr(files_mod, "_load_workspaces", lambda: store["data"])
+    monkeypatch.setattr(files_mod, "_save_workspaces", lambda d: store.__setitem__("data", d))
+    async with aiohttp.ClientSession() as cs:
+        async with cs.put(
+            f"{base}/api/files/workspace/dir",
+            json={"path": str(proj)},
+            headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+        ) as r:
+            assert r.status == 200, await r.text()
+            data = await r.json()
+    assert data["dir"] == str(proj.resolve())
+    assert store["data"]["current_dir"] == str(proj.resolve())
+
+
+@pytest.mark.asyncio
+async def test_set_workspace_dir_outside_home_rejected(app_server, monkeypatch, tmp_path):
+    base, _, _ = app_server
+    home = tmp_path / "home_rej"
+    home.mkdir()
+    outside = tmp_path / "outside_rej"
+    outside.mkdir()
+    monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+    async with aiohttp.ClientSession() as cs:
+        async with cs.put(
+            f"{base}/api/files/workspace/dir",
+            json={"path": str(outside)},
+            headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+        ) as r:
+            assert r.status == 400, await r.text()
+            data = await r.json()
+    assert data["error"] == "outside_home"
+
+
+@pytest.mark.asyncio
+async def test_workspace_subdirs_lists_and_parent(app_server, monkeypatch, tmp_path):
+    base, _, _ = app_server
+    home = tmp_path / "home_sub"
+    home.mkdir()
+    proj = home / "proj"
+    proj.mkdir()
+    (proj / "a").mkdir()
+    (proj / "b").mkdir()
+    (proj / ".hidden").mkdir()  # hidden → filtered
+    (proj / "file.txt").write_text("x")  # non-dir → filtered
+    monkeypatch.setattr(files_mod, "_home", lambda: home.resolve())
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/files/workspace/subdirs?path={proj}") as r:
+            assert r.status == 200, await r.text()
+            data = await r.json()
+    assert [d["name"] for d in data["dirs"]] == ["a", "b"]
+    assert data["parent"] == str(home.resolve())

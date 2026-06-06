@@ -327,6 +327,8 @@ export const en: Translations = {
   files: {
     rootHermes: "~/.hermes",
     rootWorkspace: "~/workspace",
+    switchFolder: "Switch folder",
+    noSubfolders: "No subfolders",
     loading: "Loading…",
     loadingFile: "Loading file…",
     empty: "Empty",

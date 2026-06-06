@@ -1,5 +1,6 @@
-"""File browser endpoints scoped to two whitelisted roots:
-hermes (~/.hermes) and workspace (~/workspace)."""
+"""File browser endpoints scoped to two whitelisted roots: ``hermes``
+(``~/.hermes``) and ``workspace`` — a switchable "current directory" that
+defaults to the user's home (``~/``) and is confined under home (option A)."""
 
 from __future__ import annotations
 
@@ -125,22 +126,53 @@ def active_workspace() -> tuple[str | None, Path | None]:
     return None, None
 
 
+def _home() -> Path:
+    return Path.home().resolve()
+
+
+def _under_home(p: Path) -> bool:
+    """Option A confinement: the file browser is bounded by the user's home."""
+    home = _home()
+    return p == home or home in p.parents
+
+
+def _current_dir() -> Path:
+    """The file browser's current ``workspace`` directory — defaults to the
+    user's home (``~/``) and is switchable to any directory **under** home.
+    A persisted value that's gone / not a dir / escaped home falls back to home.
+    """
+    data = _load_workspaces()
+    raw = data.get("current_dir")
+    if isinstance(raw, str) and raw.strip():
+        try:
+            p = Path(raw).expanduser().resolve()
+            if p.is_dir() and _under_home(p):
+                return p
+        except Exception:  # noqa: S110 — best-effort; fall through to home
+            pass
+    return _home()
+
+
+def _validate_dir_under_home(path_str: str) -> tuple[Path | None, str | None]:
+    """A browse-dir target: must exist, be a directory, and live under ``~/``."""
+    try:
+        p = Path(path_str).expanduser().resolve()
+    except Exception:
+        return None, "invalid_path"
+    if not p.exists():
+        return None, "not_found"
+    if not p.is_dir():
+        return None, "not_a_directory"
+    if not _under_home(p):
+        return None, "outside_home"
+    return p, None
+
+
 def _root_path(name: str) -> Path | None:
     if name == "hermes":
         return upstream_paths.hermes_home().resolve()
     if name == "workspace":
-        data = _load_workspaces()
-        active_id = data.get("active_id")
-        if active_id:
-            for ws in data.get("workspaces", []):
-                if ws.get("id") == active_id:
-                    try:
-                        p = Path(ws["path"]).expanduser().resolve()
-                        if p.is_dir():
-                            return p
-                    except Exception:  # noqa: S110 — best-effort probe; fall through to default workspace
-                        pass
-        return (Path.home() / "workspace").resolve()
+        return _current_dir()
     return None
 
 
@@ -733,6 +765,87 @@ async def set_active_workspace(request: web.Request) -> web.Response:
     from server.lib.workspace_cwd import apply_active_workspace_cwd
     cwd = await asyncio.to_thread(apply_active_workspace_cwd)
     return web.json_response({"active_id": ws_id, "workspaces": ws_list, "cwd": cwd})
+
+
+# ── Browse directory (the `workspace` file-browser root) ──────────────
+# A single "current directory" the file browser is rooted at — defaults to the
+# user's home (`~/`) and is switchable to any directory **under** home (option
+# A confinement). Independent of the agent's active-workspace / cwd.
+
+_SUBDIRS_CAP = 300
+
+
+@router.get("/api/files/workspace/dir")
+async def get_workspace_dir(request: web.Request) -> web.Response:
+    def _resolve() -> tuple[str, str, str]:
+        cur = _current_dir()
+        return str(cur), str(_home()), (cur.name or str(cur))
+
+    cur, home, name = await asyncio.to_thread(_resolve)
+    return web.json_response({"dir": cur, "home": home, "name": name})
+
+
+@router.put("/api/files/workspace/dir")
+async def set_workspace_dir(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid_json"}, status=400)
+    path_str = (body.get("path") or "").strip()
+    if not path_str:
+        return web.json_response({"error": "path_required"}, status=400)
+
+    resolved, err = await asyncio.to_thread(_validate_dir_under_home, path_str)
+    if err or resolved is None:
+        status = 404 if err == "not_found" else 400
+        return web.json_response({"error": err or "invalid_path"}, status=status)
+
+    def _persist() -> None:
+        data = _load_workspaces()
+        _save_workspaces({**data, "current_dir": str(resolved)})
+
+    await asyncio.to_thread(_persist)
+    return web.json_response({
+        "dir": str(resolved), "home": str(_home()), "name": resolved.name or str(resolved),
+    })
+
+
+@router.get("/api/files/workspace/subdirs")
+async def get_workspace_subdirs(request: web.Request) -> web.Response:
+    """Immediate (non-hidden) subdirectories of a dir under home — feeds the
+    path switcher's drill-down — plus its parent when still under home."""
+    raw = (request.query.get("path") or "").strip()
+
+    def _resolve() -> dict | None:
+        try:
+            base = _current_dir() if not raw else Path(raw).expanduser().resolve()
+        except Exception:
+            return None
+        if not (base.is_dir() and _under_home(base)):
+            return None
+        dirs: list[dict] = []
+        try:
+            children = sorted(base.iterdir(), key=lambda p: p.name.lower())
+        except PermissionError:
+            children = []
+        for child in children:
+            if len(dirs) >= _SUBDIRS_CAP:
+                break
+            if child.name.startswith(".") or _is_blocked(child.name):
+                continue
+            try:
+                if child.is_dir():
+                    dirs.append({"name": child.name, "path": str(child)})
+            except OSError:
+                continue
+        parent = base.parent
+        parent_str = str(parent) if (base != _home() and _under_home(parent)) else None
+        return {"dir": str(base), "home": str(_home()), "parent": parent_str, "dirs": dirs}
+
+    result = await asyncio.to_thread(_resolve)
+    if result is None:
+        return web.json_response({"error": "invalid_path"}, status=400)
+    return web.json_response(result)
 
 
 def attach(app: web.Application) -> None:

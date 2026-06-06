@@ -80,7 +80,8 @@ interface FilesSelectionState {
 }
 
 export const useFilesSelection = create<FilesSelectionState>((set) => ({
-  root: "hermes",
+  // Default to the `workspace` root — it now opens at the user's home (~/).
+  root: "workspace",
   selected: null,
   setRoot: (root) =>
     set((state) => ({

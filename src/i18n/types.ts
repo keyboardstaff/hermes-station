@@ -345,6 +345,8 @@ export interface Translations {
   files: {
     rootHermes: string;
     rootWorkspace: string;
+    switchFolder: string;
+    noSubfolders: string;
     loading: string;
     loadingFile: string;
     empty: string;

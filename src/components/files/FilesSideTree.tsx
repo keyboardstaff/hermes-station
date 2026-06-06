@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Eye, EyeOff, FilePlus2, FolderPlus } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
@@ -8,13 +8,7 @@ import {
   type FileRoot,
 } from "@/hooks/useFiles";
 import { useFilesSelection } from "@/store/panel-selection";
-import {
-  useWorkspaces,
-  useAddWorkspace,
-  useRemoveWorkspace,
-  useSetActiveWorkspace,
-} from "@/hooks/useWorkspaces";
-import { WorkspacePicker } from "./WorkspacePicker";
+import { WorkspacePathSwitcher } from "./WorkspacePathSwitcher";
 import { TreeNode, type CreateState, type CreateProps } from "./FileTreeNode";
 
 /**
@@ -46,22 +40,6 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
   const writeMut = useWriteFile();
   const mkdirMut = useCreateDir();
   const gitInfo = useGitInfo(root);
-  const wsQuery = useWorkspaces();
-  const addWsMut = useAddWorkspace();
-  const removeWsMut = useRemoveWorkspace();
-  const setActiveWsMut = useSetActiveWorkspace();
-
-  // Restore the browse root from the server's persisted active workspace on
-  // first load — the selection store isn't persisted, so a refresh otherwise
-  // always shows `hermes` regardless of what's actually active. The `"hermes"`
-  // sentinel → hermes root; any other active_id (or default) → workspace root.
-  const syncedRef = useRef(false);
-  const activeId = wsQuery.data?.active_id;
-  useEffect(() => {
-    if (syncedRef.current || wsQuery.data === undefined) return;
-    syncedRef.current = true;
-    setRoot(activeId === "hermes" ? "hermes" : "workspace");
-  }, [activeId, wsQuery.data, setRoot]);
 
   const switchRoot = (r: FileRoot) => {
     if (r === root) return;
@@ -161,27 +139,9 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
           one line to save vertical space. The page title is owned by the
           PageTopBar / drawer tab bar, so there's no <h2> here. */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)" }}>
-        {/* Single workspace switcher — ~/.hermes, default ~/workspace, and
-            custom workspaces in one picker; selection drives the file tree
-            root and (for workspaces) the agent's TERMINAL_CWD. */}
-        <WorkspacePicker
-          root={root}
-          data={wsQuery.data}
-          onSelectHermes={() => {
-            // Browse ~/.hermes AND point the agent's cwd there (the "hermes"
-            // active-workspace sentinel) — selecting it used to only switch the
-            // tree root, leaving the agent on the prior workspace.
-            switchRoot("hermes");
-            setActiveWsMut.mutate({ id: "hermes" });
-          }}
-          onSwitch={(id) => {
-            if (root !== "workspace") switchRoot("workspace");
-            setActiveWsMut.mutate({ id });
-          }}
-          onAdd={(path, name) => addWsMut.mutateAsync({ path, name })}
-          onRemove={(id) => removeWsMut.mutate({ id })}
-          f={f}
-        />
+        {/* Root control — ~/.hermes toggle + the `workspace` path switcher
+            (default ~/, click a crumb or pick a subfolder to switch path). */}
+        <WorkspacePathSwitcher root={root} onSwitchRoot={switchRoot} f={f} />
 
         <div style={{ flex: 1 }} />
 

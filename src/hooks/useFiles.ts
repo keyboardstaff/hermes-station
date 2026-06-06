@@ -44,6 +44,57 @@ export type ReadPayload = ReadPayloadText | ReadPayloadBinary;
 
 const TREE_KEY = "files-tree" as const;
 const READ_KEY = "files-read" as const;
+const WS_DIR_KEY = "files-workspace-dir" as const;
+const WS_SUBDIRS_KEY = "files-workspace-subdirs" as const;
+
+// ── Browse directory (the `workspace` root) ───────────────────────────
+// A switchable current directory, default ~/, confined under home (option A).
+
+export interface WorkspaceDirInfo {
+  dir: string;
+  home: string;
+  name: string;
+}
+
+export interface WorkspaceSubdirs {
+  dir: string;
+  home: string;
+  parent: string | null;
+  dirs: Array<{ name: string; path: string }>;
+}
+
+export function useWorkspaceDir() {
+  return useQuery<WorkspaceDirInfo>({
+    queryKey: [WS_DIR_KEY],
+    queryFn: () => api.get<WorkspaceDirInfo>("/api/files/workspace/dir"),
+    staleTime: 30_000,
+  });
+}
+
+export function useWorkspaceSubdirs(path: string | null) {
+  return useQuery<WorkspaceSubdirs>({
+    queryKey: [WS_SUBDIRS_KEY, path],
+    queryFn: () =>
+      api.get<WorkspaceSubdirs>(
+        `/api/files/workspace/subdirs${path ? `?path=${encodeURIComponent(path)}` : ""}`,
+      ),
+    enabled: path !== null,
+    staleTime: 10_000,
+  });
+}
+
+export function useSetWorkspaceDir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) =>
+      api.json<WorkspaceDirInfo>("/api/files/workspace/dir", "PUT", { path }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [WS_DIR_KEY] });
+      qc.invalidateQueries({ queryKey: [WS_SUBDIRS_KEY] });
+      qc.invalidateQueries({ queryKey: [TREE_KEY] });
+    },
+  });
+}
 
 export function useFileTree(root: FileRoot, path: string) {
   return useQuery<TreePayload>({
