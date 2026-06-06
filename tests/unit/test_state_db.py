@@ -12,25 +12,28 @@ import pytest
 def upstream_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     pytest.importorskip("hermes_state", reason="hermes-agent venv required")
     from hermes_state import SessionDB
-
-    db = SessionDB(db_path=tmp_path / "state.db")
-    # Clear the server singleton between tests.
     from server.lib import state_db as st
+
+    # Clear both the default singleton and any per-home SessionDB cache left by
+    # earlier tests so this fixture owns the only visible DB handle.
+    st.close_for_test()
+    db = SessionDB(db_path=tmp_path / "state.db")
     st._singleton = db
     yield db
-    try:
-        db.close()
-    except Exception:
-        pass
-    st._singleton = None
+    st.close_for_test()
 
 
 @pytest.fixture
-async def sessions_client(upstream_db: Any):
+async def sessions_client(upstream_db: Any, monkeypatch: pytest.MonkeyPatch):
     pytest.importorskip("aiohttp")
     from aiohttp import web
     from aiohttp.test_utils import TestClient, TestServer
     from server.routes import chat
+
+    # These route-smokes exercise one isolated tmp state.db, not the user's real
+    # profile fan-out; pin the listing to the default home so /api/sessions
+    # can't aggregate named-profile DBs from the live environment.
+    monkeypatch.setattr(chat, "_profile_homes", lambda: [("default", None)])
 
     app = web.Application()
     chat.attach(app)
