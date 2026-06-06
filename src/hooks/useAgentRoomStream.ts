@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useWSStore } from "@/store/ws";
 import { useChatStore } from "@/store/chat";
-import { useAgentRoomStore } from "@/store/agentRoom";
+import { useAgentRoomStore, currentRoom } from "@/store/agentRoom";
 import { messagePlainText } from "@/lib/branch";
 import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
 import type { RunEventMessage } from "@/lib/ws-types";
@@ -123,9 +123,8 @@ export function useAgentRoomStream() {
     const agent = queueRef.current.agents.shift();
     if (!agent) return;
     const { body, attachments } = queueRef.current;
-    const room = useAgentRoomStore.getState();
 
-    const history = room.messages
+    const history = currentRoom(useAgentRoomStore.getState()).messages
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({ role: m.role, content: messagePlainText(m) }))
       .filter((tn) => tn.content.trim().length > 0);
@@ -181,19 +180,20 @@ export function useAgentRoomStream() {
 
   const send = useCallback(
     async (text: string, attachments?: ComposerAttachment[]) => {
-      const room = useAgentRoomStore.getState();
-      if (room.activeRunId) return; // one fan-out at a time in the MVP room
-      const { agents, body } = parseMentions(text.trim(), room.members);
+      const s = useAgentRoomStore.getState();
+      const cur = currentRoom(s);
+      if (cur.activeRunId) return; // one fan-out at a time per room
+      const { agents, body } = parseMentions(text.trim(), cur.members);
       const routed =
         agents.length > 0
           ? agents
-          : room.responder
-            ? [room.responder]
-            : room.members.slice(0, 1);
+          : cur.responder
+            ? [cur.responder]
+            : cur.members.slice(0, 1);
       const hasAttach = !!attachments && attachments.length > 0;
       if (routed.length === 0 || (!body.trim() && !hasAttach)) return;
 
-      room.appendUser(body, routed.join(", "));
+      s.appendUser(body, routed.join(", "));
       queueRef.current = { agents: [...routed], body, attachments };
       void runNext();
     },
@@ -205,7 +205,7 @@ export function useAgentRoomStream() {
   useEffect(() => {
     if (resumedRef.current) return;
     resumedRef.current = true;
-    const { activeRunId, turnAgent } = useAgentRoomStore.getState();
+    const { activeRunId, turnAgent } = currentRoom(useAgentRoomStore.getState());
     if (!activeRunId) return;
     void (async () => {
       try {
@@ -230,7 +230,7 @@ export function useAgentRoomStream() {
 
   const stop = useCallback(async () => {
     queueRef.current.agents = []; // stop chaining to the remaining agents too
-    const runId = useAgentRoomStore.getState().activeRunId;
+    const runId = currentRoom(useAgentRoomStore.getState()).activeRunId;
     if (!runId) return;
     try {
       await fetch(`/api/runs/${encodeURIComponent(runId)}/stop`, {

@@ -1,45 +1,52 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useAgentRoomStore } from "@/store/agentRoom";
+import { useAgentRoomStore, currentRoom, type Room } from "@/store/agentRoom";
 import { parseMentions } from "@/hooks/useAgentRoomStream";
 
-describe("useAgentRoomStore (agents room roster)", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    useAgentRoomStore.setState({
-      members: [], responder: null, messages: [], activeRunId: null, activeTurnId: null, turnAgent: null,
-    });
-  });
+const room = (): Room => currentRoom(useAgentRoomStore.getState());
+
+const freshRoom = (id: string): Room => ({
+  id, name: "Room 1", members: [], responder: null, messages: [],
+  sessionIds: [], activeRunId: null, activeTurnId: null, turnAgent: null,
+});
+
+function reset() {
+  localStorage.clear();
+  useAgentRoomStore.setState({ rooms: [freshRoom("r1")], currentRoomId: "r1", _streamRoomId: null });
+}
+
+describe("useAgentRoomStore (current-room roster + conversation)", () => {
+  beforeEach(reset);
 
   it("adds a member and makes the first one the responder", () => {
     useAgentRoomStore.getState().addMember("coder");
-    expect(useAgentRoomStore.getState().members).toEqual(["coder"]);
-    expect(useAgentRoomStore.getState().responder).toBe("coder");
+    expect(room().members).toEqual(["coder"]);
+    expect(room().responder).toBe("coder");
   });
 
   it("dedupes repeated adds", () => {
     useAgentRoomStore.getState().addMember("coder");
     useAgentRoomStore.getState().addMember("coder");
-    expect(useAgentRoomStore.getState().members).toEqual(["coder"]);
+    expect(room().members).toEqual(["coder"]);
   });
 
   it("removing the active responder reassigns to the first remaining member", () => {
     const s = useAgentRoomStore.getState();
     s.addMember("coder");
     s.addMember("writer");
-    useAgentRoomStore.getState().setResponder("writer");
-    useAgentRoomStore.getState().removeMember("writer");
-    expect(useAgentRoomStore.getState().members).toEqual(["coder"]);
-    expect(useAgentRoomStore.getState().responder).toBe("coder");
+    s.setResponder("writer");
+    s.removeMember("writer");
+    expect(room().members).toEqual(["coder"]);
+    expect(room().responder).toBe("coder");
   });
 
-  it("persists members to localStorage", () => {
+  it("persists rooms to localStorage", () => {
     useAgentRoomStore.getState().addMember("coder");
-    expect(localStorage.getItem("hms_agent_room_members")).toContain("coder");
+    expect(localStorage.getItem("hms_agent_rooms")).toContain("coder");
   });
 
   it("appendUser tags the message with the routed agent (isolated transcript)", () => {
     useAgentRoomStore.getState().appendUser("hi", "coder");
-    const m = useAgentRoomStore.getState().messages.at(-1);
+    const m = room().messages.at(-1);
     expect(m?.role).toBe("user");
     expect(m?.agent).toBe("coder");
     expect(m?.content).toBe("hi");
@@ -49,15 +56,49 @@ describe("useAgentRoomStore (agents room roster)", () => {
     const s = useAgentRoomStore.getState();
     s.beginTurn("run1", "writer");
     s.appendDelta("answer");
-    const m = useAgentRoomStore.getState().messages.find((x) => x.role === "assistant");
+    const m = room().messages.find((x) => x.role === "assistant");
     expect(m?.agent).toBe("writer");
   });
 
   it("clearConversation empties the room transcript", () => {
     const s = useAgentRoomStore.getState();
     s.appendUser("hi", "coder");
-    useAgentRoomStore.getState().clearConversation();
-    expect(useAgentRoomStore.getState().messages).toEqual([]);
+    s.clearConversation();
+    expect(room().messages).toEqual([]);
+  });
+});
+
+describe("useAgentRoomStore (multiple rooms)", () => {
+  beforeEach(reset);
+
+  it("createRoom adds + selects a new, empty, isolated room", () => {
+    useAgentRoomStore.getState().addMember("coder"); // → r1
+    useAgentRoomStore.getState().createRoom("Design");
+    expect(useAgentRoomStore.getState().rooms).toHaveLength(2);
+    expect(room().name).toBe("Design");
+    expect(room().members).toEqual([]);
+  });
+
+  it("keeps each room's roster isolated", () => {
+    const s = useAgentRoomStore.getState();
+    s.addMember("coder"); // r1
+    s.createRoom("B");
+    const bId = useAgentRoomStore.getState().currentRoomId;
+    s.addMember("writer"); // B
+    s.selectRoom("r1");
+    expect(room().members).toEqual(["coder"]);
+    s.selectRoom(bId);
+    expect(room().members).toEqual(["writer"]);
+  });
+
+  it("deleteRoom always leaves at least one room", () => {
+    useAgentRoomStore.getState().deleteRoom("r1");
+    expect(useAgentRoomStore.getState().rooms.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renameRoom updates the name", () => {
+    useAgentRoomStore.getState().renameRoom("r1", "Planning");
+    expect(useAgentRoomStore.getState().rooms[0].name).toBe("Planning");
   });
 });
 

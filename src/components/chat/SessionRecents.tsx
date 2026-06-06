@@ -7,7 +7,7 @@ import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import { useAgentRoomStore } from "@/store/agentRoom";
 import type { SessionSummary } from "@/lib/hermes-types";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useI18n } from "@/i18n";
 import Tooltip from "@/components/ui/Tooltip";
 
@@ -296,7 +296,10 @@ export default function SessionRecents({
   // is actually open). Elsewhere (e.g. the isolated /agents room) a stale active
   // highlight is misleading.
   const activeOnChat = useLocation().pathname === "/chat";
-  const roomSessionIds = new Set(useAgentRoomStore((s) => s.sessionIds));
+  // Select the stable rooms array (a fresh flatMap()/Set each render would make
+  // zustand re-render forever); derive the id set with useMemo.
+  const agentRooms = useAgentRoomStore((s) => s.rooms);
+  const roomSessionIds = useMemo(() => new Set(agentRooms.flatMap((r) => r.sessionIds)), [agentRooms]);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");

@@ -393,6 +393,10 @@ export interface Translations {
     subtitle: string;
     addAgent: string;
     clearRoom: string;
+    rooms: string;
+    newRoom: string;
+    deleteRoom: string;
+    renameRoomPrompt: string;
     noMembers: string;
     noMembersHint: string;
     respondsLabel: string;

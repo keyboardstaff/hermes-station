@@ -616,3 +616,7 @@ body,
   0%, 100% { background: transparent; }
   12% { background: var(--hms-accent-weak); }
 }
+
+/* Agents room list — reveal the delete affordance on row hover. */
+.hms-room-del { opacity: 0; transition: opacity 120ms; }
+.hms-room-row:hover .hms-room-del { opacity: 1; }
