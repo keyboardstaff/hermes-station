@@ -428,7 +428,6 @@ export interface Translations {
     kindFile: string;
     kindLink: string;
     colName: string;
-    colLocation: string;
     colSession: string;
     items: string;
     itemsImage: string;

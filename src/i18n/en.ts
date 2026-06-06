@@ -406,7 +406,6 @@ export const en: Translations = {
     kindFile: "File",
     kindLink: "Link",
     colName: "Name",
-    colLocation: "Location",
     colSession: "Session",
     items: "items",
     itemsImage: "images",

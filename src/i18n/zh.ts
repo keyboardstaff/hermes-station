@@ -405,7 +405,6 @@ export const zh: Translations = {
     kindFile: "文件",
     kindLink: "链接",
     colName: "名称",
-    colLocation: "位置",
     colSession: "会话",
     items: "项",
     itemsImage: "张图片",

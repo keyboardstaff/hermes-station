@@ -21,9 +21,11 @@ import PageTopBar from "@/components/layout/PageTopBar";
 import SearchInput from "@/components/ui/SearchInput";
 import IconButton from "@/components/ui/IconButton";
 import ImageLightbox, { type LightboxImage } from "@/components/ui/ImageLightbox";
+import DocPreview from "@/components/files/DocPreview";
 
-/** Shared 3-column grid for the file/link table (NAME · LOCATION · SESSION). */
-const TABLE_COLS = "minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 0.7fr)";
+/** Shared 2-column grid for the file/link table (NAME · SESSION). NAME stacks
+ *  the label over its location (path / url), so there's no separate column. */
+const TABLE_COLS = "minmax(0, 1fr) minmax(120px, 200px)";
 
 /**
  * ArtifactsPanel — a cross-session gallery of images / files / links, collected
@@ -107,6 +109,7 @@ export default function ArtifactsPanel() {
   const [filePage, setFilePage] = useState(1);
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
   const [lightbox, setLightbox] = useState<{ images: LightboxImage[]; index: number } | null>(null);
+  const [docPreview, setDocPreview] = useState<{ target: FileTarget; label: string } | null>(null);
 
   useEffect(() => { setImagePage(1); setFilePage(1); }, [artifacts, kind, query]);
   // A fresh index is a clean slate — don't carry stale "broken image" marks
@@ -161,7 +164,7 @@ export default function ArtifactsPanel() {
     if (pos >= 0) setLightbox({ images: lbImages, index: pos });
   };
 
-  const openFile = (target: FileTarget) => {
+  const openFileInFiles = (target: FileTarget) => {
     setFileSelection(target);
     navigate("/files", { state: { from: "artifacts" } });
   };
@@ -279,7 +282,7 @@ export default function ArtifactsPanel() {
                     border: "1px solid var(--hms-border)", overflow: "hidden",
                   }}
                 >
-                  {/* Column headers (NAME · LOCATION · SESSION) */}
+                  {/* Column headers (NAME · SESSION) */}
                   <div
                     style={{
                       display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)',
@@ -290,7 +293,6 @@ export default function ArtifactsPanel() {
                     }}
                   >
                     <span>{a.colName}</span>
-                    <span>{a.colLocation}</span>
                     <span>{a.colSession}</span>
                   </div>
                   {pagedFiles.map((art) => (
@@ -299,7 +301,7 @@ export default function ArtifactsPanel() {
                       art={art}
                       t={a}
                       fileTarget={art.kind === "file" ? resolveFileTarget(art.value, workspaces) : null}
-                      onOpenFile={openFile}
+                      onPreviewFile={(target) => setDocPreview({ target, label: art.label })}
                       onOpenChat={() => openChat(art)}
                     />
                   ))}
@@ -317,6 +319,15 @@ export default function ArtifactsPanel() {
           currentIndex={lightbox.index}
           onIndexChange={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
           onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {docPreview && (
+        <DocPreview
+          target={docPreview.target}
+          label={docPreview.label}
+          onClose={() => setDocPreview(null)}
+          onOpenInFiles={() => { openFileInFiles(docPreview.target); setDocPreview(null); }}
         />
       )}
     </div>
@@ -436,20 +447,19 @@ function ImageCard({
 }
 
 function FileRow({
-  art, t, fileTarget, onOpenFile, onOpenChat,
+  art, t, fileTarget, onPreviewFile, onOpenChat,
 }: {
   art: ArtifactRecord;
   t: ArtifactT;
   fileTarget: FileTarget | null;
-  onOpenFile: (target: FileTarget) => void;
+  onPreviewFile: (target: FileTarget) => void;
   onOpenChat: () => void;
 }) {
   const isLink = art.kind === "link";
   const Icon = isLink ? Link2 : FileText;
   const linkHref = isLink && isWebOpenable(art.href) ? art.href : null;
-  const openTitle = linkHref ? t.open : fileTarget ? t.open : undefined;
 
-  const nameInner = (
+  const titleInner = (
     <>
       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)" }}>
         <Icon size={13} />
@@ -461,7 +471,7 @@ function FileRow({
     </>
   );
 
-  const nameCellStyle: React.CSSProperties = {
+  const titleStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0,
     border: "none", background: "none", padding: 0, textAlign: "left", width: "100%",
     color: "var(--hms-text)", textDecoration: "none",
@@ -477,21 +487,22 @@ function FileRow({
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
-      {/* NAME — opens (link → new tab, file → Files preview), else plain label */}
-      {linkHref ? (
-        <a href={linkHref} target="_blank" rel="noreferrer" title={openTitle ?? art.label} style={nameCellStyle}>{nameInner}</a>
-      ) : fileTarget ? (
-        <button type="button" onClick={() => onOpenFile(fileTarget)} title={openTitle ?? art.label} style={{ ...nameCellStyle, cursor: "pointer" }}>{nameInner}</button>
-      ) : (
-        <div title={art.label} style={nameCellStyle}>{nameInner}</div>
-      )}
-
-      {/* LOCATION — the path / url + copy */}
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0 }}>
-        <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
-          {art.value}
-        </span>
-        <CopyBtn text={art.value} label={t.copy} />
+      {/* NAME — label (opens: link → new tab, file → rendered preview) stacked
+          over its location (path / url) + copy. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)', minWidth: 0 }}>
+        {linkHref ? (
+          <a href={linkHref} target="_blank" rel="noreferrer" title={t.open} style={titleStyle}>{titleInner}</a>
+        ) : fileTarget ? (
+          <button type="button" onClick={() => onPreviewFile(fileTarget)} title={t.open} style={{ ...titleStyle, cursor: "pointer" }}>{titleInner}</button>
+        ) : (
+          <div title={art.label} style={titleStyle}>{titleInner}</div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, paddingLeft: 'var(--hms-space-6)' }}>
+          <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
+            {art.value}
+          </span>
+          <CopyBtn text={art.value} label={t.copy} />
+        </div>
       </div>
 
       {/* SESSION — attribution → jump to chat */}
