@@ -67,3 +67,26 @@ async def test_list_sessions_named_profile_failure_is_skipped(quiet_hms_env, mon
     resp = await chat.list_sessions(make_mocked_request("GET", "/api/sessions"))
     assert resp.status == 200
     assert [s["session_id"] for s in json.loads(resp.body)["sessions"]] == ["s1"]
+
+
+@pytest.mark.asyncio
+async def test_list_sessions_deduplicates_same_session_id(quiet_hms_env, monkeypatch) -> None:
+    import server.routes.chat as chat
+    from aiohttp.test_utils import make_mocked_request
+
+    default_db = MagicMock()
+    default_db.list_sessions_rich.return_value = [
+        {"session_id": "run_dup", "started_at": 100, "title": "default copy"},
+    ]
+    creative_db = MagicMock()
+    creative_db.list_sessions_rich.return_value = [
+        {"session_id": "run_dup", "started_at": 100, "title": "creative copy"},
+    ]
+    monkeypatch.setattr(chat, "_profile_homes", lambda: [("default", None), ("creative", "/h/c")])
+    monkeypatch.setattr(chat, "db", lambda: default_db)
+    monkeypatch.setattr(chat, "db_for_home", lambda h: creative_db)
+
+    resp = await chat.list_sessions(make_mocked_request("GET", "/api/sessions?limit=100"))
+    data = json.loads(resp.body)
+    assert [s["session_id"] for s in data["sessions"]] == ["run_dup"]
+    assert data["sessions"][0]["profile"] == "creative"

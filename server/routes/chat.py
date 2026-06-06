@@ -113,18 +113,28 @@ async def list_sessions(request: web.Request) -> web.Response:
                 merged.append({**row, "profile": name})
 
     sort_key = "last_active" if order_by_last_active else "started_at"
-    merged.sort(key=lambda r: (r.get(sort_key) or r.get("started_at") or 0), reverse=True)
+    merged.sort(
+        key=lambda r: (
+            r.get(sort_key) or r.get("started_at") or 0,
+            0 if r.get("profile") == "default" else 1,
+        ),
+        reverse=True,
+    )
 
     normalised: list[dict] = []
-    for row in merged[offset:offset + limit]:
+    seen: set[str] = set()
+    for row in merged:
         rid = row.get("session_id") or row.get("id")
         if not rid:
             continue
+        if rid in seen:
+            continue
         if "session_id" not in row:
             row = {**row, "session_id": rid}
+        seen.add(rid)
         normalised.append(row)
 
-    return web.json_response({"sessions": normalised})
+    return web.json_response({"sessions": normalised[offset:offset + limit]})
 
 
 @router.get("/api/sessions/{session_id}")
