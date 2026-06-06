@@ -8,17 +8,22 @@ import {
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api";
 import { useChatStore } from "@/store/chat";
+import { useFilesSelection } from "@/store/panel-selection";
 import { formatSessionTitle } from "@/lib/session-title";
 import {
   collectArtifactsForSession,
   type ArtifactRecord, type ArtifactKind, type ArtifactMessage,
 } from "@/lib/artifacts";
+import { resolveFileTarget, type FileTarget, type WorkspaceDir } from "@/lib/file-target";
 import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
 import PageTopBar from "@/components/layout/PageTopBar";
 import SearchInput from "@/components/ui/SearchInput";
 import IconButton from "@/components/ui/IconButton";
 import ImageLightbox, { type LightboxImage } from "@/components/ui/ImageLightbox";
+
+/** Shared 3-column grid for the file/link table (NAME · LOCATION · SESSION). */
+const TABLE_COLS = "minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 0.7fr)";
 
 /**
  * ArtifactsPanel — a cross-session gallery of images / files / links, collected
@@ -79,12 +84,22 @@ export default function ArtifactsPanel() {
   const navigate = useNavigate();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
+  const setFileSelection = useFilesSelection((s) => s.setSelected);
 
   const { data: artifacts, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["artifacts-index"],
     queryFn: buildArtifactIndex,
     staleTime: 30_000,
   });
+
+  // Workspace dirs let us map an absolute file path onto a Files-page root so a
+  // file artifact can open in the file preview (text files), like links do.
+  const { data: wsData } = useQuery<{ workspaces: WorkspaceDir[] }>({
+    queryKey: ["files-workspaces"],
+    queryFn: () => api.get<{ workspaces: WorkspaceDir[] }>("/api/files/workspaces"),
+    staleTime: 60_000,
+  });
+  const workspaces = useMemo(() => wsData?.workspaces ?? [], [wsData]);
 
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<ArtifactKind | "all">("all");
@@ -144,6 +159,11 @@ export default function ArtifactsPanel() {
     const target = pagedImages[index];
     const pos = ok.findIndex((x) => x.id === target.id);
     if (pos >= 0) setLightbox({ images: lbImages, index: pos });
+  };
+
+  const openFile = (target: FileTarget) => {
+    setFileSelection(target);
+    navigate("/files", { state: { from: "artifacts" } });
   };
 
   return (
@@ -211,7 +231,7 @@ export default function ArtifactsPanel() {
             {images.length > 0 && (
               <section>
                 <SectionHeader
-                  label={a.filterImages}
+                  itemsLabel={a.itemsImage}
                   page={curImagePage}
                   pageCount={imagePageCount}
                   total={images.length}
@@ -244,7 +264,7 @@ export default function ArtifactsPanel() {
             {files.length > 0 && (
               <section>
                 <SectionHeader
-                  label={kind === "link" ? a.filterLinks : a.filterFiles}
+                  itemsLabel={kind === "link" ? a.itemsLink : kind === "file" ? a.itemsFile : a.items}
                   page={curFilePage}
                   pageCount={filePageCount}
                   total={files.length}
@@ -259,8 +279,29 @@ export default function ArtifactsPanel() {
                     border: "1px solid var(--hms-border)", overflow: "hidden",
                   }}
                 >
+                  {/* Column headers (NAME · LOCATION · SESSION) */}
+                  <div
+                    style={{
+                      display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)',
+                      padding: "6px 10px", background: "var(--hms-hover-bg)",
+                      borderBottom: "1px solid var(--hms-border)",
+                      fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em",
+                      textTransform: "uppercase", color: "var(--hms-text-muted)",
+                    }}
+                  >
+                    <span>{a.colName}</span>
+                    <span>{a.colLocation}</span>
+                    <span>{a.colSession}</span>
+                  </div>
                   {pagedFiles.map((art) => (
-                    <FileRow key={art.id} art={art} t={a} onOpenChat={() => openChat(art)} />
+                    <FileRow
+                      key={art.id}
+                      art={art}
+                      t={a}
+                      fileTarget={art.kind === "file" ? resolveFileTarget(art.value, workspaces) : null}
+                      onOpenFile={openFile}
+                      onOpenChat={() => openChat(art)}
+                    />
                   ))}
                 </div>
               </section>
@@ -288,17 +329,16 @@ type ArtifactT = {
 };
 
 function SectionHeader({
-  label, page, pageCount, total, onPrev, onNext, prevLabel, nextLabel,
+  itemsLabel, page, pageCount, total, onPrev, onNext, prevLabel, nextLabel,
 }: {
-  label: string; page: number; pageCount: number; total: number;
+  itemsLabel: string; page: number; pageCount: number; total: number;
   onPrev: () => void; onNext: () => void; prevLabel: string; nextLabel: string;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-      <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>
-        {label}
+      <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>
+        {total} {itemsLabel}
       </span>
-      <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", opacity: 0.7 }}>{total}</span>
       {pageCount > 1 && (
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
           <button type="button" onClick={onPrev} disabled={page <= 1} aria-label={prevLabel} style={pagerBtn(page <= 1)}>
@@ -395,62 +435,78 @@ function ImageCard({
   );
 }
 
-function FileRow({ art, t, onOpenChat }: { art: ArtifactRecord; t: ArtifactT; onOpenChat: () => void }) {
+function FileRow({
+  art, t, fileTarget, onOpenFile, onOpenChat,
+}: {
+  art: ArtifactRecord;
+  t: ArtifactT;
+  fileTarget: FileTarget | null;
+  onOpenFile: (target: FileTarget) => void;
+  onOpenChat: () => void;
+}) {
   const isLink = art.kind === "link";
   const Icon = isLink ? Link2 : FileText;
-  const webOpen = isWebOpenable(art.href);
+  const linkHref = isLink && isWebOpenable(art.href) ? art.href : null;
+  const openTitle = linkHref ? t.open : fileTarget ? t.open : undefined;
+
+  const nameInner = (
+    <>
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)" }}>
+        <Icon size={13} />
+      </span>
+      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)" }}>
+        {art.label}
+      </span>
+      {linkHref && <ExternalLink size={12} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />}
+    </>
+  );
+
+  const nameCellStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0,
+    border: "none", background: "none", padding: 0, textAlign: "left", width: "100%",
+    color: "var(--hms-text)", textDecoration: "none",
+  };
 
   return (
     <div
       style={{
-        display: "flex", alignItems: "center", gap: 'var(--hms-space-3)',
+        display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)', alignItems: "center",
         padding: "8px 10px", borderTop: "1px solid var(--hms-border)",
         transition: "background var(--hms-duration-fast) var(--hms-ease-standard)",
       }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
-      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, flexShrink: 0, borderRadius: 6, background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)" }}>
-        <Icon size={14} />
-      </span>
+      {/* NAME — opens (link → new tab, file → Files preview), else plain label */}
+      {linkHref ? (
+        <a href={linkHref} target="_blank" rel="noreferrer" title={openTitle ?? art.label} style={nameCellStyle}>{nameInner}</a>
+      ) : fileTarget ? (
+        <button type="button" onClick={() => onOpenFile(fileTarget)} title={openTitle ?? art.label} style={{ ...nameCellStyle, cursor: "pointer" }}>{nameInner}</button>
+      ) : (
+        <div title={art.label} style={nameCellStyle}>{nameInner}</div>
+      )}
 
-      {/* Name + location */}
-      <div style={{ minWidth: 0, flex: 1 }}>
-        {webOpen ? (
-          <a href={art.href} target="_blank" rel="noreferrer" title={art.label} style={{ display: "block", fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {art.label}
-          </a>
-        ) : (
-          <div title={art.label} style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
-        )}
-        <div title={art.value} style={{ fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
+      {/* LOCATION — the path / url + copy */}
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0 }}>
+        <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
+          {art.value}
+        </span>
+        <CopyBtn text={art.value} label={t.copy} />
       </div>
 
-      {/* Session attribution → jump to chat */}
+      {/* SESSION — attribution → jump to chat */}
       <button
         type="button"
         onClick={onOpenChat}
-        title={art.sessionTitle}
+        title={t.openInChat}
         style={{
-          display: "flex", flexDirection: "column", alignItems: "flex-end", maxWidth: 180, flexShrink: 0,
-          border: "none", background: "none", cursor: "pointer", padding: 0, color: "var(--hms-text-muted)",
+          display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0,
+          border: "none", background: "none", cursor: "pointer", padding: 0, color: "var(--hms-text-muted)", width: "100%",
         }}
       >
-        <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{art.sessionTitle}</span>
+        <span style={{ maxWidth: "100%", fontSize: 'var(--hms-text-xs)', color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.sessionTitle}</span>
         <span style={{ fontSize: 'var(--hms-text-xs)', opacity: 0.7 }}>{TIME_FMT.format(new Date(art.timestamp))}</span>
       </button>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexShrink: 0 }}>
-        <CopyBtn text={art.value} label={t.copy} />
-        {webOpen && (
-          <a href={art.href} target="_blank" rel="noreferrer" title={t.open} aria-label={t.open} style={iconLink}>
-            <ExternalLink size={14} />
-          </a>
-        )}
-        <button type="button" onClick={onOpenChat} title={t.openInChat} aria-label={t.openInChat} style={{ ...iconLink, border: "none", background: "none", cursor: "pointer" }}>
-          <FolderOpen size={14} />
-        </button>
-      </div>
     </div>
   );
 }

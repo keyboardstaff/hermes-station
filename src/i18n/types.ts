@@ -427,6 +427,13 @@ export interface Translations {
     kindImage: string;
     kindFile: string;
     kindLink: string;
+    colName: string;
+    colLocation: string;
+    colSession: string;
+    items: string;
+    itemsImage: string;
+    itemsFile: string;
+    itemsLink: string;
     prev: string;
     next: string;
   };
