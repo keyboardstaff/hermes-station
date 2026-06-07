@@ -207,17 +207,7 @@ export default function KeyEditDialog({
           />
 
           {error && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "6px 10px",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.18)",
-                borderRadius: 6,
-                color: "var(--hms-error-text)",
-                fontSize: 'var(--hms-text-caption)',
-              }}
-            >
+            <div className="hms-settings-notice hms-settings-notice--error" style={{ marginTop: 10 }}>
               {error}
             </div>
           )}

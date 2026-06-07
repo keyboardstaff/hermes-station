@@ -404,17 +404,7 @@ function FallbackTab({ m }: { m: ML | undefined }) {
   // about this rather than expose a broken edit UX.
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 'var(--hms-space-3)',
-          padding: "14px 16px",
-          background: "rgba(245,158,11,0.06)",
-          border: "1px solid rgba(245,158,11,0.18)",
-          borderRadius: 10,
-        }}
-      >
+      <div className="hms-settings-notice hms-settings-notice--warning" style={{ display: "flex", alignItems: "flex-start", gap: 'var(--hms-space-3)', borderRadius: 10 }}>
         <AlertTriangle size={16} style={{ color: "var(--hms-warning)", flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 'var(--hms-text-sm)', lineHeight: 1.5 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
@@ -481,20 +471,7 @@ function KeysTab({ m }: { m: ML | undefined }) {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 'var(--hms-space-2)',
-          marginBottom: 16,
-          padding: "8px 12px",
-          background: "rgba(99,102,241,0.06)",
-          border: "1px solid rgba(99,102,241,0.18)",
-          borderRadius: 6,
-          fontSize: 'var(--hms-text-xs)',
-          color: "var(--hms-text-muted)",
-        }}
-      >
+      <div className="hms-settings-notice hms-settings-notice--info" style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', marginBottom: 16 }}>
         <Info size={12} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
         <span>
           {m?.keysHintV2 ?? "Edits write to ~/.hermes/.env. Restart the gateway for changes to take effect."}

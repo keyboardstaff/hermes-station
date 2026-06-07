@@ -59,7 +59,7 @@ export default function ProviderCard({ provider, isCurrent, labels }: Props) {
                 fontSize: '0.5625rem',
                 padding: "1px 5px",
                 borderRadius: 4,
-                background: "rgba(34,197,94,0.12)",
+                background: "var(--hms-success-weak)",
                 color: "var(--hms-success-text)",
                 fontWeight: 600,
               }}

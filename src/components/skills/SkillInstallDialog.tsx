@@ -198,31 +198,13 @@ export default function SkillInstallDialog({ open, onClose, labels }: Props) {
           </label>
 
           {err && (
-            <div
-              style={{
-                padding: "6px 10px",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.18)",
-                borderRadius: 6,
-                color: "var(--hms-error-text)",
-                fontSize: 'var(--hms-text-caption)',
-              }}
-            >
+            <div className="hms-settings-notice hms-settings-notice--error">
               {err}
             </div>
           )}
 
           {success && (
-            <div
-              style={{
-                padding: "6px 10px",
-                background: "rgba(34,197,94,0.08)",
-                border: "1px solid rgba(34,197,94,0.20)",
-                borderRadius: 6,
-                color: "var(--hms-success-text)",
-                fontSize: 'var(--hms-text-caption)',
-              }}
-            >
+            <div className="hms-settings-notice hms-settings-notice--success">
               ✓ {success}
             </div>
           )}

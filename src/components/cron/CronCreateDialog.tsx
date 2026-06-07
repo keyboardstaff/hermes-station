@@ -167,16 +167,7 @@ export default function CronCreateDialog({ open, onClose, onCreated, labels, ini
           </Field>
 
           {err && (
-            <div
-              style={{
-                padding: "6px 10px",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.18)",
-                borderRadius: 6,
-                color: "var(--hms-error-text)",
-                fontSize: 'var(--hms-text-caption)',
-              }}
-            >
+            <div className="hms-settings-notice hms-settings-notice--error">
               {err}
             </div>
           )}

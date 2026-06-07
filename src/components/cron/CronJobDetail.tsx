@@ -176,10 +176,10 @@ export default function CronJobDetail({ job, onDeleted, labels }: Props) {
               borderRadius: 4,
               fontWeight: 600,
               background: isPaused
-                ? "rgba(245,158,11,0.12)"
+                ? "var(--hms-warning-weak)"
                 : job.state === "error"
-                  ? "rgba(239,68,68,0.10)"
-                  : "rgba(34,197,94,0.10)",
+                  ? "var(--hms-error-weak)"
+                  : "var(--hms-success-weak)",
               color: isPaused
                 ? "var(--hms-warning-text)"
                 : job.state === "error"
@@ -233,7 +233,7 @@ export default function CronJobDetail({ job, onDeleted, labels }: Props) {
         <button
           onClick={handleDelete}
           disabled={del.isPending}
-          style={{ ...iconActionBtn, color: "var(--hms-error-text)", borderColor: "rgba(239,68,68,0.25)" }}
+          style={{ ...iconActionBtn, color: "var(--hms-error-text)", borderColor: "var(--hms-error-border)" }}
         >
           <Trash2 size={12} />
           {labels.delete}
@@ -288,35 +288,14 @@ export default function CronJobDetail({ job, onDeleted, labels }: Props) {
         </Field>
 
         {errMsg && (
-          <div
-            style={{
-              padding: "6px 10px",
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.18)",
-              borderRadius: 6,
-              color: "var(--hms-error-text)",
-              fontSize: 'var(--hms-text-caption)',
-              display: "flex",
-              alignItems: "center",
-              gap: 'var(--hms-space-1)',
-            }}
-          >
+          <div className="hms-settings-notice hms-settings-notice--error" style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)' }}>
             <AlertTriangle size={12} />
             {errMsg}
           </div>
         )}
 
         {savedFlash && (
-          <div
-            style={{
-              padding: "6px 10px",
-              background: "rgba(34,197,94,0.08)",
-              border: "1px solid rgba(34,197,94,0.20)",
-              borderRadius: 6,
-              color: "var(--hms-success-text)",
-              fontSize: 'var(--hms-text-caption)',
-            }}
-          >
+          <div className="hms-settings-notice hms-settings-notice--success">
             ✓ {labels.save}
           </div>
         )}
@@ -361,8 +340,8 @@ export default function CronJobDetail({ job, onDeleted, labels }: Props) {
                 padding: "1px 5px",
                 borderRadius: 4,
                 background: job.last_status === "ok"
-                  ? "rgba(34,197,94,0.10)"
-                  : "rgba(239,68,68,0.10)",
+                  ? "var(--hms-success-weak)"
+                  : "var(--hms-error-weak)",
                 color: job.last_status === "ok" ? "var(--hms-success-text)" : "var(--hms-error-text)",
               }}
             >

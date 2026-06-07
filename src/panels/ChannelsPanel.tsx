@@ -100,19 +100,7 @@ export default function ChannelsPanel() {
       >
 
       {/* Manage keys hint */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 'var(--hms-space-2)',
-          padding: "8px 12px",
-          background: "rgba(99,102,241,0.06)",
-          border: "1px solid rgba(99,102,241,0.18)",
-          borderRadius: 6,
-          fontSize: 'var(--hms-text-xs)',
-          color: "var(--hms-text-muted)",
-        }}
-      >
+      <div className="hms-settings-notice hms-settings-notice--info" style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
         <Plug size={12} style={{ color: "var(--hms-accent)" }} />
         <span style={{ flex: 1 }}>
           {ch?.keysHint ??

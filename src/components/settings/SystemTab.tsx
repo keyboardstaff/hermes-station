@@ -168,9 +168,9 @@ function DiagnosticsSection() {
                         padding: "3px 8px",
                         borderRadius: 4,
                         fontSize: 'var(--hms-text-xs)',
-                        background: ok ? "rgba(34,197,94,0.10)" : "rgba(239,68,68,0.08)",
+                        background: ok ? "var(--hms-success-weak)" : "var(--hms-error-weak)",
                         color: ok ? "var(--hms-success-text)" : "var(--hms-error-text)",
-                        border: `1px solid ${ok ? "rgba(34,197,94,0.20)" : "rgba(239,68,68,0.15)"}`,
+                        border: `1px solid ${ok ? "var(--hms-success-border)" : "var(--hms-error-border)"}`,
                       }}
                     >
                       {ok ? "✓" : "✗"} {label}
@@ -219,31 +219,31 @@ function SectionHeaderBadge({
   if (loading) {
     // Neutral until /api/lifecycle/status returns — avoids misleading red/yellow flash.
     label = "…";
-    bg = "rgba(148,163,184,0.18)";
-    color = "#475569";
+    bg = "var(--hms-hover-bg)";
+    color = "var(--hms-text-muted)";
   } else if (restarting) {
     label = "restarting";
-    bg = "rgba(245,158,11,0.15)";
-    color = "#b45309";
+    bg = "var(--hms-warning-weak)";
+    color = "var(--hms-warning-text)";
   } else if (crashed) {
     label = t.connection.crashed;
-    bg = "rgba(239,68,68,0.15)";
+    bg = "var(--hms-error-weak)";
     color = "var(--hms-error-text)";
   } else if (notInstalled) {
     label = "not installed";
-    bg = "rgba(245,158,11,0.15)";
-    color = "#b45309";
+    bg = "var(--hms-warning-weak)";
+    color = "var(--hms-warning-text)";
   } else if (running) {
     label = "running";
-    bg = "rgba(34,197,94,0.15)";
+    bg = "var(--hms-success-weak)";
     color = "var(--hms-success-text)";
   } else if (unmanaged) {
     label = "not managed";
-    bg = "rgba(148,163,184,0.18)";
-    color = "#475569";
+    bg = "var(--hms-hover-bg)";
+    color = "var(--hms-text-muted)";
   } else {
     label = "stopped";
-    bg = "rgba(239,68,68,0.15)";
+    bg = "var(--hms-error-weak)";
     color = "var(--hms-error-text)";
   }
   return (

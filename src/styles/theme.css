@@ -1173,6 +1173,27 @@ body {
   color: var(--hms-error-dark);
 }
 
+.hms-settings-notice--success {
+  background: var(--hms-success-weak);
+  border: 1px solid var(--hms-success-border);
+  color: var(--hms-success-text);
+}
+
+.hms-settings-notice--info {
+  background: var(--hms-accent-weak);
+  border: 1px solid color-mix(in srgb, var(--hms-accent) 24%, transparent);
+  color: var(--hms-text-muted);
+}
+
+/* CronInfoBar — full-row info bar inside the cron list shell */
+.hms-cron-info-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  margin: 8px 10px 0;
+  flex-shrink: 0;
+}
+
 /* ── Plugin auth notice ───────────────────────────────────────────── */
 
 .hms-plugin-auth-notice {
