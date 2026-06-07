@@ -31,8 +31,9 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
   ];
   const label = current === ALL_PROFILES ? t.sessions.allProfiles : current;
 
+  // Sidebar (fullWidth) wants breathing room; the inline pill (topbar) doesn't.
   return (
-    <div style={{ padding: "var(--hms-space-1) var(--hms-space-2)" }}>
+    <div style={fullWidth ? { padding: "var(--hms-space-1) var(--hms-space-2)" } : undefined}>
       <PopupSelect
         icon={<Layers size={13} />}
         label={label}

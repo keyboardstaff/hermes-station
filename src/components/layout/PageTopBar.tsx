@@ -1,4 +1,5 @@
 import type { ReactNode, CSSProperties } from "react";
+import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
 
 /**
  * PageTopBar — the single "page top protocol" for every routed panel.
@@ -34,6 +35,7 @@ export default function PageTopBar({
   actions,
   context,
   style,
+  showProfileScope = false,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -44,6 +46,10 @@ export default function PageTopBar({
   /** Full-width row below the header (filters, tabs, breadcrumb). */
   context?: ReactNode;
   style?: CSSProperties;
+  /** Show the profile view-scope picker in the actions area — for pages whose
+   *  data is profile-scoped (skills / models / cron / mcp / files). Self-hides
+   *  for single-profile users, so it's a no-op there. */
+  showProfileScope?: boolean;
 }) {
   return (
     <div className="hms-page-topbar" style={style}>
@@ -55,7 +61,12 @@ export default function PageTopBar({
             <span className="hms-page-topbar-subtitle">{subtitle}</span>
           )}
         </div>
-        {actions && <div className="hms-page-topbar-actions">{actions}</div>}
+        {(showProfileScope || actions) && (
+          <div className="hms-page-topbar-actions">
+            {showProfileScope && <ProfileScopeSelector fullWidth={false} />}
+            {actions}
+          </div>
+        )}
       </div>
       {context && (
         <div className="hms-page-topbar-context">{context}</div>

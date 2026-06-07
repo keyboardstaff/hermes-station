@@ -44,7 +44,7 @@ export default function SkillsPanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <PageTopBar title={t.nav.skills} />
+      <PageTopBar title={t.nav.skills} showProfileScope />
       <div style={{ flex: 1, minHeight: 0 }}>
         <PanelTwoColumn
           list={<SkillsSideList />}

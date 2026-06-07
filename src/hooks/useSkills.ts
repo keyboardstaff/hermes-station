@@ -13,6 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useScopeParam } from "@/hooks/useProfiles";
 
 // ── Raw shape ────────────────────────────────────────────────────────
 
@@ -47,10 +48,13 @@ const LIST_KEY = ["skills"] as const;
 // ── List hook ────────────────────────────────────────────────────────
 
 export function useSkills() {
+  const profile = useScopeParam();
   return useQuery<Skill[]>({
-    queryKey: LIST_KEY,
+    // Profile in the key so a view-scope switch refetches under that home.
+    queryKey: [...LIST_KEY, profile ?? null],
     queryFn: async () => {
-      const data = await api.get<SkillsPayload>("/api/skills");
+      const q = profile ? `?profile=${encodeURIComponent(profile)}` : "";
+      const data = await api.get<SkillsPayload>(`/api/skills${q}`);
       const skills = data?.skills ?? [];
       return skills.map((s): Skill => ({
         name: s.name,
@@ -79,10 +83,12 @@ export interface Toolset {
 }
 
 export function useToolsets() {
+  const profile = useScopeParam();
   return useQuery<Toolset[]>({
-    queryKey: ["toolsets"],
+    queryKey: ["toolsets", profile ?? null],
     queryFn: async () => {
-      const data = await api.get<{ toolsets: Toolset[] }>("/api/toolsets");
+      const q = profile ? `?profile=${encodeURIComponent(profile)}` : "";
+      const data = await api.get<{ toolsets: Toolset[] }>(`/api/toolsets${q}`);
       return data?.toolsets ?? [];
     },
     staleTime: 30_000,

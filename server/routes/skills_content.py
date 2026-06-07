@@ -19,6 +19,8 @@ from pathlib import Path
 
 from aiohttp import web
 
+from server.lib.profile_run import profile_home_override
+from server.lib.route_helpers import profile_arg
 from server.lib.upstream_shim import _agent_root, shim
 
 logger = logging.getLogger(__name__)
@@ -93,15 +95,22 @@ def _classify_source(name: str, hub: dict[str, str]) -> str:
 
 
 @router.get("/api/skills")
-async def list_skills(_request: web.Request) -> web.Response:
+async def list_skills(request: web.Request) -> web.Response:
     """Station-native skills list with correct provenance.
 
     Mirrors upstream ``/api/skills`` (``_find_all_skills`` + disabled set) and
     enriches each row with a ``source`` derived in-process — the dashboard
     plugin-hub merge keyed on platform-plugin names, which never matched skill
-    names (every row showed ``unknown``)."""
+    names (every row showed ``unknown``).
+
+    ``?profile=<name>`` reads that profile's own skills (its ``HERMES_HOME``)
+    via the in-process home override — the read-only view scope; omitted/default
+    reads the process home unchanged."""
     if not shim.flags.agent_importable:
         return web.json_response({"error": "Agent not importable on this host."}, status=404)
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
     find_all = shim.skills.find_all
     get_disabled = shim.skills.get_disabled
     load_config = shim.skills.load_config
@@ -109,56 +118,65 @@ async def list_skills(_request: web.Request) -> web.Response:
         return web.json_response({"error": "skills_unavailable"}, status=503)
 
     try:
-        disabled = get_disabled(load_config())
-        raw = find_all(skip_disabled=True) or []
+        # find_all / load_config / _classify_source all resolve paths from the
+        # active HERMES_HOME, so scope the whole read (incl. provenance) under it.
+        with profile_home_override(profile):
+            disabled = get_disabled(load_config())
+            raw = find_all(skip_disabled=True) or []
+            hub = _hub_sources()
+            skills = [
+                {
+                    "name": s.get("name", ""),
+                    "description": s.get("description", ""),
+                    "category": s.get("category"),
+                    "enabled": s.get("name") not in disabled,
+                    "source": _classify_source(s.get("name", ""), hub),
+                }
+                for s in raw
+                if s.get("name")
+            ]
     except Exception:
         logger.exception("[hms.skills] list failed")
         return web.json_response({"error": "list_failed"}, status=500)
 
-    hub = _hub_sources()
-    skills = [
-        {
-            "name": s.get("name", ""),
-            "description": s.get("description", ""),
-            "category": s.get("category"),
-            "enabled": s.get("name") not in disabled,
-            "source": _classify_source(s.get("name", ""), hub),
-        }
-        for s in raw
-        if s.get("name")
-    ]
     return web.json_response({"skills": skills})
 
 
 @router.get("/api/toolsets")
-async def list_toolsets(_request: web.Request) -> web.Response:
+async def list_toolsets(request: web.Request) -> web.Response:
     """Configurable toolsets with enabled/configured state + their tools.
 
     Mirrors upstream ``/api/tools/toolsets`` via the shim — powers the Skills
-    page's Toolsets view."""
+    page's Toolsets view. ``?profile=`` scopes the read to that profile's home."""
     if not shim.flags.agent_importable:
         return web.json_response({"error": "Agent not importable on this host."}, status=404)
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
     ts = shim.toolsets
     if ts.list_configurable is None or ts.get_platform_tools is None or ts.load_config is None:
         return web.json_response({"error": "toolsets_unavailable"}, status=503)
     try:
-        config = ts.load_config()
-        enabled = set(ts.get_platform_tools(config, "cli", include_default_mcp_servers=False) or [])
-        out = []
-        for name, label, desc in ts.list_configurable():
-            try:
-                tools = sorted(set(ts.resolve(name))) if ts.resolve else []
-            except Exception:
-                tools = []
-            is_enabled = name in enabled
-            out.append({
-                "name": name,
-                "label": label,
-                "description": desc,
-                "enabled": is_enabled,
-                "configured": bool(ts.has_keys(name, config)) if ts.has_keys else False,
-                "tools": tools,
-            })
+        with profile_home_override(profile):
+            config = ts.load_config()
+            enabled = set(
+                ts.get_platform_tools(config, "cli", include_default_mcp_servers=False) or []
+            )
+            out = []
+            for name, label, desc in ts.list_configurable():
+                try:
+                    tools = sorted(set(ts.resolve(name))) if ts.resolve else []
+                except Exception:
+                    tools = []
+                is_enabled = name in enabled
+                out.append({
+                    "name": name,
+                    "label": label,
+                    "description": desc,
+                    "enabled": is_enabled,
+                    "configured": bool(ts.has_keys(name, config)) if ts.has_keys else False,
+                    "tools": tools,
+                })
     except Exception:
         logger.exception("[hms.toolsets] list failed")
         return web.json_response({"error": "list_failed"}, status=500)

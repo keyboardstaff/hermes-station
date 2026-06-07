@@ -11,6 +11,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useProfileScope, scopeProfileParam } from "@/store/profile-scope";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -224,6 +225,16 @@ export function useActiveProfile() {
     staleTime: 30_000,
     retry: 1,
   });
+}
+
+/** The `?profile=` value for the current view-scope (a concrete profile name,
+ *  or `undefined` for the default home / All-profiles view). Reacts to both the
+ *  scope store and the active profile, so a scope switch refetches scoped page
+ *  reads under the right home. Single-profile users always get `undefined`. */
+export function useScopeParam(): string | undefined {
+  const scope = useProfileScope((s) => s.scope);
+  const { data: active } = useActiveProfile();
+  return scopeProfileParam(scope, active?.current);
 }
 
 /** Set the sticky active profile. The caller is responsible for triggering
