@@ -197,4 +197,42 @@ describe("chat store", () => {
     expect(textSegs).toHaveLength(1);
     if (textSegs[0].type === "text") expect(textSegs[0].content).toBe("some text");
   });
+
+  // Every run terminal/abort path (terminal frame, stop, resume-on-mount,
+  // reconnect guard) funnels its "clear the trailing streaming bubble" through
+  // this one reducer — these pin the behaviour the inlined copies had.
+  describe("settleStreamingMessage", () => {
+    it("flips the trailing streaming bubble to done, preserving content", () => {
+      const s = useChatStore.getState();
+      s.appendDelta("partial answer");
+      expect(useChatStore.getState().messages[0].streaming).toBe(true);
+      s.settleStreamingMessage();
+      const last = useChatStore.getState().messages[0];
+      expect(last.streaming).toBe(false);
+      const seg = last.segments?.[0];
+      if (seg?.type === "text") expect(seg.content).toBe("partial answer");
+    });
+
+    it("is a no-op (same messages reference) when the tail isn't streaming", () => {
+      const { appendMessage, settleStreamingMessage } = useChatStore.getState();
+      appendMessage({ id: "u1", role: "user", content: "hi", createdAt: 0 });
+      const before = useChatStore.getState().messages;
+      settleStreamingMessage();
+      expect(useChatStore.getState().messages).toBe(before);
+    });
+
+    it("settles only the LAST message — an earlier streaming bubble is untouched", () => {
+      useChatStore.setState({
+        messages: [
+          { id: "a1", role: "assistant", content: "",
+            segments: [{ type: "text", content: "x" }], streaming: true, createdAt: 0 },
+          { id: "u2", role: "user", content: "next", createdAt: 1 },
+        ],
+      });
+      useChatStore.getState().settleStreamingMessage();
+      // Tail (u2) isn't streaming → no-op; the historic semantics never reached
+      // past the trailing bubble.
+      expect(useChatStore.getState().messages[0].streaming).toBe(true);
+    });
+  });
 });

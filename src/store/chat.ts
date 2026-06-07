@@ -65,6 +65,13 @@ interface ChatState {
   clearStreamingContent: () => void;
   /** Replace leaked pre-tool text with run.completed.output. */
   setFinalContent: (text: string) => void;
+  /** Settle the trailing streaming bubble: if the last message is still
+   *  streaming, mark it done. The SINGLE reconciliation point every run
+   *  terminal / abort path funnels through (terminal frame, stop,
+   *  resume-on-mount, reconnect guard) so the "clear the trailing streaming
+   *  bubble" reduction lives in exactly one place. No-op when the tail isn't a
+   *  live stream. */
+  settleStreamingMessage: () => void;
   setActiveRunId: (id: string | null) => void;
   setActiveTurn: (id: string | null) => void;
   setRunningForSession: (sessionId: string, runId: string) => void;
@@ -348,6 +355,20 @@ export const useChatStore = create<ChatState>()(
       const newSeg: MessageSegment = { type: "text", content: text };
       msgs[streamIdx] = { ...target, segments: [...nonText, newSeg] };
       return { messages: msgs };
+    }),
+
+  settleStreamingMessage: () =>
+    set((s) => {
+      // Key off the LAST message specifically (the trailing bubble), not the
+      // turn-keyed lookup — a run terminal/abort settles whatever is currently
+      // streaming at the tail. Atomic read-modify-write inside set().
+      const last = s.messages[s.messages.length - 1];
+      if (!last?.streaming) return {};
+      return {
+        messages: s.messages.map((m) =>
+          m.id === last.id ? { ...m, streaming: false } : m
+        ),
+      };
     }),
 
   appendApprovalNoticeSegment: (choice, command) =>

@@ -86,15 +86,7 @@ export function useRunsStream() {
         setActiveTurn(null);
         const { activeSessionId: sid } = useChatStore.getState();
         if (sid) clearRunningForSession(sid);
-        const msgs = useChatStore.getState().messages;
-        const last = msgs[msgs.length - 1];
-        if (last?.streaming) {
-          useChatStore.setState({
-            messages: msgs.map((m) =>
-              m.id === last.id ? { ...m, streaming: false } : m
-            ),
-          });
-        }
+        useChatStore.getState().settleStreamingMessage();
       })
       .catch(() => { /* best-effort */ });
   }, [wsStatus, setActiveRunId, setActiveTurn, clearRunningForSession]);
@@ -215,16 +207,7 @@ export function useRunsStream() {
             if (msg.event === "run.completed" && msg.usage) {
               useChatStore.getState().setLastUsage(msg.usage);
             }
-            const store = useChatStore.getState();
-            const msgs = store.messages;
-            const last = msgs[msgs.length - 1];
-            if (last?.streaming) {
-              useChatStore.setState({
-                messages: msgs.map((m) =>
-                  m.id === last.id ? { ...m, streaming: false } : m
-                ),
-              });
-            }
+            useChatStore.getState().settleStreamingMessage();
             setActiveRunId(null);
             // Cleared AFTER setFinalContent above (which still needs the turn id).
             setActiveTurn(null);
@@ -353,15 +336,7 @@ export function useRunsStream() {
         } else {
           setActiveRunId(null);
           if (sid) clearRunningForSession(sid);
-          const msgs = useChatStore.getState().messages;
-          const last = msgs[msgs.length - 1];
-          if (last?.streaming) {
-            useChatStore.setState({
-              messages: msgs.map((m) =>
-                m.id === last.id ? { ...m, streaming: false } : m
-              ),
-            });
-          }
+          useChatStore.getState().settleStreamingMessage();
         }
       } catch {
         if (!cancelled) setActiveRunId(null);
@@ -528,15 +503,7 @@ export function useRunsStream() {
     setActiveTurn(null);
     if (sid) clearRunningForSession(sid);
     detach();
-    const msgs = useChatStore.getState().messages;
-    const last = msgs[msgs.length - 1];
-    if (last?.streaming) {
-      useChatStore.setState({
-        messages: msgs.map((m) =>
-          m.id === last.id ? { ...m, streaming: false } : m
-        ),
-      });
-    }
+    useChatStore.getState().settleStreamingMessage();
   }, [send, setActiveRunId, setActiveTurn, clearRunningForSession, detach]);
 
   return { sendMessage, stopRun };

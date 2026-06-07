@@ -229,7 +229,10 @@ are the places future work most easily destabilizes:
   defect. **Any third path must emit terminals via `_terminal_frame()`.**
 - **Transcript reconciliation.** [`useRunsStream.ts`](./src/hooks/useRunsStream.ts)
   + [`chat.ts`](./src/store/chat.ts) carry the projection-vs-truth
-  reconciliation. The "clear the trailing streaming bubble" operation is
-  duplicated across ≥4 control-flow paths (reconnect guard, terminal
-  frame, resume-on-mount, stop). This is correct today but fragile;
-  centralize it before it drifts.
+  reconciliation. The "clear the trailing streaming bubble" operation —
+  once inlined across 4 control-flow paths (reconnect guard, terminal
+  frame, resume-on-mount, stop) — now funnels through the single
+  `settleStreamingMessage()` store reducer; every run terminal/abort path
+  calls it, so the reduction lives in one place (pinned by `chat.test.ts`).
+  **Any new run terminal/abort path must settle through that reducer, not
+  re-inline the tail walk.**
