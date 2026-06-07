@@ -27,6 +27,7 @@ export default function StatusBadge({
       style={{
         display: "inline-flex",
         alignItems: "center",
+        gap: "var(--hms-space-1)",
         padding: "1px 6px",
         borderRadius: "var(--hms-radius-sm)",
         fontSize: "0.625rem",

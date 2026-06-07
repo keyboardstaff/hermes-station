@@ -134,17 +134,17 @@ export default function PluginDetail() {
               <StatusBadge tone="muted" uppercase={false}>{plugin.source}</StatusBadge>
             )}
             {supportsCtxLlm && (
-              <StatusBadge tone="accent" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
+              <StatusBadge tone="accent" uppercase={false}>
                 <Cpu size={10} /> ctx.llm
               </StatusBadge>
             )}
             {hasToolOverride && (
-              <StatusBadge tone="warning" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
+              <StatusBadge tone="warning" uppercase={false}>
                 <Wrench size={10} /> tool override
               </StatusBadge>
             )}
             {isActiveMemoryProvider && (
-              <StatusBadge tone="success" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
+              <StatusBadge tone="success" uppercase={false}>
                 <Brain size={10} /> {p?.activeMemory ?? "active memory"}
               </StatusBadge>
             )}

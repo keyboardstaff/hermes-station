@@ -155,9 +155,6 @@ export default function FileEditor({
   const historyAvailable = !!gitInfo.data?.branch && !isBinary;
 
   const fileName = path.split("/").pop() || path;
-  const rootStyle: React.CSSProperties = isDrawer
-    ? { display: "flex", flexDirection: "column", gap: "var(--hms-space-2)", height: "100%", minHeight: 0 }
-    : { display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", flex: 1, minWidth: 0, height: "100%", minHeight: 0 };
 
   return (
     <div className="hms-file-editor" data-variant={isDrawer ? "drawer" : "page"}>

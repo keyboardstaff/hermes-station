@@ -329,11 +329,11 @@ export function ModelPicker({
                           fontSize: 'var(--hms-text-caption)',
                           color: isSelected ? "var(--hms-text)" : "var(--hms-text-muted)",
                         }}
-                        onMouseEnter={(e) => {
+                        onMouseEnter={() => {
                           if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current);
                           setEffortFlyout(true);
                         }}
-                        onMouseLeave={(e) => {
+                        onMouseLeave={() => {
                           effortLeaveRef.current = setTimeout(() => setEffortFlyout(false), 160);
                         }}
                       >

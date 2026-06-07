@@ -16,6 +16,7 @@ import ModelPickerDialog from "@/components/models/ModelPickerDialog";
 import KeyRow from "@/components/models/KeyRow";
 import ParetoSlider from "@/components/models/ParetoSlider";
 import Button from "@/components/ui/Button";
+import StatusBadge from "@/components/ui/StatusBadge";
 import { RefreshCw, ArrowRightLeft, Info, AlertTriangle } from "lucide-react";
 
 /**
