@@ -136,28 +136,14 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-3)' }}>
+    <div className="hms-models-tab">
       {/* Current model card */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 'var(--hms-space-3)',
-          padding: "14px 16px",
-          background: "var(--hms-surface)",
-          border: "1px solid var(--hms-border)",
-          borderRadius: 10,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
-            {m?.currentModel ?? "Current model"}
-          </div>
-          <div style={{ fontFamily: "monospace", fontSize: 'var(--hms-text-body)', fontWeight: 600 }}>
-            {currentModel || "--"}
-          </div>
+      <div className="hms-models-current">
+        <div className="hms-models-main">
+          <div className="hms-models-label">{m?.currentModel ?? "Current model"}</div>
+          <div className="hms-models-current-model">{currentModel || "--"}</div>
           {currentProvider && (
-            <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginTop: 2 }}>
+            <div className="hms-models-current-via">
               via {currentProvider}
               {data.model_default && currentModel !== data.model_default && (
                 <span> · {m?.default ?? "default"}: {data.model_default}</span>
@@ -177,10 +163,8 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
         </div>
       )}
 
-      <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
+      <div className="hms-models-toolbar">
+        <span className="hms-models-muted-caption">
           {providers.length} {m?.providersLabel ?? "providers"}
         </span>
         <Button size="sm" onClick={refreshProviders}>
@@ -191,23 +175,10 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
 
       {/* Provider summary cards (without Test button — keep the layout compact) */}
       {providers.map((p) => (
-        <div
-          key={p.slug}
-          style={{
-            padding: "10px 14px",
-            background: "var(--hms-surface)",
-            border: `1px solid ${p.is_current ? "var(--hms-text)" : "var(--hms-border)"}`,
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 'var(--hms-space-3)',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 'var(--hms-space-2)', alignItems: "center" }}>
-              <span style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600 }}>
-                {p.name || p.slug}
-              </span>
+        <div key={p.slug} className="hms-models-provider" data-current={p.is_current || undefined}>
+          <div className="hms-models-main">
+            <div className="hms-models-provider-namerow">
+              <span className="hms-models-provider-name">{p.name || p.slug}</span>
               {p.is_current && (
                 <StatusBadge tone="success" uppercase={false}>{m?.current ?? "current"}</StatusBadge>
               )}
@@ -215,7 +186,7 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
                 <StatusBadge tone="muted" uppercase={false}>{p.source}</StatusBadge>
               )}
             </div>
-            <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginTop: 2 }}>
+            <div className="hms-models-provider-count">
               {p.models?.length ?? p.total_models ?? 0} {m?.modelsCount ?? "models"}
             </div>
           </div>
@@ -223,7 +194,7 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
       ))}
 
       {flags?.pareto_code_router && (
-        <div style={{ marginTop: 12 }}>
+        <div className="hms-models-pareto">
           <ParetoSlider
             value={0.5}
             enabled
@@ -294,8 +265,8 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)' }}>
-      <p style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", margin: "0 0 8px" }}>
+    <div className="hms-models-aux">
+      <p className="hms-models-hint">
         {m?.auxiliaryHintV2 ?? "Each upstream task uses an auxiliary model. Auto resolves to the primary provider's recommended model."}
       </p>
 
@@ -311,42 +282,9 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
         const model = entry?.model || "";
         const isAuto = provider === "auto" || !model;
         return (
-          <div
-            key={slot}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 'var(--hms-space-3)',
-              padding: "10px 14px",
-              background: "var(--hms-surface)",
-              border: "1px solid var(--hms-border)",
-              borderRadius: 8,
-            }}
-          >
-            <span
-              style={{
-                fontSize: '0.625rem',
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                color: "var(--hms-text-muted)",
-                minWidth: 130,
-                flexShrink: 0,
-              }}
-            >
-              {slotLabel(slot)}
-            </span>
-            <span
-              style={{
-                flex: 1,
-                fontFamily: "monospace",
-                fontSize: 'var(--hms-text-caption)',
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                color: isAuto ? "var(--hms-text-muted)" : "var(--hms-text)",
-              }}
-            >
+          <div key={slot} className="hms-models-provider">
+            <span className="hms-models-aux-label">{slotLabel(slot)}</span>
+            <span className="hms-models-aux-value" data-auto={isAuto || undefined}>
               {isAuto ? (m?.autoLabel ?? "Auto") : `${provider} / ${model}`}
             </span>
             <Button size="sm" onClick={() => setEditingSlot(slot)}>
@@ -386,13 +324,13 @@ function FallbackTab({ m }: { m: ML | undefined }) {
   // about this rather than expose a broken edit UX.
   return (
     <div>
-      <div className="hms-settings-notice hms-settings-notice--warning" style={{ display: "flex", alignItems: "flex-start", gap: 'var(--hms-space-3)', borderRadius: 10 }}>
-        <AlertTriangle size={16} style={{ color: "var(--hms-warning)", flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 'var(--hms-text-sm)', lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+      <div className="hms-settings-notice hms-settings-notice--warning hms-models-notice-row">
+        <AlertTriangle size={16} className="hms-models-notice-icon" />
+        <div className="hms-models-notice-text">
+          <div className="hms-models-notice-title">
             {m?.fallbackUnsupportedTitle ?? "Fallback chain not supported"}
           </div>
-          <div style={{ color: "var(--hms-text-muted)" }}>
+          <div className="hms-models-notice-body">
             {m?.fallbackUnsupportedBody ?? "Upstream hermes-agent v0.14 has no fallback-chain configuration — the primary model is used exclusively. Per-provider request/timeout overrides can be set under model.providers in config.yaml."}
           </div>
         </div>
@@ -453,28 +391,19 @@ function KeysTab({ m }: { m: ML | undefined }) {
 
   return (
     <div>
-      <div className="hms-settings-notice hms-settings-notice--info" style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', marginBottom: 16 }}>
-        <Info size={12} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
+      <div className="hms-settings-notice hms-settings-notice--info hms-models-notice-inline">
+        <Info size={12} className="hms-models-notice-info-icon" />
         <span>
           {m?.keysHintV2 ?? "Edits write to ~/.hermes/.env. Restart the gateway for changes to take effect."}
         </span>
       </div>
 
       {sortedCats.map((cat) => (
-        <div key={cat} style={{ marginBottom: 18 }}>
-          <div
-            style={{
-              fontSize: '0.625rem',
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              color: "var(--hms-text-muted)",
-              marginBottom: 8,
-            }}
-          >
+        <div key={cat} className="hms-models-cat">
+          <div className="hms-models-cat-label">
             {(m?.[`cat_${cat}` as keyof ML] as string | undefined) ?? prettyCat(cat)}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)' }}>
+          <div className="hms-models-cat-rows">
             {groups[cat].map((k) => (
               <KeyRow key={k.name} entry={k} labels={labels} />
             ))}
@@ -499,35 +428,11 @@ function prettyCat(cat: string): string {
 }
 
 function LoadingBox() {
-  return (
-    <div
-      style={{
-        padding: 32,
-        textAlign: "center",
-        color: "var(--hms-text-muted)",
-        fontSize: 'var(--hms-text-sm)',
-      }}
-    >
-      Loading...
-    </div>
-  );
+  return <div className="hms-models-loading">Loading...</div>;
 }
 
 function EmptyState({ text }: { text: string }) {
-  return (
-    <div
-      style={{
-        padding: 'var(--hms-space-6)',
-        border: "1px dashed var(--hms-border)",
-        borderRadius: 8,
-        textAlign: "center",
-        color: "var(--hms-text-muted)",
-        fontSize: 'var(--hms-text-sm)',
-      }}
-    >
-      {text}
-    </div>
-  );
+  return <div className="hms-models-empty">{text}</div>;
 }
 
 
