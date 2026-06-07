@@ -473,6 +473,8 @@ export interface Translations {
     loading: string;
     empty: string;
     page: string;
+    allProfiles: string;
+    scopeTitle: string;
   };
 
   channels: {

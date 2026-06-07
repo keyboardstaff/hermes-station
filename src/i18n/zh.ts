@@ -450,6 +450,8 @@ export const zh: Translations = {
     loading: "加载中…",
     empty: "未找到会话。",
     page: "第",
+    allProfiles: "全部 Profile",
+    scopeTitle: "正在查看 Profile",
   },
 
   channels: {

@@ -451,6 +451,8 @@ export const en: Translations = {
     loading: "Loading…",
     empty: "No sessions found.",
     page: "Page",
+    allProfiles: "All profiles",
+    scopeTitle: "Viewing profile",
   },
 
   channels: {

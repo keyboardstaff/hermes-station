@@ -6,6 +6,9 @@ import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import { useAgentRoomStore } from "@/store/agentRoom";
+import { useProfileScope, filterSessionsByScope } from "@/store/profile-scope";
+import { useActiveProfile } from "@/hooks/useProfiles";
+import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useI18n } from "@/i18n";
@@ -221,6 +224,9 @@ export interface SessionRecentsProps {
   onTogglePin?: (id: string) => void;
   /** Maximum number of unpinned sessions to show. */
   limit?: number;
+  /** Show the profile view-scope picker + scope the recents list to it
+   *  (the "workspace switcher"). Pinned favourites stay cross-profile. */
+  showScopeSelector?: boolean;
 }
 
 export default function SessionRecents({
@@ -235,6 +241,7 @@ export default function SessionRecents({
   pinnedIds,
   onTogglePin,
   limit,
+  showScopeSelector = false,
 }: SessionRecentsProps = {}) {
   const { t } = useI18n();
   const { activeSessionId, setActiveSession, clearMessages, setProvisionalTitle } = useChatStore();
@@ -243,6 +250,10 @@ export default function SessionRecents({
   const runningBySession = useChatStore((s) => s.runningBySession);
   // Title fallback while a run's auto-title is still being generated.
   const provisionalTitles = useChatStore((s) => s.provisionalTitles);
+  // Profile view-scope (the workspace switcher). Only consulted when the caller
+  // opts in (showScopeSelector); single-profile users never have >1 to scope to.
+  const profileScope = useProfileScope((s) => s.scope);
+  const { data: activeProfile } = useActiveProfile();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
@@ -423,15 +434,21 @@ export default function SessionRecents({
       });
   })();
 
+  // Scope the recents to the viewed profile (the workspace switcher). Pinned
+  // favourites are explicit cross-profile picks, so they stay unscoped.
+  const scopedSessions = showScopeSelector
+    ? filterSessionsByScope(sessions, profileScope, activeProfile?.current)
+    : sessions;
+
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
     ? sessions.filter((s) => pinnedIds.has(s.session_id))
     : [];
   const displaySessions = pinnedIds
-    ? sessions.filter((s) => !pinnedIds.has(s.session_id)).slice(0, limit)
+    ? scopedSessions.filter((s) => !pinnedIds.has(s.session_id)).slice(0, limit)
     : limit
-      ? sessions.slice(0, limit)
-      : sessions;
+      ? scopedSessions.slice(0, limit)
+      : scopedSessions;
 
   // Header actions (View all / chevron) fade in on container hover
   // when hoverRevealsActions=true. Always visible otherwise.
@@ -549,6 +566,10 @@ export default function SessionRecents({
         </div>
       </div>
 
+      {/* Profile view-scope picker (the workspace switcher) — self-hides for
+          single-profile users, so it's a no-op there. */}
+      {showScopeSelector && !collapsed && <ProfileScopeSelector />}
+
       {/* Session list — animated collapse/expand (Sidebar Recents). */}
       <div className="hms-session-recents-body" style={{
         flex: 1,
@@ -565,7 +586,7 @@ export default function SessionRecents({
           </div>
         )}
 
-        {sessions.length === 0 && !isError && (
+        {displaySessions.length === 0 && pinnedSessions.length === 0 && !isError && (
           <div className="hms-session-recents-empty">
             No sessions yet.
           </div>

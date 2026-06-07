@@ -36,6 +36,7 @@ export default function SidebarRecents({ limit = 50 }: { limit?: number }) {
       pinnedTitle={t.sidebar.pinned}
       pinnedIds={pinnedIds}
       onTogglePin={toggle}
+      showScopeSelector
     />
   );
 }
