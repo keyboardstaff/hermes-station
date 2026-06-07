@@ -6,6 +6,8 @@ import type { ComposerAttachment, ContentPart, RunInput, ToolCall } from "@/lib/
 import type { RunEventMessage } from "@/lib/ws-types";
 import { api } from "@/lib/api";
 import { toolResultsById, profileQuery } from "@/lib/load-session";
+import { resolveRunProfile } from "@/lib/run-profile";
+import { useProfileScope, effectiveScopeName } from "@/store/profile-scope";
 import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
 import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
@@ -390,13 +392,21 @@ export function useRunsStream() {
         runInput = input;
       }
 
-      // Active profile = the Composer pill's sticky selection (cached under
-      // ["profile-active"]). Sending it lets the backend re-scope this run to
-      // that profile's HERMES_HOME in-process, no restart.
-      // Omit "default" — that's the process home already.
-      const activeProfile = queryClient.getQueryData<{ sticky?: string }>(["profile-active"])?.sticky;
-      // Agents room @mention routes THIS turn to a specific profile-agent's home.
-      const runProfile = opts?.profileOverride ?? activeProfile;
+      // The run follows the CURRENT profile (Phase B — no activate/restart):
+      //  override (agents-room @mention) → the existing session's own profile
+      //  (continuing a chat stays in its home) → the view-scope's current profile
+      //  (a new chat runs in whatever profile you're in). The backend re-scopes
+      //  in-process via the profile param; "default" is omitted (process home).
+      const activeData = queryClient.getQueryData<{ sticky?: string; current?: string }>(["profile-active"]);
+      const activeCurrent = activeData?.current ?? activeData?.sticky;
+      const scope = useProfileScope.getState().scope;
+      const currentProfile = effectiveScopeName(scope, activeCurrent) ?? activeCurrent;
+      const sessionProfile = currentSessionId
+        ? queryClient
+            .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
+            ?.sessions.find((sx) => sx.session_id === currentSessionId)?.profile
+        : undefined;
+      const runProfile = resolveRunProfile(opts?.profileOverride, sessionProfile, currentProfile);
 
       // Branch context (edit / regenerate / branch from a message): seed this
       // fresh run with prior turns as the agent's history. Consume-once, and
@@ -410,7 +420,7 @@ export function useRunsStream() {
         ...(selectedModel ? { model: selectedModel } : {}),
         ...(selectedProvider ? { provider: selectedProvider } : {}),
         ...(reasoningEffort !== null && reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
-        ...(runProfile && runProfile !== "default" ? { profile: runProfile } : {}),
+        ...(runProfile ? { profile: runProfile } : {}),
         ...(!currentSessionId && branchHistory && branchHistory.length > 0
           ? { conversation_history: branchHistory } : {}),
       };

@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Paperclip, Mic, Send, Square, User, Settings as SettingsIcon } from "lucide-react";
 import SlashMenu from "./SlashMenu";
 import type { SlashCommand } from "@/lib/slash-commands";
 import { useDiscoverSlashCommands } from "@/store/discovery";
 import { useChatStore } from "@/store/chat";
 import { useCapabilityStore } from "@/store/capabilities";
-import { useProfiles, useActiveProfile, useSetActiveProfile } from "@/hooks/useProfiles";
+import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
+import { useProfileScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
 import { useI18n } from "@/i18n";
 import type { ComposerAttachment } from "@/lib/hermes-types";
 import type { ProviderInfo } from "@/hooks/useProviders";
@@ -60,7 +61,6 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     lastUsage, showTokens, setShowTokens,
   } = useChatStore();
   const isRunning = running ?? !!activeRunId;
-  const queryClient = useQueryClient();
 
   // Attachment state + every ingest path (picker / paste / drag / imperative).
   // All files uploaded via POST /api/upload (persisted across refreshes); cap from caps.limits.
@@ -80,32 +80,26 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     addFiles(files: File[]) { ingestFiles(files); },
   }), [ingestFiles]);
 
-  // Active profile = sticky ~/.hermes/active_profile (server state, not chat-store).
-  // Switching writes the sticky file; each profile is its own gateway.
+  // The profile pill is the view-scope picker (Phase B — the "current profile"):
+  // picking a profile scopes reads + runs to it (no sticky write, no restart),
+  // unified with the sidebar scope selector. The sticky active is now only the
+  // gateway's *background* home (managed in the Profile panel).
   const profilesQuery = useProfiles();
   const profileNames: string[] = useMemo(
     () => (profilesQuery.data?.profiles ?? []).map((p) => p.name),
     [profilesQuery.data],
   );
   const activeProfileQuery = useActiveProfile();
-  const setActiveProfile = useSetActiveProfile();
-  const activeProfileName = activeProfileQuery.data?.sticky ?? "default";
-  const profileSwitching = setActiveProfile.isPending;
-  const profileChoices = profileNames.length > 0 ? profileNames : [activeProfileName];
-  const handleProfileChange = useCallback(async (next: string) => {
-    if (next === activeProfileName) return;
-    try {
-      // Each profile is its own gateway (upstream multi-gateway model) — set
-      // the sticky default; no restart. If that profile's gateway isn't
-      // running, the user starts it from /profile. Refresh profile-scoped caches.
-      await setActiveProfile.mutateAsync(next);
-      ["fs-models", "profile-active", "profiles", "skills", "sessions-table-all"].forEach((key) =>
-        queryClient.invalidateQueries({ queryKey: [key] }),
-      );
-    } catch {
-      /* mutation errors surface via react-query state. */
-    }
-  }, [activeProfileName, setActiveProfile, queryClient]);
+  const scope = useProfileScope((s) => s.scope);
+  const setScope = useProfileScope((s) => s.setScope);
+  // The concrete profile in view (scope, or the running profile when following /
+  // browsing "All profiles" — the pill is a single-profile control).
+  const activeProfileName = activeProfileQuery.data?.current ?? activeProfileQuery.data?.sticky ?? "default";
+  const currentProfileName = effectiveScopeName(scope, activeProfileName) ?? activeProfileName;
+  const profileChoices = profileNames.length > 0 ? profileNames : [currentProfileName];
+  const handleProfileChange = useCallback((next: string) => {
+    if (next !== currentProfileName || scope === ALL_PROFILES) setScope(next);
+  }, [currentProfileName, scope, setScope]);
 
   const { data: modelsResp } = useQuery<{
     models: string[];
@@ -467,13 +461,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             />
           </ToolbarBtn>
 
-          {/* Active-profile pill: changing it writes ~/.hermes/active_profile. */}
+          {/* Profile pill = the view-scope picker: scopes reads + runs to the
+              chosen profile (no sticky write / restart), unified with the sidebar. */}
           <PillSelect
             icon={<User size={12} />}
-            value={activeProfileName}
+            value={currentProfileName}
             options={profileChoices}
             onChange={handleProfileChange}
-            disabledHint={profileSwitching ? "switching…" : undefined}
             footerAction={{ label: t.composer.manageProfiles, icon: <SettingsIcon size={11} />, onClick: openProfile }}
           />
 
