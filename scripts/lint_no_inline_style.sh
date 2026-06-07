@@ -18,6 +18,24 @@
 
 set -euo pipefail
 
+ALLOWLIST_FILE="scripts/lint_no_inline_style.allowlist"
+
+filter_allowlisted_paths() {
+  if [[ ! -f "$ALLOWLIST_FILE" ]]; then
+    cat
+    return
+  fi
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    local path="${line%%:*}"
+    if grep -Fxq "$path" "$ALLOWLIST_FILE"; then
+      continue
+    fi
+    echo "$line"
+  done
+}
+
 PATTERN='style=\{\{[^}]*(fontSize|padding|margin|gap)['"'"'"]?\s*:\s*['"'"'"]?[0-9]'
 
 VIOLATIONS=$(grep -rEn "$PATTERN" src/ --include='*.tsx' \
@@ -39,6 +57,16 @@ COLOR_VIOLATIONS=$(grep -rEn "$COLOR_PATTERN" src/ --include='*.tsx' \
   | grep -v 'hms-allow-color' \
   || true)
 
+# DOM-style hover mutations: directly assigning e.currentTarget.style.background/
+# color/etc inside TSX event handlers. These are the highest-signal D64 smell:
+# they hide interactive styling in JS instead of shared CSS classes. Existing
+# offenders are allowlisted file-by-file and burned down incrementally.
+HOVER_PATTERN='\.style\.(background|color|border|borderColor|opacity)\s*='
+HOVER_VIOLATIONS=$(grep -rEn "$HOVER_PATTERN" src/ --include='*.tsx' \
+  | grep -v 'hms-allow-hover' \
+  | filter_allowlisted_paths \
+  || true)
+
 STATUS=0
 if [[ -n "$VIOLATIONS" ]]; then
   echo "❌  Inline numeric style literals found — use var(--hms-*) tokens instead:"
@@ -54,10 +82,18 @@ if [[ -n "$COLOR_VIOLATIONS" ]]; then
   echo ""
   STATUS=1
 fi
+if [[ -n "$HOVER_VIOLATIONS" ]]; then
+  echo "❌  Inline DOM style mutations found — replace JS hover with shared CSS classes instead:"
+  echo ""
+  echo "$HOVER_VIOLATIONS"
+  echo ""
+  echo "Ref: docs/UI_CONVENTIONS.md §2 and $ALLOWLIST_FILE"
+  STATUS=1
+fi
 
 if [[ "$STATUS" -ne 0 ]]; then
   echo "Ref: src/styles/tokens.css"
   exit 1
 fi
 
-echo "✓  No inline numeric/colour style literals found."
+echo "✓  No inline numeric/colour style literals or DOM-style hover mutations found."

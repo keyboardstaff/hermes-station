@@ -320,22 +320,20 @@ export function ModelPicker({
                           onChange(m, providerConfigKey(p));
                           setOpen(false);
                         }}
+                        className="hms-sidebar-row"
+                        data-active={isSelected}
                         style={{
                           display: "flex", alignItems: "center", justifyContent: "space-between",
                           padding: "5px 12px 5px 28px",
                           cursor: "pointer",
                           fontSize: 'var(--hms-text-caption)',
                           color: isSelected ? "var(--hms-text)" : "var(--hms-text-muted)",
-                          background: isSelected ? "var(--hms-selected-bg)" : "transparent",
-                          transition: "background 120ms",
                         }}
                         onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.background = "var(--hms-hover-bg)";
                           if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current);
                           setEffortFlyout(true);
                         }}
                         onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.background = isSelected ? "var(--hms-selected-bg)" : "transparent";
                           effortLeaveRef.current = setTimeout(() => setEffortFlyout(false), 160);
                         }}
                       >
@@ -403,9 +401,9 @@ export function ModelPicker({
                 key={opt.value}
                 type="button"
                 onClick={() => onReasoningChange(opt.value)}
+                className="hms-sidebar-row"
+                data-active={checked}
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: checked ? "var(--hms-text)" : "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--hms-hover-bg)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
               >
                 {opt.label}
                 {checked && <Check size={12} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />}

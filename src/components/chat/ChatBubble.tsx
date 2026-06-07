@@ -32,39 +32,13 @@ function ApprovalNotice({ choice, command }: { choice: string; command: string }
 
   return (
     <div
-      style={{
-        alignSelf: "flex-start",
-        display: "flex",
-        alignItems: "center",
-        gap: 'var(--hms-space-2)',
-        padding: "6px 10px",
-        borderRadius: 10,
-        background: isDeny
-          ? "color-mix(in srgb, #ef4444 10%, transparent)"
-          : "color-mix(in srgb, #22c55e 10%, transparent)",
-        color: isDeny ? "var(--hms-error-dark)" : "#166534",
-        fontSize: 'var(--hms-text-xs)',
-        margin: "4px 0",
-      }}
+      className="hms-chat-approval-notice"
+      data-kind={isDeny ? "deny" : "approve"}
     >
       {isDeny ? <ShieldX size={11} /> : <ShieldCheck size={11} />}
-      <span style={{ fontWeight: 600 }}>{label}</span>
+      <span className="hms-chat-approval-label">{label}</span>
       {command && (
-        <code
-          style={{
-            fontFamily: "monospace",
-            fontSize: '0.625rem',
-            padding: "1px 6px",
-            borderRadius: 4,
-            color: "var(--hms-text)",
-            maxWidth: 360,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {command}
-        </code>
+        <code className="hms-chat-approval-command">{command}</code>
       )}
     </div>
   );
@@ -83,19 +57,7 @@ function StreamingActivity() {
   const sec = Math.max(0, Math.floor((now - start) / 1000));
   const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
   return (
-    <span
-      aria-label="Working"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--hms-space-1)",
-        marginLeft: 2,
-        color: "var(--hms-text-muted)",
-        fontSize: "var(--hms-text-xs)",
-        fontVariantNumeric: "tabular-nums",
-        verticalAlign: "text-bottom",
-      }}
-    >
+    <span aria-label="Working" className="hms-chat-streaming-activity">
       <Clock size={12} />
       {label}
     </span>
@@ -107,47 +69,17 @@ function ReasoningBlock({ text, streaming }: { text: string; streaming?: boolean
   const [open, setOpen] = useState(false);
   const isOpen = streaming || open;
   return (
-    <div
-      style={{
-        marginBottom: 6,
-        borderRadius: 8,
-        background: "color-mix(in srgb, var(--hms-border) 80%, transparent)",
-        fontSize: 'var(--hms-text-caption)',
-      }}
-    >
+    <div className="hms-chat-reasoning">
       <button
         onClick={() => setOpen((v) => !v)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 'var(--hms-space-2)',
-          padding: "5px 10px",
-          background: "transparent",
-          border: "none",
-          color: "var(--hms-text-muted)",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
+        className="hms-chat-reasoning-toggle"
       >
         <Brain size={12} />
-        <span style={{ flex: 1 }}>Thinking{streaming ? "…" : ""}</span>
+        <span className="hms-chat-reasoning-label">Thinking{streaming ? "…" : ""}</span>
         {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
       </button>
       {isOpen && (
-        <div
-          style={{
-            padding: "8px 10px",
-            color: "var(--hms-text-muted)",
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.55,
-            maxHeight: 220,
-            overflowY: "auto",
-            fontSize: 'var(--hms-text-caption)',
-          }}
-        >
-          {text}
-        </div>
+        <div className="hms-chat-reasoning-body">{text}</div>
       )}
     </div>
   );
@@ -481,49 +413,29 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   };
 
   const actionBtnStyle: React.CSSProperties = {
-    border: "none",
-    background: "transparent",
+    width: 22,
+    height: 22,
     borderRadius: 4,
-    padding: "2px 4px",
-    cursor: "pointer",
-    color: "var(--hms-text-muted)",
-    display: "flex",
-    alignItems: "center",
   };
 
   return (
     <div
-      className="hms-msg-row"
+      className="hms-chat-bubble-row"
+      data-role={isUser ? "user" : "assistant"}
       data-msg-id={msg.id}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: isUser ? "flex-end" : "flex-start",
-        padding: "4px 0",
-        gap: 'var(--hms-space-1)',
-      }}
     >
-      <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", paddingInline: 4 }}>
+      <div className="hms-chat-bubble-role">
         {isUser ? "You" : "Assistant"}
       </div>
 
       <div
-        className="hms-msg-bubble"
-        style={{
-          maxWidth: isUser ? "80%" : "100%",
-          background: isUser ? "var(--hms-border)" : "transparent",
-          border: "none",
-          borderRadius: isUser ? 12 : 0,
-          padding: isUser ? "10px 14px" : "4px 0",
-          fontSize: 'var(--hms-text-body)',
-          lineHeight: 1.6,
-          color: "var(--hms-text)",
-        }}
+        className="hms-chat-bubble"
+        data-role={isUser ? "user" : "assistant"}
       >
         {isUser ? (
           <>
             {msg.agent ? (
-              <span style={{ display: "block", marginBottom: 4, fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>
+              <span className="hms-chat-bubble-agent-note hms-chat-bubble-agent-note--user">
                 → @{msg.agent}
               </span>
             ) : null}
@@ -533,7 +445,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
           /* Assistant: segments-based; content fallback for system notices. */
           <>
             {msg.agent ? (
-              <span style={{ display: "block", marginBottom: 4, fontSize: 'var(--hms-text-xs)', fontWeight: 600, color: "var(--hms-accent)" }}>
+              <span className="hms-chat-bubble-agent-note hms-chat-bubble-agent-note--assistant">
                 @{msg.agent}
               </span>
             ) : null}
@@ -558,29 +470,30 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
 
       {/* Visibility driven by CSS hover on .hms-msg-row. */}
       {!msg.streaming && (
-        <div className="hms-msg-actions" style={{ display: "flex", gap: 'var(--hms-space-1)' }}>
+        <div className="hms-msg-actions hms-chat-bubble-actions">
           {canBranch && isUser && (
-            <button onClick={handleEdit} title="Edit & resend" style={actionBtnStyle}>
+            <button onClick={handleEdit} title="Edit & resend" className="hms-chat-bubble-action" style={actionBtnStyle}>
               <Pencil size={12} />
             </button>
           )}
           {canBranch && !isUser && (
-            <button onClick={handleRetry} title="Regenerate" style={actionBtnStyle}>
+            <button onClick={handleRetry} title="Regenerate" className="hms-chat-bubble-action" style={actionBtnStyle}>
               <RotateCcw size={12} />
             </button>
           )}
           {canBranch && (
-            <button onClick={handleBranch} title="Branch from here" style={actionBtnStyle}>
+            <button onClick={handleBranch} title="Branch from here" className="hms-chat-bubble-action" style={actionBtnStyle}>
               {forked ? <Check size={12} /> : <GitFork size={12} />}
             </button>
           )}
-          <button onClick={copyContent} title="Copy" style={actionBtnStyle}>
+          <button onClick={copyContent} title="Copy" className="hms-chat-bubble-action" style={actionBtnStyle}>
             {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
           {tts.supported && (
             <button
               onClick={() => (tts.speaking ? tts.stop() : tts.speak(getMessageText()))}
               title={tts.speaking ? "Stop" : "Speak"}
+              className="hms-chat-bubble-action"
               style={actionBtnStyle}
             >
               {tts.speaking ? <Square size={12} /> : <Volume2 size={12} />}

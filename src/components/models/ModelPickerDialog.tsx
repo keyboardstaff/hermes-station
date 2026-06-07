@@ -46,7 +46,6 @@ export default function ModelPickerDialog({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus the search input on open + reset state.
   useEffect(() => {
     if (open) {
       setSearch("");
@@ -249,6 +248,8 @@ export default function ModelPickerDialog({
                         <button
                           key={`${p.slug}/${m}`}
                           onClick={() => onSelect(p.slug, m)}
+                          className="hms-sidebar-row"
+                          data-active={isCurrent}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -256,23 +257,12 @@ export default function ModelPickerDialog({
                             width: "100%",
                             padding: "6px 12px 6px 28px",
                             border: "none",
-                            background: isCurrent ? "rgba(99,102,241,0.08)" : "transparent",
                             color: isCurrent ? "var(--hms-text)" : "var(--hms-text)",
                             cursor: "pointer",
                             fontSize: 'var(--hms-text-caption)',
                             fontFamily: "monospace",
                             textAlign: "left",
                             borderRadius: 6,
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.background =
-                              isCurrent
-                                ? "rgba(99,102,241,0.12)"
-                                : "var(--hms-border)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.background =
-                              isCurrent ? "rgba(99,102,241,0.08)" : "transparent";
                           }}
                         >
                           {isCurrent && (

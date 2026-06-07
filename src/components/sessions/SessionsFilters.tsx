@@ -47,13 +47,8 @@ export default function SessionsFilters({ total }: { total: number }) {
   const opt = (vals: string[]) => vals.map((v) => ({ value: v, label: v === "all" ? s.all : v }));
 
   return (
-    <div
-      style={{
-        display: "flex", alignItems: "center", gap: 'var(--hms-space-4)',
-        padding: "6px 16px", flexShrink: 0, flexWrap: "wrap",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-4)', flex: 1, minWidth: 0, flexWrap: "wrap" }}>
+    <div className="hms-sessions-filters">
+      <div className="hms-sessions-filters-groups">
         {/* Profile first — it's the higher-level scope. */}
         <Group label={s.profile}>
           <SegmentedControl<string>
@@ -69,8 +64,8 @@ export default function SessionsFilters({ total }: { total: number }) {
         </Group>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)', flexShrink: 0 }}>
-        <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
+      <div className="hms-sessions-filters-search">
+        <span className="hms-sessions-filters-count">
           {total} {s.count}
         </span>
         <SearchInput
@@ -87,10 +82,8 @@ export default function SessionsFilters({ total }: { total: number }) {
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
-      <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, color: "var(--hms-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        {label}
-      </span>
+    <div className="hms-sessions-filters-group">
+      <span className="hms-sessions-filters-group-label">{label}</span>
       {children}
     </div>
   );

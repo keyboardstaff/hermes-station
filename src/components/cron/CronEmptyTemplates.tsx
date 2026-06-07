@@ -101,6 +101,7 @@ export default function CronEmptyTemplates({
             key={tpl.label}
             type="button"
             onClick={() => onTemplate(tpl)}
+            className="hms-cron-template-chip"
             style={{
               padding: "8px 16px",
               border: "1px solid var(--hms-border)",
@@ -109,12 +110,6 @@ export default function CronEmptyTemplates({
               color: "var(--hms-text)",
               fontSize: "var(--hms-text-sm)",
               cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--hms-surface-hover)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--hms-surface)";
             }}
           >
             {tpl.label}

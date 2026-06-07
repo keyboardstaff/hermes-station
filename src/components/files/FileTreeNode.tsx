@@ -167,43 +167,19 @@ function TreeEntry({
     f,
   };
 
-  const rowHoverBg = (hl: boolean): string => (hl ? "var(--hms-hover-bg)" : "transparent");
-  const iconBtn: React.CSSProperties = {
-    background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
-    lineHeight: 0, color: "var(--hms-text-muted)", flexShrink: 0,
-  };
-
   if (entry.kind === "dir") {
     return (
       <div>
         <div
           className="hms-tree-row"
-          style={{
-            display: "flex", alignItems: "center", borderRadius: 'var(--hms-radius-sm)',
-            background: rowHoverBg(hovered),
-          }}
+          data-active={false}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
           <button
             onClick={() => onToggle(`${root}/${childPath}`)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--hms-space-1)",
-              paddingLeft: depth * 12 + 4,
-              paddingRight: 4,
-              paddingTop: 2,
-              paddingBottom: 2,
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              flex: 1,
-              textAlign: "left",
-              color: "var(--hms-text)",
-              fontSize: "var(--hms-text-xs)",
-              minWidth: 0,
-            }}
+            className="hms-tree-row-btn"
+            style={{ paddingLeft: depth * 12 + 4 }}
           >
             {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             {isExpanded ? (
@@ -211,30 +187,28 @@ function TreeEntry({
             ) : (
               <Folder size={11} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
             )}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {entry.name}
-            </span>
+            <span className="hms-tree-row-name">{entry.name}</span>
           </button>
           {hovered && (
             <>
               <button
                 title={f?.newFile ?? "New file"}
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "file"); }}
-                style={iconBtn}
+                className="hms-tree-icon-btn"
               >
                 <FilePlus size={10} />
               </button>
               <button
                 title={f?.newFolder ?? "New folder"}
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "dir"); }}
-                style={iconBtn}
+                className="hms-tree-icon-btn"
               >
                 <FolderPlus size={10} />
               </button>
               <button
                 title={f?.delete ?? "Delete"}
                 onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "dir"); }}
-                style={iconBtn}
+                className="hms-tree-icon-btn"
               >
                 <Trash2 size={10} />
               </button>
@@ -255,43 +229,23 @@ function TreeEntry({
   return (
     <div
       className="hms-tree-row"
-      style={{
-        display: "flex", alignItems: "center", borderRadius: 'var(--hms-radius-sm)',
-        background: isSelected ? "var(--hms-selected-bg)" : rowHoverBg(hovered),
-      }}
+      data-active={isSelected}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <button
         onClick={() => onSelectFile(childPath)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--hms-space-1)",
-          paddingLeft: depth * 12 + 17,
-          paddingRight: 4,
-          paddingTop: 2,
-          paddingBottom: 2,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          flex: 1,
-          minWidth: 0,
-          textAlign: "left",
-          color: "var(--hms-text)",
-          fontSize: "var(--hms-text-xs)",
-        }}
+        className="hms-tree-row-btn hms-tree-row-btn--file"
+        style={{ paddingLeft: depth * 12 + 17 }}
       >
         <FileIcon size={11} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {entry.name}
-        </span>
+        <span className="hms-tree-row-name">{entry.name}</span>
       </button>
       {hovered && (
         <button
           title={f?.delete ?? "Delete"}
           onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "file"); }}
-          style={iconBtn}
+          className="hms-tree-icon-btn"
         >
           <Trash2 size={10} />
         </button>
@@ -328,17 +282,7 @@ function NewItemRow({
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        paddingLeft: depth * 12 + 4,
-        paddingRight: 6,
-        paddingTop: 2,
-        paddingBottom: 2,
-      }}
-    >
+    <div className="hms-tree-new-item" style={{ paddingLeft: depth * 12 + 4 }}>
       {kind === "dir" ? (
         <FolderPlus size={11} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
       ) : (
@@ -353,28 +297,12 @@ function NewItemRow({
           if (e.key === "Escape") onCancel();
         }}
         placeholder={kind === "dir" ? (f?.newFolder ?? "Folder name…") : (f?.newFile ?? "File name…")}
-        style={{
-          flex: 1,
-          background: "transparent",
-          border: "none",
-          borderBottom: "1px solid var(--hms-accent)",
-          outline: "none",
-          color: "var(--hms-text)",
-          fontSize: "var(--hms-text-xs)",
-          padding: "0 2px",
-          minWidth: 0,
-        }}
+        className="hms-tree-new-item-input"
       />
-      <button
-        onClick={submit}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 1, lineHeight: 0, color: "var(--hms-text-muted)" }}
-      >
+      <button onClick={submit} className="hms-tree-icon-btn">
         <Check size={11} />
       </button>
-      <button
-        onClick={onCancel}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 1, lineHeight: 0, color: "var(--hms-text-muted)" }}
-      >
+      <button onClick={onCancel} className="hms-tree-icon-btn">
         <X size={11} />
       </button>
     </div>

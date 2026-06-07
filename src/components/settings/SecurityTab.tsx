@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n";
 import { useDebouncedEffect } from "@/hooks/useDebouncedValue";
 import { api, ApiError } from "@/lib/api";
 import { Section } from "@/components/settings/shared";
+import Button from "@/components/ui/Button";
 
 interface SecuritySettings {
   host?: string;
@@ -147,7 +148,7 @@ export function SecurityTab() {
           ))}
         </div>
         {bindChanged ? (
-          <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--hms-warning-bg)", border: "1px solid #f59e0b", fontSize: 'var(--hms-text-caption)', color: "var(--hms-warning-text)" }}>
+          <div className="hms-settings-notice hms-settings-notice--warning">
             ⚠ {t.settings.security.restartHint} — run <code>pnpm dev</code> again (or restart the production server) after saving.
           </div>
         ) : (
@@ -193,33 +194,21 @@ export function SecurityTab() {
         </div>
 
         {pwStatus === "err" && pwError && (
-          <div style={{ padding: "6px 10px", borderRadius: 6, background: "var(--hms-error-bg)", border: "1px solid #ef4444", fontSize: 'var(--hms-text-caption)', color: "var(--hms-error-dark)" }}>
+          <div className="hms-settings-notice hms-settings-notice--error">
             {pwError}
           </div>
         )}
 
         <div style={{ display: "flex", gap: 'var(--hms-space-2)' }}>
-          <button
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
             onClick={submitPassword}
             disabled={!newPassword || !confirmPassword || (hasStoredPassword && !currentPassword)}
-            style={{
-              padding: "6px 18px",
-              borderRadius: 6,
-              border: "none",
-              background: !newPassword || !confirmPassword || (hasStoredPassword && !currentPassword)
-                ? "var(--hms-border)"
-                : "var(--hms-text)",
-              color: !newPassword || !confirmPassword || (hasStoredPassword && !currentPassword)
-                ? "var(--hms-text-muted)"
-                : "var(--hms-bg)",
-              fontSize: 'var(--hms-text-sm)',
-              cursor: !newPassword || !confirmPassword || (hasStoredPassword && !currentPassword)
-                ? "not-allowed"
-                : "pointer",
-            }}
           >
             {pwStatus === "ok" ? "Saved ✓" : hasStoredPassword ? t.settings.security.updatePassword : t.settings.security.setPassword}
-          </button>
+          </Button>
           {/* No "clear password" — backend has no unset semantic; edit config.yaml directly. */}
         </div>
 
@@ -258,12 +247,12 @@ export function SecurityTab() {
           in-flight states stay silent per UX request (auto-save is the
           contract, no chrome needed). */}
       {dangerHost && (
-        <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--hms-warning-bg)", border: "1px solid #f59e0b", fontSize: 'var(--hms-text-caption)', color: "var(--hms-warning-text)" }}>
+        <div className="hms-settings-notice hms-settings-notice--warning">
           {t.settings.security.networkWarning}
         </div>
       )}
       {saveStatus === "err" && saveError && (
-        <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--hms-error-bg)", border: "1px solid #ef4444", fontSize: 'var(--hms-text-caption)', color: "var(--hms-error-dark)" }}>
+        <div className="hms-settings-notice hms-settings-notice--error">
           {saveError}
         </div>
       )}

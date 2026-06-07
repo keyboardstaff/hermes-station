@@ -557,13 +557,11 @@ function FileRow({
 
   return (
     <div
+      className="hms-sidebar-row"
       style={{
         display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)', alignItems: "center",
         padding: "8px 10px", borderTop: "1px solid var(--hms-border)",
-        transition: "background var(--hms-duration-fast) var(--hms-ease-standard)",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--hms-hover-bg)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
       {/* NAME — label (opens: link → new tab, file → rendered preview) stacked
           over its location (path / url) + copy. */}

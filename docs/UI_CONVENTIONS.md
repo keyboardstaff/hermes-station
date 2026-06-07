@@ -136,6 +136,32 @@ optional **`context` band** below it.
 Rule of thumb: if it performs an action, it's `actions`; if it changes the
 view, it's `context`.
 
+## 9. Semantic classes
+
+Tokens are necessary but **not sufficient**: if the DOM still reads as generic
+`<div style={{...}}>` blocks, the UI is hard to inspect, reuse, and theme.
+
+When a component's structure matters beyond a one-off wrapper, give it a stable
+`hms-*` class instead of growing an anonymous inline style object. Prefer this
+layering:
+
+- `hms-page-*` / `hms-panel-*` — routed panel shells, top bars, context bands,
+  footer bars.
+- `hms-list-*` / `hms-row-*` — tables, list rows, item meta, selection bars,
+  recents/history shells.
+- `hms-state-*` / `hms-surface-*` — empty states, warning/error notices,
+  popovers, toolbars, cards.
+- `hms-<domain>-*` — domain-local structure once it stops being generic
+  (e.g. `hms-file-history-*`, `hms-sessions-*`, `hms-agents-*`).
+
+Use global semantic classes when the pattern is intended to be shared or read in
+devtools. Use CSS Modules only for dense component-internal layout that doesn't
+deserve a reusable global vocabulary.
+
+Lint rule: `scripts/lint_no_inline_style.sh` now also blocks direct DOM style
+mutation (`e.currentTarget.style.background = ...`) outside the tracked
+allowlist. Treat that allowlist as debt to burn down, not a convenience.
+
 ---
 
 ## Migration (opportunistic, not a big-bang)

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { buildSessionActions, type SessionActionHandlers } from "@/lib/session-actions";
+import Button from "@/components/ui/Button";
 
 /**
  * SessionActionsMenu — the session title doubles as the ··· trigger.
@@ -76,43 +77,26 @@ export default function SessionActionsMenu({
         onClick={toggle}
         aria-expanded={open}
         title={title}
+        className="hms-sidebar-row hms-session-actions-trigger"
+        data-active={open}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "var(--hms-space-1)",
-          maxWidth: "100%",
-          minWidth: 0,
           margin: 0,
-          padding: "2px 6px",
-          borderRadius: 6,
-          border: "none",
-          background: open ? "var(--hms-surface-hover)" : "none",
-          color: "var(--hms-text)",
-          fontSize: "var(--hms-text-body)",
-          fontWeight: 700,
-          cursor: "pointer",
         }}
       >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span className="hms-session-actions-trigger-label">
           {title}
         </span>
-        <ChevronDown size={14} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
+        <ChevronDown size={14} className="hms-session-actions-trigger-icon" />
       </button>
 
       {open && (
         <div
           ref={panelRef}
+          className="hms-session-actions-panel"
           style={{
             position: "fixed",
             top: pos.top,
             left: pos.left,
-            zIndex: 9999,
-            background: "var(--hms-surface)",
-            border: "1px solid var(--hms-border)",
-            borderRadius: 8,
-            padding: "4px 0",
-            minWidth: 200,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
           }}
         >
           {items.map((item) => (
@@ -123,24 +107,9 @@ export default function SessionActionsMenu({
                 setOpen(false);
                 item.onSelect();
               }}
+              className="hms-sidebar-row hms-session-actions-item"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--hms-space-2)",
-                width: "100%",
-                padding: "8px 14px",
-                border: "none",
-                background: "none",
-                color: item.danger ? "var(--hms-error, #e53e3e)" : "var(--hms-text)",
-                fontSize: "var(--hms-text-sm)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "var(--hms-surface-hover)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "none";
+                color: item.danger ? "var(--hms-error-text)" : "var(--hms-text)",
               }}
             >
               {item.icon}
@@ -190,33 +159,18 @@ function RenameDialog({
   return (
     <div
       onMouseDown={onCancel}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 10000,
-        background: "rgba(0,0,0,0.32)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
+      className="hms-session-actions-dialog-backdrop"
     >
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--hms-surface)",
-          border: "1px solid var(--hms-border)",
-          borderRadius: 12,
-          padding: "var(--hms-space-4)",
-          minWidth: 320,
-          maxWidth: 420,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.24)",
-        }}
+        className="hms-session-actions-dialog"
       >
-        <div style={{ fontSize: "var(--hms-text-sm)", fontWeight: 600, color: "var(--hms-text)" }}>
+        <div className="hms-session-actions-dialog-title">
           {t.nav.renameSession}
         </div>
         <input
           ref={inputRef}
+          className="hms-session-actions-dialog-input"
           value={value}
           autoFocus
           onChange={(e) => setValue(e.target.value)}
@@ -228,55 +182,14 @@ function RenameDialog({
               onCancel();
             }
           }}
-          style={{
-            width: "100%",
-            marginTop: "var(--hms-space-3)",
-            padding: "8px 10px",
-            background: "var(--hms-bg)",
-            border: "1px solid var(--hms-border)",
-            borderRadius: 8,
-            color: "var(--hms-text)",
-            fontSize: "var(--hms-text-sm)",
-          }}
         />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "var(--hms-space-2)",
-            marginTop: "var(--hms-space-4)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              padding: "6px 14px",
-              background: "none",
-              border: "1px solid var(--hms-border)",
-              borderRadius: 8,
-              color: "var(--hms-text-muted)",
-              fontSize: "var(--hms-text-sm)",
-              cursor: "pointer",
-            }}
-          >
+        <div className="hms-session-actions-dialog-actions">
+          <Button type="button" size="sm" onClick={onCancel}>
             {t.common.cancel}
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            style={{
-              padding: "6px 14px",
-              background: "var(--hms-accent)",
-              border: "1px solid var(--hms-accent)",
-              borderRadius: 8,
-              color: "var(--hms-on-accent, #fff)",
-              fontSize: "var(--hms-text-sm)",
-              cursor: "pointer",
-            }}
-          >
+          </Button>
+          <Button type="button" size="sm" variant="primary" onClick={submit}>
             {t.common.save}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

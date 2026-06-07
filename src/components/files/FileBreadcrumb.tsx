@@ -2,6 +2,7 @@ import { ChevronLeft } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import type { FileRoot } from "@/hooks/useFiles";
+import IconButton from "@/components/ui/IconButton";
 
 /**
  * Path breadcrumb shown above the file editor when the side tree is
@@ -49,126 +50,40 @@ export default function FileBreadcrumb({
   const segments = path.split("/").filter(Boolean);
   const filename = segments.pop() ?? path;
 
-  const wrapperStyle: React.CSSProperties = chrome === "bar"
-    ? {
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--hms-space-1)",
-        padding: "0 var(--hms-space-3)",
-        height: 36,
-        borderBottom: "1px solid var(--hms-border)",
-        background: "var(--hms-surface)",
-        flexShrink: 0,
-        minWidth: 0,
-      }
-    : {
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--hms-space-1)",
-        minWidth: 0,
-        flex: 1,
-      };
-
   return (
-    <div style={wrapperStyle}>
-      <button
+    <div className="hms-file-breadcrumb" data-chrome={chrome}>
+      <IconButton
         type="button"
         onClick={onBack}
         aria-label={t.common.back}
         title={t.common.back}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 24,
-          height: 24,
-          border: "none",
-          borderRadius: 4,
-          background: "transparent",
-          color: "var(--hms-text-muted)",
-          cursor: "pointer",
-          flexShrink: 0,
-        }}
+        size="sm"
+        style={{ width: 24, height: 24, borderRadius: 4 }}
       >
         <ChevronLeft size={15} />
-      </button>
+      </IconButton>
 
-      <nav
-        aria-label="path"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          fontSize: "var(--hms-text-xs)",
-          fontFamily: "monospace",
-          minWidth: 0,
-          flex: 1,
-        }}
-      >
+      <nav aria-label="path" className="hms-file-breadcrumb-nav">
         <button
           type="button"
           onClick={onBack}
-          style={{
-            ...segmentBtn,
-            color: "var(--hms-text-muted)",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--hms-text)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--hms-text-muted)"; }}
+          className="hms-file-breadcrumb-root"
         >
           {rootLabel}
         </button>
         {segments.map((seg, i) => (
-          <span key={i} style={{ display: "flex", alignItems: "center", color: "var(--hms-text-muted)", minWidth: 0 }}>
-            <span style={separator}>/</span>
-            <span
-              title={seg}
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                maxWidth: 120,
-              }}
-            >
-              {seg}
-            </span>
+          <span key={i} className="hms-file-breadcrumb-seg">
+            <span className="hms-file-breadcrumb-sep">/</span>
+            <span title={seg} className="hms-file-breadcrumb-seg-name">{seg}</span>
           </span>
         ))}
-        <span style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
-          <span style={separator}>/</span>
-          <span
-            title={filename}
-            style={{
-              color: "var(--hms-text)",
-              fontWeight: 600,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              minWidth: 0,
-            }}
-          >
-            {filename}
-          </span>
+        <span className="hms-file-breadcrumb-last">
+          <span className="hms-file-breadcrumb-sep">/</span>
+          <span title={filename} className="hms-file-breadcrumb-filename">{filename}</span>
         </span>
       </nav>
     </div>
   );
 }
 
-const segmentBtn: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "2px 4px",
-  borderRadius: 4,
-  fontFamily: "monospace",
-  fontSize: "var(--hms-text-xs)",
-  transition: "color var(--hms-duration-fast)",
-};
 
-const separator: React.CSSProperties = {
-  margin: "0 4px",
-  color: "var(--hms-text-muted)",
-  opacity: 0.6,
-  flexShrink: 0,
-};

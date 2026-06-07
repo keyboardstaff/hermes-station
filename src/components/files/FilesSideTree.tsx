@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Eye, EyeOff, FilePlus2, FolderPlus } from "lucide-react";
 import { useI18n } from "@/i18n";
+import IconButton from "@/components/ui/IconButton";
 import {
   useWriteFile,
   useCreateDir,
@@ -133,20 +134,14 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--hms-space-2)",
-        padding: embedded ? "var(--hms-space-2)" : "var(--hms-space-3)",
-        height: "100%",
-        boxSizing: "border-box",
-      }}
+      className="hms-files-side-tree"
+      style={{ padding: embedded ? "var(--hms-space-2)" : "var(--hms-space-3)" }}
     >
       {/* Single header row: root switch (hermes / workspace) on the left,
           git badge + file action icons on the right — keeps everything on
           one line to save vertical space. The page title is owned by the
           PageTopBar / drawer tab bar, so there's no <h2> here. */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)" }}>
+      <div className="hms-files-side-tree-header">
         {/* Root control — ~/.hermes toggle + the `workspace` path switcher
             (default ~/, click a crumb or pick a subfolder to switch path). */}
         <WorkspacePathSwitcher root={root} onSwitchRoot={switchRoot} f={f} />
@@ -156,17 +151,8 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
         {gitInfo.data?.branch && (
           <span
             title={`git: ${gitInfo.data.branch}`}
-            style={{
-              fontSize: "0.6rem",
-              fontFamily: "monospace",
-              color: gitInfo.data.dirty ? "var(--hms-warn-text, #b45309)" : "var(--hms-text-muted)",
-              background: "var(--hms-surface)",
-              border: "1px solid var(--hms-border)",
-              borderRadius: 4,
-              padding: "1px 5px",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
+            className="hms-files-side-tree-git"
+            style={{ color: gitInfo.data.dirty ? "var(--hms-warning-text)" : "var(--hms-text-muted)" }}
           >
             {gitInfo.data.branch}
             {(gitInfo.data.dirty ?? 0) > 0 && ` ·${gitInfo.data.dirty}Δ`}
@@ -174,32 +160,36 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
             {(gitInfo.data.behind ?? 0) > 0 && ` ↓${gitInfo.data.behind}`}
           </span>
         )}
-        <button
+        <IconButton
           title={showHidden ? (f?.hideHidden ?? "Hide hidden files") : (f?.showHidden ?? "Show hidden files")}
           onClick={toggleHidden}
-          style={treeIconBtn(showHidden)}
+          aria-label={showHidden ? (f?.hideHidden ?? "Hide hidden files") : (f?.showHidden ?? "Show hidden files")}
+          size="sm"
+          active={showHidden}
         >
           {showHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
-        <button
+        </IconButton>
+        <IconButton
           title={f?.newFile ?? "New file"}
           onClick={() => handleCreateStart("", "file")}
-          style={treeIconBtn(false)}
+          aria-label={f?.newFile ?? "New file"}
+          size="sm"
         >
           <FilePlus2 size={14} />
-        </button>
-        <button
+        </IconButton>
+        <IconButton
           title={f?.newFolder ?? "New folder"}
           onClick={() => handleCreateStart("", "dir")}
-          style={treeIconBtn(false)}
+          aria-label={f?.newFolder ?? "New folder"}
+          size="sm"
         >
           <FolderPlus size={14} />
-        </button>
+        </IconButton>
       </div>
 
       {/* Tree — borderless/transparent in both page and drawer modes so the
           file browser looks identical wherever it's embedded. */}
-      <div style={treeBodyStyle}>
+      <div className="hms-files-side-tree-body">
         <TreeNode
           root={root}
           path=""
@@ -217,22 +207,4 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
       </div>
     </div>
   );
-}
-
-const treeBodyStyle: React.CSSProperties = { flex: 1, overflow: "auto", padding: 2 };
-
-function treeIconBtn(active: boolean): React.CSSProperties {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-    flexShrink: 0,
-  };
 }

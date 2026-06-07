@@ -97,10 +97,12 @@ export default function SlashMenu({ query, selectedIndex, onSelect, onClose, com
         <div
           key={cmd.name}
           data-idx={idx}
+          data-active={idx === selectedIndex}
           onMouseDown={(e) => {
             e.preventDefault(); // prevent textarea blur
             onSelect(cmd);
           }}
+          className="hms-sidebar-row"
           style={{
             display: "flex",
             alignItems: "center",
@@ -108,15 +110,6 @@ export default function SlashMenu({ query, selectedIndex, onSelect, onClose, com
             padding: "8px 14px",
             cursor: "pointer",
             borderBottom: "1px solid var(--hms-border)",
-            background: idx === selectedIndex ? "var(--hms-border)" : "transparent",
-          }}
-          onMouseEnter={(e) => {
-            if (idx !== selectedIndex)
-              (e.currentTarget as HTMLDivElement).style.background = "var(--hms-surface)";
-          }}
-          onMouseLeave={(e) => {
-            if (idx !== selectedIndex)
-              (e.currentTarget as HTMLDivElement).style.background = "transparent";
           }}
         >
           <span style={{ fontFamily: "monospace", fontSize: 'var(--hms-text-sm)', color: "var(--hms-text)", flexShrink: 0 }}>{prefix}{cmd.name}</span>

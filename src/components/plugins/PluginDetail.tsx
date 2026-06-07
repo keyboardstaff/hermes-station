@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
+import StatusBadge from "@/components/ui/StatusBadge";
 import {
   usePlugins,
   useEnablePlugin,
@@ -120,32 +121,32 @@ export default function PluginDetail() {
           ) : supportsCtxLlm ? (
             <Cpu size={20} style={{ color: "var(--hms-accent)" }} />
           ) : (
-            <Puzzle size={20} style={{ color: isEnabled ? "var(--hms-success)" : "#94a3b8" }} />
+            <Puzzle size={20} style={{ color: isEnabled ? "var(--hms-success)" : "var(--hms-muted)" }} />
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: "var(--hms-text-lg, 1.125rem)", fontWeight: 700 }}>{plugin.name}</div>
           <div style={{ display: "flex", gap: "var(--hms-space-2)", flexWrap: "wrap", marginTop: 4 }}>
             {plugin.version && (
-              <span style={badgeStyle("var(--hms-text-muted)")}>v{plugin.version}</span>
+              <StatusBadge tone="muted" uppercase={false}>v{plugin.version}</StatusBadge>
             )}
             {plugin.source && (
-              <span style={badgeStyle("var(--hms-text-muted)")}>{plugin.source}</span>
+              <StatusBadge tone="muted" uppercase={false}>{plugin.source}</StatusBadge>
             )}
             {supportsCtxLlm && (
-              <span style={badgeStyle("var(--hms-accent)")}>
+              <StatusBadge tone="accent" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
                 <Cpu size={10} /> ctx.llm
-              </span>
+              </StatusBadge>
             )}
             {hasToolOverride && (
-              <span style={badgeStyle("var(--hms-warning)")}>
+              <StatusBadge tone="warning" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
                 <Wrench size={10} /> tool override
-              </span>
+              </StatusBadge>
             )}
             {isActiveMemoryProvider && (
-              <span style={badgeStyle("var(--hms-success)")}>
+              <StatusBadge tone="success" uppercase={false} style={{ gap: 'var(--hms-space-1)' }}>
                 <Brain size={10} /> {p?.activeMemory ?? "active memory"}
-              </span>
+              </StatusBadge>
             )}
           </div>
         </div>
@@ -182,19 +183,7 @@ export default function PluginDetail() {
 
       {/* Auth hint */}
       {plugin.auth_required && plugin.auth_command && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--hms-space-2)",
-            padding: "8px 12px",
-            background: "rgba(245,158,11,0.06)",
-            border: "1px solid rgba(245,158,11,0.18)",
-            borderRadius: 8,
-            fontSize: "var(--hms-text-xs)",
-            color: "var(--hms-warning-text)",
-          }}
-        >
+        <div className="hms-plugin-auth-notice">
           <span style={{ fontWeight: 600 }}>{p?.authRequired ?? "Auth required"}:</span>
           <span>{p?.authHint ?? "Run"}</span>
           <code style={{ fontSize: "0.7rem" }}>{plugin.auth_command}</code>
@@ -239,17 +228,3 @@ export default function PluginDetail() {
   );
 }
 
-function badgeStyle(color: string): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "var(--hms-space-1)",
-    fontSize: "0.5625rem",
-    padding: "2px 6px",
-    borderRadius: 4,
-    fontWeight: 600,
-    color,
-    background: `${color}1a`,
-    border: `1px solid ${color}33`,
-  };
-}

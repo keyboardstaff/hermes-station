@@ -189,16 +189,7 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
       </div>
 
       {statusMsg && (
-        <div
-          style={{
-            padding: "8px 12px",
-            background: "rgba(34,197,94,0.08)",
-            border: "1px solid rgba(34,197,94,0.20)",
-            borderRadius: 6,
-            color: "var(--hms-success-text)",
-            fontSize: 'var(--hms-text-caption)',
-          }}
-        >
+        <div className="hms-settings-notice hms-settings-notice--success">
           {statusMsg}
         </div>
       )}
@@ -235,31 +226,10 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
                 {p.name || p.slug}
               </span>
               {p.is_current && (
-                <span
-                  style={{
-                    fontSize: '0.5625rem',
-                    padding: "1px 5px",
-                    borderRadius: 4,
-                    background: "rgba(34,197,94,0.12)",
-                    color: "var(--hms-success-text)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {m?.current ?? "current"}
-                </span>
+                <StatusBadge tone="success" uppercase={false}>{m?.current ?? "current"}</StatusBadge>
               )}
               {p.source && p.source !== "built-in" && (
-                <span
-                  style={{
-                    fontSize: '0.5625rem',
-                    padding: "1px 5px",
-                    borderRadius: 4,
-                    background: "var(--hms-border)",
-                    color: "var(--hms-text-muted)",
-                  }}
-                >
-                  {p.source}
-                </span>
+                <StatusBadge tone="muted" uppercase={false}>{p.source}</StatusBadge>
               )}
             </div>
             <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginTop: 2 }}>
@@ -347,16 +317,7 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
       </p>
 
       {statusMsg && (
-        <div
-          style={{
-            padding: "8px 12px",
-            background: "rgba(34,197,94,0.08)",
-            border: "1px solid rgba(34,197,94,0.20)",
-            borderRadius: 6,
-            color: "var(--hms-success-text)",
-            fontSize: 'var(--hms-text-caption)',
-          }}
-        >
+        <div className="hms-settings-notice hms-settings-notice--success">
           {statusMsg}
         </div>
       )}

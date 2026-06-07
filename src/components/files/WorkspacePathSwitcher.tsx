@@ -62,12 +62,13 @@ export function WorkspacePathSwitcher({
   };
 
   return (
-    <div ref={ref} style={{ position: "relative", display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, flex: "0 1 auto" }}>
+    <div ref={ref} className="hms-ws-picker">
       <button
         type="button"
         onClick={() => onSwitchRoot("hermes")}
         title={f?.rootHermes ?? "~/.hermes"}
-        style={chip(root === "hermes")}
+        className="hms-ws-picker-chip"
+        data-active={root === "hermes"}
       >
         .hermes
       </button>
@@ -77,43 +78,29 @@ export function WorkspacePathSwitcher({
         type="button"
         onClick={onFolderClick}
         title={info?.dir ?? (f?.rootWorkspace ?? "~")}
-        style={{
-          ...chip(isWorkspace), minWidth: 0, maxWidth: 240, display: "flex", alignItems: "center",
-          gap: 'var(--hms-space-1)', justifyContent: "flex-start", height: 24,
-        }}
+        className="hms-ws-picker-chip hms-ws-picker-chip--folder"
+        data-active={isWorkspace}
       >
         <Folder size={13} style={{ flexShrink: 0, color: isWorkspace ? "var(--hms-accent)" : "var(--hms-text-muted)" }} />
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span className="hms-ws-picker-chip-label">
           {info ? folderLabel(info.home, info.dir) : "~"}
         </span>
         <ChevronDown size={13} style={{ flexShrink: 0 }} />
       </button>
 
       {open && (
-        <div
-          className="hms-pop-in"
-          style={{
-            position: "absolute", left: 0, top: "calc(100% + 4px)", zIndex: 9999,
-            width: 280, maxWidth: "80vw", borderRadius: 'var(--hms-radius-md)',
-            background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.16)", overflow: "hidden",
-            display: "flex", flexDirection: "column",
-          }}
-        >
+        <div className="hms-ws-picker-popover hms-pop-in">
           {/* Browsing breadcrumb */}
-          <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "6px 10px", borderBottom: "1px solid var(--hms-border)", overflowX: "auto", whiteSpace: "nowrap" }}>
+          <div className="hms-ws-picker-crumbs">
             {crumbs.map((c, i) => (
-              <span key={c.path} style={{ display: "inline-flex", alignItems: "center" }}>
-                {i > 0 && <span style={{ color: "var(--hms-text-muted)", margin: "0 1px" }}>/</span>}
+              <span key={c.path} className="hms-ws-picker-crumb-item">
+                {i > 0 && <span className="hms-ws-picker-crumb-sep">/</span>}
                 <button
                   type="button"
                   onClick={() => setNavPath(c.path)}
                   title={c.path}
-                  style={{
-                    border: "none", background: "none", padding: "1px 3px", cursor: "pointer",
-                    color: i === crumbs.length - 1 ? "var(--hms-text)" : "var(--hms-text-muted)",
-                    fontSize: 'var(--hms-text-caption)', fontWeight: i === crumbs.length - 1 ? 600 : 400,
-                  }}
+                  className="hms-ws-picker-crumb-btn"
+                  data-active={i === crumbs.length - 1}
                 >
                   {c.label}
                 </button>
@@ -122,21 +109,21 @@ export function WorkspacePathSwitcher({
           </div>
 
           {/* Subfolders */}
-          <div style={{ maxHeight: 260, overflowY: "auto", padding: "4px 0" }}>
+          <div className="hms-ws-picker-dirs">
             {nav.data?.parent && (
-              <button type="button" onClick={() => setNavPath(nav.data!.parent!)} style={menuItem}>
+              <button type="button" onClick={() => setNavPath(nav.data!.parent!)} className="hms-ws-picker-menu-item">
                 <CornerLeftUp size={13} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
                 <span>..</span>
               </button>
             )}
             {(nav.data?.dirs ?? []).map((d) => (
-              <button key={d.path} type="button" onClick={() => setNavPath(d.path)} style={menuItem}>
+              <button key={d.path} type="button" onClick={() => setNavPath(d.path)} className="hms-ws-picker-menu-item">
                 <Folder size={13} style={{ flexShrink: 0, color: "var(--hms-accent)" }} />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
+                <span className="hms-ws-picker-dir-name">{d.name}</span>
               </button>
             ))}
             {nav.data && nav.data.dirs.length === 0 && (
-              <div style={{ padding: "6px 12px", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}>
+              <div className="hms-ws-picker-empty">
                 {f?.noSubfolders ?? "No subfolders"}
               </div>
             )}
@@ -147,12 +134,7 @@ export function WorkspacePathSwitcher({
             type="button"
             onClick={() => navPath && commit(navPath)}
             disabled={setDir.isPending || !navPath}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 'var(--hms-space-1)',
-              padding: "7px 12px", border: "none", borderTop: "1px solid var(--hms-border)",
-              background: "var(--hms-accent-weak)", color: "var(--hms-accent)",
-              fontSize: 'var(--hms-text-sm)', fontWeight: 600, cursor: "pointer",
-            }}
+            className="hms-ws-picker-commit"
           >
             <Check size={13} /> {f?.useThisFolder ?? "Use this folder"}
           </button>
@@ -182,20 +164,3 @@ function buildCrumbs(home: string, dir: string): Array<{ label: string; path: st
   }
   return crumbs;
 }
-
-function chip(active: boolean): React.CSSProperties {
-  return {
-    flexShrink: 0, display: "inline-flex", alignItems: "center", height: 24,
-    border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
-    background: active ? "var(--hms-accent-weak)" : "var(--hms-surface)",
-    color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-    borderRadius: 'var(--hms-radius-md)', padding: "0 8px", cursor: "pointer",
-    fontSize: 'var(--hms-text-caption)', whiteSpace: "nowrap",
-  };
-}
-
-const menuItem: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
-  padding: "6px 12px", border: "none", background: "none", cursor: "pointer",
-  color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', textAlign: "left",
-};

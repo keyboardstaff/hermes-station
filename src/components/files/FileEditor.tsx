@@ -160,26 +160,15 @@ export default function FileEditor({
     : { display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", flex: 1, minWidth: 0, height: "100%", minHeight: 0 };
 
   return (
-    <div style={rootStyle}>
+    <div className="hms-file-editor" data-variant={isDrawer ? "drawer" : "page"}>
       {/* One compact toolbar: file name + meta (page) on the left, status, and
           the action buttons on the right. Drawer hides it while viewing history. */}
       {!(isDrawer && showHistory) && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--hms-space-2)",
-            padding: isDrawer ? "0 var(--hms-space-3)" : 0,
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
+        <div className="hms-file-editor-toolbar" data-variant={isDrawer ? "drawer" : "page"}>
           {!isDrawer ? (
-            <div title={path} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: "var(--hms-space-2)", overflow: "hidden" }}>
-              <span style={{ fontSize: "var(--hms-text-sm)", fontWeight: 600, fontFamily: "monospace", color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {fileName}
-              </span>
-              <span style={{ fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            <div title={path} className="hms-file-editor-filename-header">
+              <span className="hms-file-editor-filename-name">{fileName}</span>
+              <span className="hms-file-editor-filename-meta">
                 {root}{readQuery.data ? ` · ${readQuery.data.size} ${f.bytes}` : ""}
               </span>
             </div>
@@ -188,7 +177,7 @@ export default function FileEditor({
           )}
 
           {(err || savedFlash) && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--hms-space-2)", minWidth: 0 }}>
+            <div className="hms-file-editor-status">
               {err && (
                 <StatusPill kind="error">
                   <AlertCircle size={11} />
@@ -242,21 +231,7 @@ export default function FileEditor({
               <MoreHorizontal size={13} />
             </IconButton>
             {menuOpen && (
-              <div
-                role="menu"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "calc(100% + 4px)",
-                  zIndex: 50,
-                  background: "var(--hms-surface)",
-                  border: "1px solid var(--hms-border)",
-                  borderRadius: 8,
-                  padding: "4px 0",
-                  minWidth: 160,
-                  boxShadow: "var(--hms-shadow-popover)",
-                }}
-              >
+              <div role="menu" className="hms-file-editor-menu">
                 <MenuItem icon={<Download size={13} />} label={f.download} onClick={handleDownload} disabled={!readQuery.data} />
                 <MenuItem icon={<Pencil size={13} />} label={f.rename} onClick={handleRename} disabled={renameMut.isPending} />
                 <MenuItem icon={<Trash2 size={13} />} label={f.delete} onClick={handleDelete} disabled={deleteMut.isPending} danger />
@@ -266,27 +241,7 @@ export default function FileEditor({
         </div>
       )}
 
-      <div
-        style={
-          isDrawer
-            ? {
-                flex: 1,
-                minHeight: 0,
-                display: "flex",
-                overflow: "hidden",
-              }
-            : {
-                display: "flex",
-                gap: 12,
-                flex: 1,
-                minHeight: 0,
-                border: "1px solid var(--hms-border)",
-                borderRadius: "var(--hms-radius-md)",
-                background: "var(--hms-surface)",
-                overflow: "hidden",
-              }
-        }
-      >
+      <div className="hms-file-editor-body" data-variant={isDrawer ? "drawer" : "page"}>
         {isDrawer && showHistory ? (
           <FileVersionHistory
             root={root}
@@ -297,7 +252,7 @@ export default function FileEditor({
           />
         ) : (
           <>
-            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+            <div className="hms-file-editor-canvas">
               {readQuery.isLoading ? (
                 <EditorState icon={<Loader size={24} className="hms-spin" />} text={f.loadingFile} />
               ) : readQuery.isError ? (

@@ -10,6 +10,7 @@ import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useI18n } from "@/i18n";
 import Tooltip from "@/components/ui/Tooltip";
+import IconButton from "@/components/ui/IconButton";
 
 function relativeTime(ts?: number): string {
   if (!ts) return "";
@@ -108,6 +109,8 @@ function SessionItem({
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="hms-session-recents-item"
+      data-active={isActive}
       style={{
         display: "flex",
         alignItems: "center",
@@ -115,55 +118,37 @@ function SessionItem({
         padding: "7px 8px",
         borderRadius: 8,
         cursor: "pointer",
-        background: (isActive || hovered) ? "var(--hms-border)" : "transparent",
         position: "relative",
-        transition: "background 0.12s",
       }}
     >
       <MessageSquare size={13} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
       {isRenaming ? (
-        <div style={{ display: "flex", gap: 'var(--hms-space-1)', alignItems: "center", flex: 1 }} onClick={(e) => e.stopPropagation()}>
+        <div className="hms-session-recents-rename" onClick={(e) => e.stopPropagation()}>
           <input
             ref={inputRef}
+            className="hms-session-recents-rename-input"
             value={renameValue}
             onChange={(e) => onRenameChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") onRenameSubmit();
               if (e.key === "Escape") onRenameCancel();
             }}
-            style={{
-              flex: 1,
-              fontSize: 'var(--hms-text-sm)',
-              padding: "2px 6px",
-              borderRadius: 4,
-              border: "1px solid var(--hms-border)",
-              background: "var(--hms-bg)",
-              color: "var(--hms-text)",
-              outline: "none",
-            }}
           />
-          <button onClick={onRenameSubmit} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2 }}>
+          <IconButton onClick={onRenameSubmit} size="sm" style={{ width: 18, height: 18, borderRadius: 4 }}>
             <Check size={13} />
-          </button>
-          <button onClick={onRenameCancel} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hms-text-muted)", padding: 2 }}>
+          </IconButton>
+          <IconButton onClick={onRenameCancel} size="sm" style={{ width: 18, height: 18, borderRadius: 4 }}>
             <X size={13} />
-          </button>
+          </IconButton>
         </div>
       ) : (
         <>
           {/* Title (flex: 1, truncate) */}
-          <span style={{
-            flex: 1,
-            fontSize: 'var(--hms-text-sm)',
-            color: "var(--hms-text)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}>
+          <span className="hms-session-recents-title">
             {formatSessionTitle(s.title)}
           </span>
           {/* Relative time */}
-          <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", flexShrink: 0 }}>
+          <span className="hms-session-recents-time">
             {relativeTime(s.updated_at ?? s.started_at)}
           </span>
           {/* While a run is streaming for the active session, replace the
@@ -173,66 +158,37 @@ function SessionItem({
             <span
               title="Run in progress"
               aria-label="loading"
-              style={{
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 20,
-                height: 20,
-                color: "var(--hms-text)",
-              }}
+              className="hms-session-recents-spinner"
             >
               <Loader2 size={13} className="hms-spin" />
             </span>
           ) : (hovered || isActive) && !isRenaming && (
             shiftHeld ? (
               <Tooltip label="Delete session" placement="left">
-                <button
+                <IconButton
                   aria-label="Delete session"
                   onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  style={{
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 20,
-                    height: 20,
-                    borderRadius: 4,
-                    border: "none",
-                    background: "transparent",
-                    color: "var(--hms-error, #e53e3e)",
-                    cursor: "pointer",
-                  }}
+                  size="sm"
+                  danger
+                  style={{ width: 20, height: 20, borderRadius: 4 }}
                 >
                   <Trash2 size={13} />
-                </button>
+                </IconButton>
               </Tooltip>
             ) : (
               <Tooltip label="More options" placement="left">
-                <button
+                <IconButton
                   aria-label="More options"
                   onClick={(e) => {
                     e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     onMenuOpen(rect.right + 4, rect.top);
                   }}
-                  style={{
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 20,
-                    height: 20,
-                    borderRadius: 4,
-                    border: "none",
-                    background: "transparent",
-                    color: "var(--hms-text-muted)",
-                    cursor: "pointer",
-                  }}
+                  size="sm"
+                  style={{ width: 20, height: 20, borderRadius: 4 }}
                 >
                   <MoreHorizontal size={13} />
-                </button>
+                </IconButton>
               </Tooltip>
             )
           )}
@@ -483,6 +439,7 @@ export default function SessionRecents({
 
   return (
     <div
+      className="hms-session-recents-root"
       style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}
       onMouseEnter={() => setContainerHovered(true)}
       onMouseLeave={() => setContainerHovered(false)}
@@ -490,25 +447,12 @@ export default function SessionRecents({
       {/* Pinned section — only when caller provides pinnedIds and list is non-empty */}
       {pinnedSessions.length > 0 && (
         <div style={{ flexShrink: 0 }}>
-          <div style={{ padding: "12px 12px 4px", display: "flex", alignItems: "center", flexShrink: 0 }}>
+          <div className="hms-session-recents-subheader">
             <button
               onClick={() => setPinnedCollapsed((c) => !c)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                flex: 1,
-                background: "none",
-                border: "none",
-                padding: "2px 0",
-                cursor: "pointer",
-                color: "var(--hms-text)",
-                fontSize: 'var(--hms-text-sm)',
-                fontWeight: 600,
-                textAlign: "left",
-              }}
+              className="hms-session-recents-toggle"
             >
-              <span>{pinnedTitle}</span>
+              <span className="hms-session-recents-heading">{pinnedTitle}</span>
               <ChevronDown
                 size={13}
                 style={{
@@ -554,35 +498,13 @@ export default function SessionRecents({
       )}
 
       {/* Header */}
-      <div
-        style={{
-          padding: "12px 12px 8px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: borderless ? "none" : "1px solid var(--hms-border)",
-          flexShrink: 0,
-        }}
-      >
+      <div className="hms-session-recents-header" style={{ borderBottom: borderless ? "none" : "1px solid var(--hms-border)" }}>
         {collapsible ? (
           <button
             onClick={() => setCollapsed((c) => !c)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              flex: 1,
-              background: "none",
-              border: "none",
-              padding: "2px 0",
-              cursor: "pointer",
-              color: "var(--hms-text)",
-              fontSize: 'var(--hms-text-sm)',
-              fontWeight: 600,
-              textAlign: "left",
-            }}
+            className="hms-session-recents-toggle"
           >
-            <span>{headerTitle ?? "Sessions"}</span>
+            <span className="hms-session-recents-heading">{headerTitle ?? "Sessions"}</span>
             <ChevronDown
               size={13}
               style={{
@@ -595,13 +517,11 @@ export default function SessionRecents({
             />
           </button>
         ) : (
-          <span style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600 }}>{headerTitle ?? "Sessions"}</span>
+          <span className="hms-session-recents-heading">{headerTitle ?? "Sessions"}</span>
         )}
         <div
+          className="hms-session-recents-actions"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 'var(--hms-space-2)',
             opacity: actionsOpacity,
             transition: "opacity var(--hms-transition)",
             pointerEvents: actionsOpacity === 0 ? "none" : undefined,
@@ -610,44 +530,27 @@ export default function SessionRecents({
           {viewAllHref && (
             <button
               onClick={() => navigate(viewAllHref)}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                fontSize: 'var(--hms-text-xs)',
-                color: "var(--hms-text-muted)",
-              }}
+              className="hms-session-recents-link"
             >
               View all →
             </button>
           )}
 
           {showNewButton && (
-            <button
+            <IconButton
               onClick={handleNewSession}
               title="New session"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                border: "1px solid var(--hms-border)",
-                background: "transparent",
-                color: "var(--hms-text-muted)",
-                cursor: "pointer",
-              }}
+              aria-label="New session"
+              size="sm"
             >
               <Plus size={14} />
-            </button>
+            </IconButton>
           )}
         </div>
       </div>
 
       {/* Session list — animated collapse/expand (Sidebar Recents). */}
-      <div style={{
+      <div className="hms-session-recents-body" style={{
         flex: 1,
         overflow: "hidden",
         minHeight: 0,
@@ -655,15 +558,15 @@ export default function SessionRecents({
         transition: "max-height 0.22s ease, opacity 0.18s ease",
         opacity: collapsed ? 0 : 1,
       }}>
-        <div style={{ overflowY: "auto", padding: "6px 6px", height: "100%" }}>
+        <div className="hms-session-recents-scroll">
         {isError && (
-          <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", padding: "8px 6px" }}>
+          <div className="hms-session-recents-empty">
             Dashboard unavailable — session history not loaded.
           </div>
         )}
 
         {sessions.length === 0 && !isError && (
-          <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", padding: "8px 6px" }}>
+          <div className="hms-session-recents-empty">
             No sessions yet.
           </div>
         )}
@@ -705,7 +608,7 @@ export default function SessionRecents({
             borderRadius: 8,
             padding: "4px 0",
             minWidth: 160,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            boxShadow: "var(--hms-shadow-popover)",
           }}
         >
           {buildSessionActions(t, {
@@ -735,6 +638,7 @@ export default function SessionRecents({
             <button
               key={item.key}
               onClick={() => { item.onSelect(); setMenu(null); }}
+              className="hms-sidebar-row hms-session-recents-menu-item"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -745,7 +649,7 @@ export default function SessionRecents({
                 border: "none",
                 cursor: "pointer",
                 fontSize: 'var(--hms-text-sm)',
-                color: item.danger ? "var(--hms-error, #e53e3e)" : "var(--hms-text)",
+                color: item.danger ? "var(--hms-error-text)" : "var(--hms-text)",
                 textAlign: "left",
               }}
             >
