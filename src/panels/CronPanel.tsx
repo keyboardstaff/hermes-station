@@ -196,6 +196,7 @@ export default function CronPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <PageTopBar
         title={t.nav.cron}
+        showProfileScope
         actions={
           <>
             <Button size="sm" variant="primary" onClick={openBlank}>

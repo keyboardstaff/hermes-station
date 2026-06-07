@@ -67,18 +67,9 @@ export default function ModelsPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+    <div className="hms-models-root">
       <PageTopBar title={t.nav.models} />
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "var(--hms-space-6)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--hms-space-8, 32px)",
-        }}
-      >
+      <div className="hms-models-body">
         {/* Primary */}
         <SectionCard title={tabLabels.primary}>
           <PrimaryTab m={m} flags={flags} />
@@ -106,16 +97,7 @@ export default function ModelsPanel() {
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2
-        style={{
-          margin: "0 0 12px",
-          fontSize: "var(--hms-text-body)",
-          fontWeight: 700,
-          color: "var(--hms-text)",
-        }}
-      >
-        {title}
-      </h2>
+      <h2 className="hms-models-section-title">{title}</h2>
       {children}
     </section>
   );

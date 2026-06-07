@@ -14,6 +14,23 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useProfileScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
+import { useActiveProfile } from "@/hooks/useProfiles";
+
+// The upstream cron endpoints (proxied verbatim, query forwarded) all take a
+// `?profile=` param — "all" for every profile, else a concrete profile's home.
+// So cron is profile-scoped end-to-end by just threading the view-scope through.
+function useCronScope() {
+  const scope = useProfileScope((s) => s.scope);
+  const { data: active } = useActiveProfile();
+  const concrete = scope === ALL_PROFILES ? undefined : (effectiveScopeName(scope, active?.current) ?? undefined);
+  return {
+    // List: a concrete profile's jobs, or every profile's ("all").
+    list: concrete ?? "all",
+    // Create: a concrete profile (ALL scope → undefined → upstream "default").
+    write: concrete,
+  };
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -85,9 +102,10 @@ export interface CronUpdateBody {
 const LIST_KEY = ["cron-jobs"] as const;
 
 export function useCronJobs() {
+  const { list } = useCronScope();
   return useQuery<CronJob[]>({
-    queryKey: LIST_KEY,
-    queryFn: () => api.get<CronJob[]>("/api/dashboard/cron/jobs"),
+    queryKey: [...LIST_KEY, list],
+    queryFn: () => api.get<CronJob[]>(`/api/dashboard/cron/jobs?profile=${encodeURIComponent(list)}`),
     refetchInterval: 15_000,
     staleTime: 5_000,
     retry: 1,
@@ -106,9 +124,12 @@ export function useCronJob(id: string | null) {
 
 export function useCreateJob() {
   const qc = useQueryClient();
+  const { write } = useCronScope();
   return useMutation({
     mutationFn: (body: CronCreateBody) =>
-      api.json<CronJob>("/api/dashboard/cron/jobs", "POST", body),
+      api.json<CronJob>(
+        `/api/dashboard/cron/jobs${write ? `?profile=${encodeURIComponent(write)}` : ""}`, "POST", body,
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: LIST_KEY }),
   });
 }
