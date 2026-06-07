@@ -11,6 +11,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 from aiohttp import web
 
@@ -23,11 +24,35 @@ router = web.RouteTableDef()
 
 _KNOWN_SOURCE_PREFIX_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,32}$")
 _SOURCE_TOKEN_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,32}$")
+_PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _VALID_SEARCH_SORTS = frozenset({"newest", "oldest"})
 
 
 def _valid_session_id(sid: str) -> bool:
     return bool(sid and SESSION_ID_RE.match(sid))
+
+
+def _session_db(request: web.Request) -> tuple[Any, web.Response | None]:
+    """SessionDB for the request's ``?profile=`` (default / unset → process ``db()``).
+
+    A non-default profile's sessions live in its OWN ``state.db``, so a per-session
+    read or mutation must open *that* db — otherwise a non-default-profile session
+    404s on read, or a mutation lands in the wrong home. Mirrors upstream desktop's
+    read routing (``getSessionMessages(id, profile)`` → "the primary opens that
+    profile's state.db via ``?profile=``"): the cross-home aggregation tags each
+    row with its ``profile``, and the SPA echoes that tag back here. An unknown /
+    unresolvable named profile falls back to ``db()`` (the row may be the default
+    profile's); a malformed profile name is rejected, not silently coerced.
+    """
+    from server.lib.profile_run import resolve_profile_home
+
+    raw = request.query.get("profile")
+    if not raw or raw == "default":
+        return db(), None
+    if not _PROFILE_ID_RE.match(raw):
+        return None, web.json_response({"error": "invalid_profile"}, status=400)
+    home = resolve_profile_home(raw)
+    return (db() if home is None else db_for_home(home)), None
 
 
 def _split_csv(raw: str | None, *, validator: re.Pattern[str]) -> list[str] | None:
@@ -142,7 +167,10 @@ async def get_session(request: web.Request) -> web.Response:
     sid = request.match_info["session_id"]
     if not _valid_session_id(sid):
         return web.json_response({"error": "invalid_session_id"}, status=400)
-    row = await run_db(db().get_session, sid)
+    sdb, err = _session_db(request)
+    if err is not None:
+        return err
+    row = await run_db(sdb.get_session, sid)
     if row is None:
         return web.json_response({"error": "not_found"}, status=404)
     if isinstance(row, dict) and "session_id" not in row and row.get("id"):
@@ -155,6 +183,9 @@ async def patch_session(request: web.Request) -> web.Response:
     sid = request.match_info["session_id"]
     if not _valid_session_id(sid):
         return web.json_response({"error": "invalid_session_id"}, status=400)
+    sdb, err = _session_db(request)
+    if err is not None:
+        return err
 
     try:
         body = await request.json()
@@ -168,7 +199,7 @@ async def patch_session(request: web.Request) -> web.Response:
         if not isinstance(title, str):
             return web.json_response({"error": "invalid_title"}, status=400)
         try:
-            ok = await run_db(db().set_session_title, sid, title)
+            ok = await run_db(sdb.set_session_title, sid, title)
         except ValueError as exc:
             return web.json_response(
                 {"error": "title_conflict", "detail": str(exc)}, status=409
@@ -185,7 +216,10 @@ async def delete_session_route(request: web.Request) -> web.Response:
     sid = request.match_info["session_id"]
     if not _valid_session_id(sid):
         return web.json_response({"error": "invalid_session_id"}, status=400)
-    deleted = await run_db(db().delete_session, sid)
+    sdb, err = _session_db(request)
+    if err is not None:
+        return err
+    deleted = await run_db(sdb.delete_session, sid)
     if not deleted:
         return web.json_response({"error": "not_found"}, status=404)
     return web.json_response({"ok": True})
@@ -199,11 +233,14 @@ async def get_session_messages(request: web.Request) -> web.Response:
     sid = request.match_info["session_id"]
     if not SESSION_ID_RE.match(sid):
         return web.json_response({"error": "invalid_session_id"}, status=400)
+    sdb, err = _session_db(request)
+    if err is not None:
+        return err
     # Tail-slice from upstream's full transcript: offset counts back from the tail.
     limit = coerce_int_arg(request.query.get("limit"), 200, lo=1, hi=5000)
     offset = coerce_int_arg(request.query.get("offset"), 0, lo=0, hi=1_000_000)
     try:
-        messages = await run_db(db().get_messages, sid)
+        messages = await run_db(sdb.get_messages, sid)
     except Exception as exc:  # noqa: BLE001
         logger.exception("get_messages failed")
         return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
@@ -222,7 +259,9 @@ async def clear_session_messages(request: web.Request) -> web.Response:
     sid = request.match_info["session_id"]
     if not SESSION_ID_RE.match(sid):
         return web.json_response({"error": "invalid_session_id"}, status=400)
-    handle = db()
+    handle, err = _session_db(request)
+    if err is not None:
+        return err
     clear = getattr(handle, "clear_messages", None) if handle is not None else None
     if clear is None:
         return web.json_response({"error": "unsupported"}, status=503)

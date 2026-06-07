@@ -10,12 +10,20 @@ import {
 } from "@/lib/session-messages";
 import type { ChatMessage } from "@/lib/hermes-types";
 
+/** Append `&profile=<name>` for a non-default profile so the backend opens that
+ *  profile's own state.db (a non-default-profile session's messages live there,
+ *  not in the default home). Omitted / "default" → unchanged default read. */
+export function profileQuery(profile?: string | null): string {
+  return profile && profile !== "default" ? `&profile=${encodeURIComponent(profile)}` : "";
+}
+
 export async function loadSessionMessages(
   sessionId: string,
   limit = 200,
+  profile?: string | null,
 ): Promise<ChatMessage[]> {
   const data = await api.get<{ messages: MessageRow[] }>(
-    `/api/sessions/${encodeURIComponent(sessionId)}/messages?limit=${limit}`,
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages?limit=${limit}${profileQuery(profile)}`,
   );
   const base = historyToChatMessages(data.messages);
   try {

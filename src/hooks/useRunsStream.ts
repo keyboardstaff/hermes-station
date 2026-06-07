@@ -5,7 +5,8 @@ import { useWSStore } from "@/store/ws";
 import type { ComposerAttachment, ContentPart, RunInput, ToolCall } from "@/lib/hermes-types";
 import type { RunEventMessage } from "@/lib/ws-types";
 import { api } from "@/lib/api";
-import { toolResultsById } from "@/lib/load-session";
+import { toolResultsById, profileQuery } from "@/lib/load-session";
+import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
 import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
 
@@ -232,7 +233,12 @@ export function useRunsStream() {
             // result text on the matching cards. Wholesale reconcile happens on the
             // next session entry, not here, so live-only segments survive.
             if (sid) {
-              fetch(`/api/sessions/${encodeURIComponent(sid)}/messages?limit=200`)
+              // Read from the run's own profile state.db (a profile-scoped run
+              // persists there, not the default home).
+              const sessProfile = queryClient
+                .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
+                ?.sessions.find((sx) => sx.session_id === sid)?.profile;
+              fetch(`/api/sessions/${encodeURIComponent(sid)}/messages?limit=200${profileQuery(sessProfile)}`)
                 .then((r) => (r.ok ? r.json() : { messages: [] }))
                 .then((data: { messages: MessageRow[] }) => {
                   const byId = toolResultsById(data.messages ?? []);

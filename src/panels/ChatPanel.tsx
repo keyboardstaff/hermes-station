@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCapabilityStore } from "@/store/capabilities";
 import { useChatStore } from "@/store/chat";
 import { useRunsStream } from "@/hooks/useRunsStream";
@@ -12,6 +13,7 @@ import { useIsMobile } from "@/hooks/useBreakpoint";
 import { useDangerousCommandApproval } from "@/hooks/useDangerousCommandApproval";
 import { AlertTriangle } from "lucide-react";
 import { loadSessionMessages } from "@/lib/load-session";
+import type { SessionSummary } from "@/lib/hermes-types";
 import Card from "@/components/ui/Card";
 import HermesMark from "@/components/ui/HermesMark";
 
@@ -78,6 +80,7 @@ export default function ChatPanel() {
   const { resolveApproval } = useApprovalBridge();
   const activeRunId = useChatStore((s) => s.activeRunId);
   const pendingAutoSend = useChatStore((s) => s.pendingAutoSend);
+  const queryClient = useQueryClient();
   const loadedSessionRef = useRef<string | null>(null);
   const loadingSessionRef = useRef<string | null>(null);
   const prevSessionRef = useRef<string | null>(null);
@@ -148,7 +151,15 @@ export default function ChatPanel() {
     loadingSessionRef.current = activeSessionId;
     setHistoryPending(true);
     const fetchingSessionId = activeSessionId;
-    loadSessionMessages(fetchingSessionId)
+    // Read this session's owning profile from the shared sessions cache so the
+    // transcript loads from THAT profile's state.db — a non-default-profile chat
+    // lives in its own home, and a default-home read returns nothing.
+    const cachedSessions =
+      queryClient.getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"]);
+    const sessionProfile = cachedSessions?.sessions.find(
+      (s) => s.session_id === fetchingSessionId,
+    )?.profile;
+    loadSessionMessages(fetchingSessionId, 200, sessionProfile)
       .then((chatMessages) => {
         // Drop stale load if user switched sessions mid-flight.
         if (loadingSessionRef.current !== fetchingSessionId) return;
@@ -207,7 +218,7 @@ export default function ChatPanel() {
         }
         setHistoryPending(false);
       });
-  }, [activeSessionId, appendMessage, reconcileSession, setHistoryPending]);
+  }, [activeSessionId, appendMessage, reconcileSession, setHistoryPending, queryClient]);
 
   // One-click "regenerate": a branch action set pendingAutoSend + a null active
   // session (so conversation_history seeds it); fire the send once it's in place.

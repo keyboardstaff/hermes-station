@@ -244,3 +244,105 @@ async def test_clear_messages_unsupported_503(app_server):
                 headers={"X-HMS-CSRF": "1"},
             ) as r:
                 assert r.status == 503
+
+
+# ── Profile-scoped per-session reads / mutations (?profile=) ──────────
+# A non-default profile's sessions live in its OWN state.db; a per-session read
+# or mutation must open THAT db (mirrors upstream desktop's ?profile= routing).
+
+
+def _install_profile_dbs(messages_default=None, messages_profile=None):
+    """Two distinct SessionDBs (process-default + a named profile's own) plus a
+    resolve_profile_home that maps only 'work' → a home; anything else → default."""
+    default_db = MagicMock(name="default_db")
+    default_db.get_messages.return_value = messages_default or []
+    profile_db = MagicMock(name="profile_db")
+    profile_db.get_messages.return_value = messages_profile or []
+
+    def _resolve(name):
+        return Path("/tmp/hermes-work") if name == "work" else None
+
+    return (
+        patch("server.routes.chat.db", return_value=default_db),
+        patch("server.routes.chat.db_for_home", return_value=profile_db),
+        patch("server.lib.profile_run.resolve_profile_home", side_effect=_resolve),
+        default_db,
+        profile_db,
+    )
+
+
+@pytest.mark.asyncio
+async def test_messages_profile_param_reads_that_profiles_db(app_server):
+    """?profile=work opens the named profile's own state.db, not the default —
+    the fix for non-default-profile session messages 404ing / coming back empty."""
+    p_db, p_home, p_resolve, default_db, profile_db = _install_profile_dbs(
+        messages_default=[{"id": 1, "role": "user", "content": "default"}],
+        messages_profile=[{"id": 9, "role": "user", "content": "work"}],
+    )
+    with p_db, p_home, p_resolve:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/sessions/abc123/messages?profile=work") as r:
+                assert r.status == 200
+                data = await r.json()
+    assert data["messages"] == [{"id": 9, "role": "user", "content": "work"}]
+    profile_db.get_messages.assert_called_once_with("abc123")
+    default_db.get_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_messages_default_profile_uses_process_db(app_server):
+    """?profile=default and an omitted profile both read db() — byte-for-byte the
+    prior behaviour, so default-only users are unaffected."""
+    p_db, p_home, p_resolve, default_db, profile_db = _install_profile_dbs(
+        messages_default=[{"id": 1, "role": "user", "content": "default"}],
+    )
+    with p_db, p_home, p_resolve:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/sessions/abc/messages?profile=default") as r:
+                assert r.status == 200
+            async with cs.get(f"{app_server}/api/sessions/abc/messages") as r:
+                assert r.status == 200
+    assert default_db.get_messages.call_count == 2
+    profile_db.get_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_messages_invalid_profile_rejected_400(app_server):
+    p_db, p_home, p_resolve, default_db, profile_db = _install_profile_dbs()
+    with p_db, p_home, p_resolve:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/sessions/abc/messages?profile=Bad!Name") as r:
+                assert r.status == 400
+                assert (await r.json())["error"] == "invalid_profile"
+    default_db.get_messages.assert_not_called()
+    profile_db.get_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_messages_unknown_profile_falls_back_to_default(app_server):
+    """A well-formed but unresolvable profile name → default db (the row may be
+    the default profile's; resolve_profile_home already logged the miss)."""
+    p_db, p_home, p_resolve, default_db, profile_db = _install_profile_dbs(
+        messages_default=[{"id": 1, "role": "user", "content": "default"}],
+    )
+    with p_db, p_home, p_resolve:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/sessions/abc/messages?profile=ghost") as r:
+                assert r.status == 200
+    default_db.get_messages.assert_called_once_with("abc")
+    profile_db.get_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_clear_profile_param_routes_mutation(app_server):
+    """A mutation (clear) under ?profile=work wipes that profile's db, not default."""
+    p_db, p_home, p_resolve, default_db, profile_db = _install_profile_dbs()
+    with p_db, p_home, p_resolve:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/abc123/clear?profile=work",
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 200, await r.text()
+    profile_db.clear_messages.assert_called_once_with("abc123")
+    default_db.clear_messages.assert_not_called()

@@ -17,6 +17,7 @@ import { api } from "@/lib/api";
 
 import type { MessageRow } from "@/lib/session-messages";
 import { historyToChatMessages } from "@/lib/session-messages";
+import { profileQuery } from "@/lib/load-session";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 
 function relativeTime(ts?: number): string {
@@ -93,16 +94,22 @@ export default function SessionsPanel() {
   // path masked failures behind a "Loading… then empty" drawer. The
   // ``api`` wrapper throws ``ApiError`` for us, react-query surfaces
   // it as ``previewError``, and the drawer renders a clear message.
+  // The session's owning profile (rows are tagged by the cross-home list) so the
+  // preview reads from THAT profile's state.db — a non-default-profile session's
+  // transcript lives in its own home, not the default one.
+  const previewProfile = preview
+    ? allData?.sessions.find((s) => s.session_id === preview)?.profile
+    : undefined;
   const {
     data: previewData,
     isLoading: previewLoading,
     error: previewError,
   } = useQuery<{ messages: MessageRow[] }>({
-    queryKey: ["session-preview", preview],
+    queryKey: ["session-preview", preview, previewProfile ?? null],
     queryFn: () =>
       preview
         ? api.get<{ messages: MessageRow[] }>(
-            `/api/sessions/${encodeURIComponent(preview)}/messages?limit=100`,
+            `/api/sessions/${encodeURIComponent(preview)}/messages?limit=100${profileQuery(previewProfile)}`,
           )
         : Promise.resolve({ messages: [] }),
     enabled: !!preview,

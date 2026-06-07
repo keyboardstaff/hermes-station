@@ -17,6 +17,7 @@ import {
 import { resolveFileTarget, hasFileExtension, type FileTarget, type WorkspaceDir } from "@/lib/file-target";
 import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
+import { profileQuery } from "@/lib/load-session";
 import PageTopBar from "@/components/layout/PageTopBar";
 import SearchInput from "@/components/ui/SearchInput";
 import IconButton from "@/components/ui/IconButton";
@@ -65,8 +66,12 @@ async function buildArtifactIndex(): Promise<ArtifactRecord[]> {
   const recent = [...sessions].sort((x, y) => recencyOf(y) - recencyOf(x)).slice(0, RECENT_SESSIONS);
 
   const results = await Promise.allSettled(
+    // Each row carries its owning profile (cross-home list) — read its messages
+    // from that profile's state.db, else a non-default session yields no artifacts.
     recent.map((s) =>
-      api.get<{ messages: MessageRow[] }>(`/api/sessions/${encodeURIComponent(s.session_id)}/messages?limit=500`),
+      api.get<{ messages: MessageRow[] }>(
+        `/api/sessions/${encodeURIComponent(s.session_id)}/messages?limit=500${profileQuery(s.profile)}`,
+      ),
     ),
   );
 
