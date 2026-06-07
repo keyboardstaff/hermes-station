@@ -116,7 +116,6 @@ export default function ProfilePanel() {
           detail={detail}
           hasSelection={selectedName !== null}
           onBack={() => setSelected(null)}
-          storageKey="profile"
         />
       </div>
     </div>

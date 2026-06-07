@@ -717,6 +717,12 @@ export interface Translations {
     argsPlaceholder: string;
     urlPlaceholder: string;
     oauth: string;
+    serverJson: string;
+    editTitle: string;
+    save: string;
+    saving: string;
+    nameRequired: string;
+    invalidJson: string;
   };
 
   /** Cron panel strings. */

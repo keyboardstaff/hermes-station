@@ -692,6 +692,12 @@ export const zh: Translations = {
     argsPlaceholder: "参数（空格分隔）",
     urlPlaceholder: "网址（https://…）",
     oauth: "OAuth 认证",
+    serverJson: "Server JSON",
+    editTitle: "服务器配置",
+    save: "保存",
+    saving: "保存中…",
+    nameRequired: "需要填写名称。",
+    invalidJson: "JSON 无效 —— 配置必须是 JSON 对象。",
   },
 
   cron: {

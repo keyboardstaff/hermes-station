@@ -110,7 +110,6 @@ export default function FilesPanel() {
           detail={detail}
           hasSelection={selected !== null}
           onBack={() => setSelected(null)}
-          storageKey="files"
           mobileBackBar={
             selected ? (
               <FileBreadcrumb

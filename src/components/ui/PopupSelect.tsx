@@ -124,7 +124,7 @@ export function PopupSelect<T extends SelectValue = string>({
     alignItems: "center",
     width: "100%",
     padding: plain ? "4px 2px" : "6px 10px",
-    fontSize: "var(--hms-text-caption)",
+    fontSize: plain ? "var(--hms-text-sm)" : "var(--hms-text-caption)",
     background: plain ? "transparent" : "var(--hms-bg)",
     border: plain ? "none" : "1px solid var(--hms-border)",
     borderRadius: plain ? 0 : 6,

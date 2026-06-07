@@ -43,11 +43,11 @@ export default function SkillsSideList() {
       .map(([category, count]) => ({ category, count }));
   }, [skills, query]);
 
-  // Default selection (desktop): first category once data lands.
+  // Default selection (desktop): the All-skills view.
   useEffect(() => {
-    if (isMobile || view || categories.length === 0) return;
-    setView({ kind: "category", key: categories[0].category });
-  }, [categories, view, setView, isMobile]);
+    if (isMobile || view) return;
+    setView({ kind: "all" });
+  }, [view, setView, isMobile]);
 
   const toolsetsActive = view?.kind === "toolsets";
   const mcpActive = view?.kind === "mcp";
@@ -82,8 +82,6 @@ export default function SkillsSideList() {
               <span className="hms-skills-row-name">{s?.allSkills ?? "All skills"}</span>
               <span className="hms-skills-row-count">{skills?.length ?? 0}</span>
             </button>
-
-            <div className="hms-skills-row-divider" aria-hidden="true" />
 
             {categories.map(({ category, count }) => {
               const active = view?.kind === "category" && view.key === category;

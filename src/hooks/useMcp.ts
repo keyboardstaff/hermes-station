@@ -20,15 +20,8 @@ export interface McpServer {
   url: string | null;
   auth: string | null;
   enabled: boolean;
-}
-
-export interface AddMcpServer {
-  name: string;
-  transport: "stdio" | "http";
-  command?: string;
-  args?: string[];
-  url?: string;
-  auth?: "oauth";
+  /** The raw config block, for the "Server JSON" editor. */
+  config: Record<string, unknown>;
 }
 
 const MCP_KEY = ["mcp-servers"] as const;
@@ -44,24 +37,15 @@ export function useMcpServers() {
   });
 }
 
-export function useToggleMcpServer() {
+/** Upsert a server's full config from the "Server JSON" editor. */
+export function useSetMcpServer() {
   const qc = useQueryClient();
   const profile = useScopeParam();
   return useMutation({
-    mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
-      api.json<{ ok: boolean }>(
-        `/api/mcp/servers/${encodeURIComponent(name)}${scopeQuery(profile)}`, "PATCH", { enabled },
+    mutationFn: ({ name, config }: { name: string; config: Record<string, unknown> }) =>
+      api.json<{ ok: boolean; name: string }>(
+        `/api/mcp/servers/${encodeURIComponent(name)}${scopeQuery(profile)}`, "PUT", { config },
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: MCP_KEY }),
-  });
-}
-
-export function useAddMcpServer() {
-  const qc = useQueryClient();
-  const profile = useScopeParam();
-  return useMutation({
-    mutationFn: (body: AddMcpServer) =>
-      api.json<{ ok: boolean; name: string }>(`/api/mcp/servers${scopeQuery(profile)}`, "POST", body),
     onSuccess: () => qc.invalidateQueries({ queryKey: MCP_KEY }),
   });
 }

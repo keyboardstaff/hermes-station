@@ -1,197 +1,150 @@
 import { useState } from "react";
-import { Plus, Trash2, Server, Globe, Terminal } from "lucide-react";
+import { Plus, Trash2, Globe, Terminal } from "lucide-react";
 import {
   useMcpServers,
-  useToggleMcpServer,
-  useAddMcpServer,
+  useSetMcpServer,
   useRemoveMcpServer,
   type McpServer,
-  type AddMcpServer,
 } from "@/hooks/useMcp";
 import { useI18n } from "@/i18n";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
-import IconButton from "@/components/ui/IconButton";
-import { ApiError } from "@/lib/api";
 
-// MCP server management — the configured ``mcp_servers`` block.
-// Lists servers with enable/disable + remove, plus a manual add form (stdio or
-// http). Catalog git-install stays in the CLI; this is the config layer.
+// MCP server management — single column: a server list on top, and a
+// "Server JSON" editor below that edits the selected server's full config block
+// (any field — command/args/url/env/headers/enabled), mirroring upstream
+// desktop. Catalog git-install stays in the CLI; this is the config layer.
+
+const NEW_TEMPLATE = JSON.stringify({ command: "npx", args: [], enabled: true }, null, 2);
 
 export default function McpServersView() {
   const { t } = useI18n();
   const m = t.mcp;
   const { data, isLoading, isError } = useMcpServers();
-  const [adding, setAdding] = useState(false);
-
+  const setServer = useSetMcpServer();
+  const remove = useRemoveMcpServer();
   const servers = data?.servers ?? [];
 
+  const [selected, setSelected] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [json, setJson] = useState("");
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectServer = (srv: McpServer) => {
+    setSelected(srv.name);
+    setName(srv.name);
+    setJson(JSON.stringify(srv.config, null, 2));
+    setOpen(true);
+    setError(null);
+  };
+
+  const startNew = () => {
+    setSelected(null);
+    setName("");
+    setJson(NEW_TEMPLATE);
+    setOpen(true);
+    setError(null);
+  };
+
+  const save = () => {
+    const n = name.trim();
+    if (!n) { setError(m?.nameRequired ?? "A name is required."); return; }
+    let config: unknown;
+    try { config = JSON.parse(json); } catch { setError(m?.invalidJson ?? "Invalid JSON."); return; }
+    if (typeof config !== "object" || config === null || Array.isArray(config)) {
+      setError(m?.invalidJson ?? "Invalid JSON.");
+      return;
+    }
+    setError(null);
+    setServer.mutate(
+      { name: n, config: config as Record<string, unknown> },
+      { onSuccess: () => setSelected(n) },
+    );
+  };
+
+  const removeSelected = () => {
+    if (!selected) return;
+    if (!confirm((m?.confirmRemove ?? "Remove MCP server") + ` "${selected}"?`)) return;
+    remove.mutate(selected, { onSuccess: () => { setOpen(false); setSelected(null); } });
+  };
+
   return (
-    <div style={{ padding: "var(--hms-space-6)", display: "flex", flexDirection: "column", gap: "var(--hms-space-3)", maxWidth: "var(--hms-content-max-w)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)" }}>
-        <div style={{ flex: 1, fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)" }}>
-          {m?.intro ?? "Configured MCP servers (config.yaml). Install new ones from the catalog via the CLI."}
-        </div>
-        <Button size="sm" variant="primary" onClick={() => setAdding((a) => !a)}>
+    <div className="hms-mcp">
+      <div className="hms-mcp-head">
+        <span className="hms-mcp-intro">{m?.intro ?? "Configured MCP servers (config.yaml)."}</span>
+        <Button size="sm" variant="primary" onClick={startNew}>
           <Plus size={12} /> {m?.add ?? "Add server"}
         </Button>
       </div>
 
-      {adding && <AddForm onDone={() => setAdding(false)} />}
-
       {isLoading && <Empty text={m?.loading ?? "Loading…"} />}
       {isError && <Empty text={m?.error ?? "Failed to load MCP servers."} />}
-      {!isLoading && !isError && servers.length === 0 && !adding && (
+      {!isLoading && !isError && servers.length === 0 && (
         <Empty text={m?.empty ?? "No MCP servers configured."} />
       )}
 
-      {servers.map((srv) => <ServerCard key={srv.name} srv={srv} />)}
-    </div>
-  );
-}
-
-function ServerCard({ srv }: { srv: McpServer }) {
-  const { t } = useI18n();
-  const m = t.mcp;
-  const toggle = useToggleMcpServer();
-  const remove = useRemoveMcpServer();
-  const Icon = srv.transport === "http" ? Globe : Terminal;
-
-  return (
-    <Card style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-2)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)" }}>
-        <Icon size={14} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
-        <span style={{ flex: 1, fontSize: "var(--hms-text-sm)", fontWeight: 600 }}>{srv.name}</span>
-        <StatusBadge tone={srv.enabled ? "success" : "muted"}>
-          {srv.enabled ? (m?.enabled ?? "enabled") : (m?.disabled ?? "disabled")}
-        </StatusBadge>
-        <label style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }} title={m?.toggleHint ?? "Enable / disable"}>
-          <input
-            type="checkbox"
-            checked={srv.enabled}
-            disabled={toggle.isPending}
-            onChange={(e) => toggle.mutate({ name: srv.name, enabled: e.target.checked })}
-          />
-        </label>
-        <IconButton
-          size="sm"
-          danger
-          title={m?.remove ?? "Remove"}
-          disabled={remove.isPending}
-          onClick={() => {
-            if (confirm((m?.confirmRemove ?? "Remove MCP server") + ` "${srv.name}"?`)) {
-              remove.mutate(srv.name);
-            }
-          }}
-        >
-          <Trash2 size={12} />
-        </IconButton>
-      </div>
-      <code style={{ fontSize: "0.625rem", fontFamily: "monospace", color: "var(--hms-text-muted)", wordBreak: "break-all" }}>
-        {srv.transport === "http"
-          ? srv.url + (srv.auth ? `  · ${srv.auth}` : "")
-          : [srv.command, ...(srv.args ?? [])].join(" ")}
-      </code>
-    </Card>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  padding: "5px 8px",
-  fontSize: "var(--hms-text-sm)",
-  background: "var(--hms-input-bg)",
-  border: "1px solid var(--hms-input-border, var(--hms-border))",
-  borderRadius: "var(--hms-input-radius, var(--hms-radius-md))",
-  color: "var(--hms-text)",
-  outline: "none",
-  boxSizing: "border-box",
-  width: "100%",
-};
-
-function AddForm({ onDone }: { onDone: () => void }) {
-  const { t } = useI18n();
-  const m = t.mcp;
-  const add = useAddMcpServer();
-  const [name, setName] = useState("");
-  const [transport, setTransport] = useState<"stdio" | "http">("stdio");
-  const [command, setCommand] = useState("");
-  const [argsRaw, setArgsRaw] = useState("");
-  const [url, setUrl] = useState("");
-  const [oauth, setOauth] = useState(false);
-
-  const submit = () => {
-    const body: AddMcpServer = { name: name.trim(), transport };
-    if (transport === "stdio") {
-      body.command = command.trim();
-      const args = argsRaw.split(/\s+/).filter(Boolean);
-      if (args.length) body.args = args;
-    } else {
-      body.url = url.trim();
-      if (oauth) body.auth = "oauth";
-    }
-    add.mutate(body, { onSuccess: onDone });
-  };
-
-  const valid = name.trim() && (transport === "stdio" ? command.trim() : url.trim());
-
-  return (
-    <Card style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-2)", borderColor: "var(--hms-accent)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)", fontSize: "var(--hms-text-sm)", fontWeight: 600 }}>
-        <Server size={13} /> {m?.addTitle ?? "Add MCP server"}
-      </div>
-      <input style={inputStyle} placeholder={m?.namePlaceholder ?? "name (e.g. linear)"} value={name} onChange={(e) => setName(e.target.value)} />
-      <div style={{ display: "inline-flex", border: "1px solid var(--hms-border)", borderRadius: "var(--hms-radius-md)", overflow: "hidden", width: "fit-content" }}>
-        {(["stdio", "http"] as const).map((tt) => (
-          <button
-            key={tt}
-            type="button"
-            onClick={() => setTransport(tt)}
-            style={{
-              padding: "4px 12px", border: "none", cursor: "pointer", fontSize: "var(--hms-text-caption)",
-              background: transport === tt ? "var(--hms-selected-bg)" : "transparent",
-              color: transport === tt ? "var(--hms-text)" : "var(--hms-text-muted)",
-              fontWeight: transport === tt ? 600 : 400,
-            }}
-          >
-            {tt}
-          </button>
-        ))}
-      </div>
-      {transport === "stdio" ? (
-        <>
-          <input style={inputStyle} placeholder={m?.commandPlaceholder ?? "command (e.g. npx)"} value={command} onChange={(e) => setCommand(e.target.value)} />
-          <input style={inputStyle} placeholder={m?.argsPlaceholder ?? "args (space-separated)"} value={argsRaw} onChange={(e) => setArgsRaw(e.target.value)} />
-        </>
-      ) : (
-        <>
-          <input style={inputStyle} placeholder={m?.urlPlaceholder ?? "url (https://…)"} value={url} onChange={(e) => setUrl(e.target.value)} />
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)", fontSize: "var(--hms-text-caption)", color: "var(--hms-text-muted)", cursor: "pointer" }}>
-            <input type="checkbox" checked={oauth} onChange={(e) => setOauth(e.target.checked)} /> {m?.oauth ?? "OAuth auth"}
-          </label>
-        </>
-      )}
-      {add.isError && (
-        <div style={{ fontSize: "var(--hms-text-caption)", color: "var(--hms-error-text)" }}>
-          {add.error instanceof ApiError && add.error.status === 409
-            ? (m?.alreadyExists ?? "A server with that name already exists.")
-            : (add.error as Error).message}
+      {servers.length > 0 && (
+        <div className="hms-mcp-list">
+          {servers.map((srv) => {
+            const Icon = srv.transport === "http" ? Globe : Terminal;
+            return (
+              <button
+                key={srv.name}
+                type="button"
+                className="hms-mcp-row"
+                data-active={selected === srv.name || undefined}
+                onClick={() => selectServer(srv)}
+              >
+                <Icon size={13} className="hms-mcp-row-icon" />
+                <span className="hms-mcp-row-name">{srv.name}</span>
+                <StatusBadge tone="muted">{srv.transport}</StatusBadge>
+                <StatusBadge tone={srv.enabled ? "success" : "muted"}>
+                  {srv.enabled ? (m?.enabled ?? "enabled") : (m?.disabled ?? "disabled")}
+                </StatusBadge>
+              </button>
+            );
+          })}
         </div>
       )}
-      <div style={{ display: "flex", gap: "var(--hms-space-2)" }}>
-        <Button size="sm" variant="primary" disabled={!valid || add.isPending} onClick={submit}>
-          {add.isPending ? (m?.adding ?? "Adding…") : (m?.addConfirm ?? "Add")}
-        </Button>
-        <Button size="sm" onClick={onDone}>{m?.cancel ?? "Cancel"}</Button>
-      </div>
-    </Card>
+
+      {open && (
+        <div className="hms-mcp-editor">
+          <div className="hms-mcp-editor-title">{selected ?? (m?.addTitle ?? "Add MCP server")}</div>
+          <input
+            className="hms-mcp-name"
+            placeholder={m?.namePlaceholder ?? "name (e.g. linear)"}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={!!selected}
+          />
+          <label className="hms-mcp-json-label">{m?.serverJson ?? "Server JSON"}</label>
+          <textarea
+            className="hms-mcp-json"
+            spellCheck={false}
+            value={json}
+            onChange={(e) => setJson(e.target.value)}
+          />
+          {error && <div className="hms-mcp-error">{error}</div>}
+          <div className="hms-mcp-actions">
+            <Button size="sm" variant="primary" disabled={setServer.isPending} onClick={save}>
+              {setServer.isPending ? (m?.saving ?? "Saving…") : (m?.save ?? "Save")}
+            </Button>
+            {selected && (
+              <Button size="sm" variant="danger" disabled={remove.isPending} onClick={removeSelected}>
+                <Trash2 size={12} /> {m?.remove ?? "Remove"}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => { setOpen(false); setSelected(null); }}>
+              {m?.cancel ?? "Cancel"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
 function Empty({ text }: { text: string }) {
-  return (
-    <div style={{ padding: 32, border: "1px dashed var(--hms-border)", borderRadius: "var(--hms-radius-lg)", textAlign: "center", color: "var(--hms-text-muted)", fontSize: "var(--hms-text-sm)" }}>
-      {text}
-    </div>
-  );
+  return <div className="hms-mcp-empty">{text}</div>;
 }

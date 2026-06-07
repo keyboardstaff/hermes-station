@@ -47,7 +47,6 @@ export default function PluginsPanel() {
               detail={<PluginDetail />}
               hasSelection={!!selected}
               onBack={() => setSelected(null)}
-              storageKey="plugins"
             />
           </div>
         </div>

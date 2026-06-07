@@ -36,7 +36,7 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
   return (
     <div className={fullWidth ? "hms-scope-switcher" : undefined}>
       <PopupSelect
-        icon={<Layers size={13} />}
+        icon={<Layers size={15} />}
         label={label}
         value={current}
         options={options}

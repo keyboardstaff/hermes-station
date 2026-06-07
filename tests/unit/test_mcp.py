@@ -230,6 +230,37 @@ async def test_toggle_named_profile_scopes_write_and_skips_live_reload(app_serve
 
 
 @pytest.mark.asyncio
+async def test_set_server_upserts_full_config(app_server):
+    """PUT writes a server's full config block (any fields) — the JSON editor."""
+    base, cfg_path = app_server
+    cfg = {"command": "uvx", "args": ["thing"], "enabled": True, "env": {"K": "V"}}
+    async with aiohttp.ClientSession() as cs:
+        async with cs.put(f"{base}/api/mcp/servers/fresh", json={"config": cfg}, headers=_CSRF) as r:
+            assert r.status == 200, await r.text()
+    saved = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))["mcp_servers"]["fresh"]
+    assert saved == cfg
+
+
+@pytest.mark.asyncio
+async def test_set_server_invalid_config_400(app_server):
+    base, _ = app_server
+    async with aiohttp.ClientSession() as cs:
+        async with cs.put(f"{base}/api/mcp/servers/x", json={"config": "notamap"}, headers=_CSRF) as r:
+            assert r.status == 400
+            assert (await r.json())["error"] == "invalid_config"
+
+
+@pytest.mark.asyncio
+async def test_list_includes_raw_config(app_server):
+    base, _ = app_server
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{base}/api/mcp/servers") as r:
+            data = await r.json()
+    local = next(s for s in data["servers"] if s["name"] == "local")
+    assert local["config"] == {"command": "uvx", "args": ["some-mcp"], "enabled": False}
+
+
+@pytest.mark.asyncio
 async def test_toggle_default_reloads_live_config(app_server):
     """A default-home toggle DOES reload the live config (it IS the live config)."""
     base, _ = app_server

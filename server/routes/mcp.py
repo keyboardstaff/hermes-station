@@ -80,6 +80,8 @@ def _serialize(name: str, cfg: dict) -> dict:
         "url": cfg.get("url"),
         "auth": cfg.get("auth"),
         "enabled": bool(enabled),
+        # The raw config block, so the UI can show/edit the full "Server JSON".
+        "config": cfg,
     }
 
 
@@ -198,6 +200,44 @@ async def toggle_server(request: web.Request) -> web.Response:
     if err is not None:
         return web.json_response({"error": err}, status=400)
     return web.json_response({"ok": True, "name": name, "enabled": enabled})
+
+
+@router.put("/api/mcp/servers/{name}")
+async def set_server(request: web.Request) -> web.Response:
+    """Upsert a server's FULL config block from the UI's "Server JSON" editor —
+    create or replace ``mcp_servers.<name>`` with an arbitrary mapping (env /
+    headers / any field). Profile-scoped like the other writes."""
+    profile, perr = profile_arg(request)
+    if perr is not None:
+        return perr
+    name = request.match_info["name"]
+    if not _NAME_RE.match(name):
+        return web.json_response({"error": "invalid_name"}, status=400)
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid_json"}, status=400)
+    config = body.get("config") if isinstance(body, dict) else None
+    if not isinstance(config, dict):
+        return web.json_response({"error": "invalid_config"}, status=400)
+
+    def _apply() -> str | None:
+        text = _read_config_text()
+        doc = yaml.safe_load(text) or {}
+        if not isinstance(doc, dict):
+            return "config_not_mapping"
+        servers = doc.get("mcp_servers") or {}
+        if not isinstance(servers, dict):
+            return "mcp_servers_not_mapping"
+        servers[name] = config
+        doc["mcp_servers"] = servers
+        yaml_edit.write_text_atomic(_config_path(), yaml.safe_dump(doc, sort_keys=False))
+        return None
+
+    err = await _write_scoped(profile, _apply)
+    if err is not None:
+        return web.json_response({"error": err}, status=400)
+    return web.json_response({"ok": True, "name": name})
 
 
 @router.delete("/api/mcp/servers/{name}")

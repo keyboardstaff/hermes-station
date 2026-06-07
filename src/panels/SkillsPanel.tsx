@@ -54,7 +54,6 @@ export default function SkillsPanel() {
           detail={content}
           hasSelection={view !== null}
           onBack={() => setView(null)}
-          storageKey="skills"
         />
       </div>
     </div>

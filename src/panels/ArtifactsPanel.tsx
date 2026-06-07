@@ -26,7 +26,6 @@ import DocPreview from "@/components/files/DocPreview";
 
 /** Shared 2-column grid for the file/link table (NAME · SESSION). NAME stacks
  *  the label over its location (path / url), so there's no separate column. */
-const TABLE_COLS = "minmax(0, 1fr) minmax(120px, 200px)";
 
 /**
  * ArtifactsPanel — a cross-session gallery of images / files / links, collected
@@ -317,22 +316,9 @@ export default function ArtifactsPanel() {
                   prevLabel={a.prev}
                   nextLabel={a.next}
                 />
-                <div
-                  style={{
-                    marginTop: 'var(--hms-space-2)', borderRadius: 'var(--hms-radius-md)',
-                    border: "1px solid var(--hms-border)", overflow: "hidden",
-                  }}
-                >
+                <div className="hms-artifacts-table">
                   {/* Column headers (NAME · SESSION) */}
-                  <div
-                    style={{
-                      display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)',
-                      padding: "6px 10px", background: "var(--hms-hover-bg)",
-                      borderBottom: "1px solid var(--hms-border)",
-                      fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em",
-                      textTransform: "uppercase", color: "var(--hms-text-muted)",
-                    }}
-                  >
+                  <div className="hms-artifacts-table-head">
                     <span>{a.colName}</span>
                     <span>{a.colSession}</span>
                   </div>
@@ -387,33 +373,21 @@ function SectionHeader({
   onPrev: () => void; onNext: () => void; prevLabel: string; nextLabel: string;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-      <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>
-        {total} {itemsLabel}
-      </span>
+    <div className="hms-artifacts-section-head">
+      <span className="hms-artifacts-section-count">{total} {itemsLabel}</span>
       {pageCount > 1 && (
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-          <button type="button" onClick={onPrev} disabled={page <= 1} aria-label={prevLabel} style={pagerBtn(page <= 1)}>
+        <div className="hms-artifacts-pager">
+          <button type="button" onClick={onPrev} disabled={page <= 1} aria-label={prevLabel} className="hms-artifacts-pager-btn">
             <ChevronLeft size={15} />
           </button>
-          <span style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>{page} / {pageCount}</span>
-          <button type="button" onClick={onNext} disabled={page >= pageCount} aria-label={nextLabel} style={pagerBtn(page >= pageCount)}>
+          <span className="hms-artifacts-pager-pos">{page} / {pageCount}</span>
+          <button type="button" onClick={onNext} disabled={page >= pageCount} aria-label={nextLabel} className="hms-artifacts-pager-btn">
             <ChevronRight size={15} />
           </button>
         </div>
       )}
     </div>
   );
-}
-
-function pagerBtn(disabled: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    width: 26, height: 26, borderRadius: 6,
-    border: "1px solid var(--hms-border)", background: "var(--hms-surface)",
-    color: disabled ? "var(--hms-text-muted)" : "var(--hms-text)",
-    cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1,
-  };
 }
 
 /** A titled, bordered rows table (Changes / Git) sharing the file/link layout. */
@@ -424,19 +398,12 @@ function GroupTable({
 }) {
   return (
     <section>
-      <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-        <span style={{ fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>{title}</span>
-        <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", opacity: 0.7 }}>{count}</span>
+      <div className="hms-artifacts-group-head">
+        <span className="hms-artifacts-group-title">{title}</span>
+        <span className="hms-artifacts-group-count">{count}</span>
       </div>
-      <div style={{ marginTop: 'var(--hms-space-2)', borderRadius: 'var(--hms-radius-md)', border: "1px solid var(--hms-border)", overflow: "hidden" }}>
-        <div
-          style={{
-            display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)',
-            padding: "6px 10px", background: "var(--hms-hover-bg)", borderBottom: "1px solid var(--hms-border)",
-            fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.06em",
-            textTransform: "uppercase", color: "var(--hms-text-muted)",
-          }}
-        >
+      <div className="hms-artifacts-table">
+        <div className="hms-artifacts-table-head">
           <span>{colName}</span>
           <span>{colSession}</span>
         </div>
@@ -448,16 +415,10 @@ function GroupTable({
 
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
-    <div
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: 'var(--hms-space-3)', color: "var(--hms-text-muted)", padding: 'var(--hms-space-8)',
-        textAlign: "center", height: "100%",
-      }}
-    >
-      <Layers size={36} style={{ color: "var(--hms-text-muted)" }} />
-      <div style={{ fontWeight: 600, color: "var(--hms-text)", fontSize: 'var(--hms-text-body)' }}>{title}</div>
-      <div style={{ maxWidth: 420, fontSize: 'var(--hms-text-sm)' }}>{hint}</div>
+    <div className="hms-artifacts-empty">
+      <Layers size={36} />
+      <div className="hms-artifacts-empty-title">{title}</div>
+      <div className="hms-artifacts-empty-hint">{hint}</div>
     </div>
   );
 }
@@ -532,34 +493,22 @@ function FileRow({
     </>
   );
 
-  const titleStyle: React.CSSProperties = {
-    display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0,
-    border: "none", background: "none", padding: 0, textAlign: "left", width: "100%",
-    color: "var(--hms-text)", textDecoration: "none",
-  };
-
   return (
-    <div
-      className="hms-sidebar-row"
-      style={{
-        display: "grid", gridTemplateColumns: TABLE_COLS, gap: 'var(--hms-space-3)', alignItems: "center",
-        padding: "8px 10px", borderTop: "1px solid var(--hms-border)",
-      }}
-    >
+    <div className="hms-sidebar-row hms-artifacts-row">
       {/* NAME — label (opens: link → new tab, file → rendered preview) stacked
           over its location (path / url) + copy. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)', minWidth: 0 }}>
+      <div className="hms-artifacts-name">
         {linkHref ? (
-          <a href={linkHref} target="_blank" rel="noreferrer" title={t.open} style={titleStyle}>{titleInner}</a>
+          <a href={linkHref} target="_blank" rel="noreferrer" title={t.open} className="hms-artifacts-title">{titleInner}</a>
         ) : fileTarget ? (
-          <button type="button" onClick={() => onPreviewFile(fileTarget)} title={t.open} style={{ ...titleStyle, cursor: "pointer" }}>{titleInner}</button>
+          <button type="button" onClick={() => onPreviewFile(fileTarget)} title={t.open} className="hms-artifacts-title">{titleInner}</button>
         ) : (
-          <div title={art.label} style={titleStyle}>{titleInner}</div>
+          <div title={art.label} className="hms-artifacts-title">{titleInner}</div>
         )}
         {/* Location line — hidden for git (the command is already the title). */}
         {!isGit && (
-          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, paddingLeft: 'var(--hms-space-6)' }}>
-            <span title={art.value} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-xs)', fontFamily: isLink ? undefined : "monospace", color: "var(--hms-text-muted)" }}>
+          <div className="hms-artifacts-loc">
+            <span title={art.value} className="hms-artifacts-loc-val" data-link={isLink || undefined}>
               {art.value}
             </span>
             <CopyBtn text={art.value} label={t.copy} />
@@ -568,17 +517,9 @@ function FileRow({
       </div>
 
       {/* SESSION — attribution → jump to chat */}
-      <button
-        type="button"
-        onClick={onOpenChat}
-        title={t.openInChat}
-        style={{
-          display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0,
-          border: "none", background: "none", cursor: "pointer", padding: 0, color: "var(--hms-text-muted)", width: "100%",
-        }}
-      >
-        <span style={{ maxWidth: "100%", fontSize: 'var(--hms-text-xs)', color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.sessionTitle}</span>
-        <span style={{ fontSize: 'var(--hms-text-xs)', opacity: 0.7 }}>{TIME_FMT.format(new Date(art.timestamp))}</span>
+      <button type="button" onClick={onOpenChat} title={t.openInChat} className="hms-artifacts-session">
+        <span className="hms-artifacts-session-title">{art.sessionTitle}</span>
+        <span className="hms-artifacts-session-time">{TIME_FMT.format(new Date(art.timestamp))}</span>
       </button>
     </div>
   );
@@ -593,14 +534,8 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
     }).catch(() => { /* clipboard blocked */ });
   };
   return (
-    <button type="button" onClick={copy} title={label} aria-label={label} style={{ ...iconLink, border: "none", background: "none", cursor: "pointer" }}>
+    <button type="button" onClick={copy} title={label} aria-label={label} className="hms-artifacts-copy">
       {done ? <Check size={14} style={{ color: "var(--hms-success-text)" }} /> : <Copy size={14} />}
     </button>
   );
 }
-
-const iconLink: React.CSSProperties = {
-  display: "inline-flex", alignItems: "center", justifyContent: "center",
-  width: 28, height: 28, borderRadius: 6,
-  color: "var(--hms-text-muted)", textDecoration: "none",
-};

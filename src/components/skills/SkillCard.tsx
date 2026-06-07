@@ -22,36 +22,23 @@ export default function SkillCard({ skill, confirmUninstall }: { skill: Skill; c
   const toggle = useToggleSkill();
   const uninstall = useUninstallSkill();
 
-  const accent = skill.enabled ? "var(--hms-success)" : "var(--hms-muted)";
-
+  // Toolsets-card style: a plain Card (no accent bar) with a label + state badge
+  // header, a source/category meta row, and the description. Toggle + uninstall
+  // are compact icon buttons in the header.
   return (
-    <Card accent={accent} style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-2)" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--hms-space-2)" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "var(--hms-text-sm)", fontWeight: 600, color: "var(--hms-text)" }}>{skill.name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)", marginTop: 3 }}>
-            <StatusBadge tone={SOURCE_TONE[skill.source] ?? "muted"}>{skill.source}</StatusBadge>
-            {skill.category && (
-              <span style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{skill.category}</span>
-            )}
-          </div>
-        </div>
-        <button
-          type="button"
+    <Card style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-2)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)" }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: "var(--hms-text-sm)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {skill.name}
+        </span>
+        <IconButton
+          size="sm"
+          title={skill.enabled ? "Disable" : "Enable"}
           onClick={() => toggle.mutate({ name: skill.name, enabled: !skill.enabled })}
           disabled={toggle.isPending}
-          title={skill.enabled ? "Disable" : "Enable"}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: "var(--hms-space-1)",
-            border: "1px solid var(--hms-border)", borderRadius: "var(--hms-radius-md)",
-            background: "transparent", cursor: "pointer", padding: "3px 8px",
-            fontSize: "var(--hms-text-xs)",
-            color: skill.enabled ? "var(--hms-success-text)" : "var(--hms-text-muted)",
-          }}
         >
-          {skill.enabled ? <Power size={11} /> : <PowerOff size={11} />}
-          {skill.enabled ? "On" : "Off"}
-        </button>
+          {skill.enabled ? <Power size={12} /> : <PowerOff size={12} />}
+        </IconButton>
         {skill.can_remove && (
           <IconButton
             size="sm"
@@ -61,6 +48,15 @@ export default function SkillCard({ skill, confirmUninstall }: { skill: Skill; c
           >
             {uninstall.isPending ? <Loader size={12} className="hms-spin" /> : <Trash2 size={12} />}
           </IconButton>
+        )}
+        <StatusBadge tone={skill.enabled ? "success" : "muted"}>
+          {skill.enabled ? "active" : "inactive"}
+        </StatusBadge>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)" }}>
+        <StatusBadge tone={SOURCE_TONE[skill.source] ?? "muted"}>{skill.source}</StatusBadge>
+        {skill.category && (
+          <span style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{skill.category}</span>
         )}
       </div>
       {skill.description && (

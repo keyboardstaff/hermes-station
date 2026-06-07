@@ -693,6 +693,12 @@ export const en: Translations = {
     argsPlaceholder: "args (space-separated)",
     urlPlaceholder: "url (https://…)",
     oauth: "OAuth auth",
+    serverJson: "Server JSON",
+    editTitle: "Server config",
+    save: "Save",
+    saving: "Saving…",
+    nameRequired: "A name is required.",
+    invalidJson: "Invalid JSON — the config must be a JSON object.",
   },
 
   cron: {
