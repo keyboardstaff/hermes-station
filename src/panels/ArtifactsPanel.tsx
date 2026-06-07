@@ -190,7 +190,7 @@ export default function ArtifactsPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+    <div className="hms-artifacts-root">
       <PageTopBar
         title={t.nav.artifacts}
         actions={
@@ -205,8 +205,8 @@ export default function ArtifactsPanel() {
           </IconButton>
         }
         context={
-          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)', padding: "6px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flex: 1, minWidth: 0, flexWrap: "wrap" }}>
+          <div className="hms-artifacts-toolbar">
+            <div className="hms-artifacts-filters">
               {FILTERS.map((k) => {
                 const active = kind === k;
                 const label = k === "all" ? a.filterAll
@@ -217,16 +217,10 @@ export default function ArtifactsPanel() {
                     key={k}
                     type="button"
                     onClick={() => setKind(k)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-                      padding: "3px 10px", borderRadius: 999,
-                      border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
-                      background: active ? "var(--hms-accent-weak)" : "var(--hms-surface)",
-                      color: active ? "var(--hms-accent)" : "var(--hms-text-muted)",
-                      fontSize: 'var(--hms-text-caption)', cursor: "pointer",
-                    }}
+                    className="hms-artifacts-chip"
+                    data-active={active || undefined}
                   >
-                    {label} <span style={{ opacity: 0.7 }}>{counts[k]}</span>
+                    {label} <span className="hms-artifacts-chip-count">{counts[k]}</span>
                   </button>
                 );
               })}
@@ -244,15 +238,15 @@ export default function ArtifactsPanel() {
         }
       />
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 'var(--hms-space-4)' }}>
+      <div className="hms-artifacts-body">
         {isLoading || artifacts == null ? (
-          <div style={{ padding: 'var(--hms-space-6)', color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-sm)' }}>{a.indexing}</div>
+          <div className="hms-artifacts-indexing">{a.indexing}</div>
         ) : visible.length === 0 ? (
           counts.all > 0
             ? <EmptyState title={a.noMatches} hint={a.noMatchesHint} />
             : <EmptyState title={a.empty} hint={a.emptyHint} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-5)' }}>
+          <div className="hms-artifacts-sections">
             {changes.length > 0 && (
               <GroupTable title={a.groupChanges} count={changes.length} colName={a.colName} colSession={a.colSession}>
                 {changes.map((art) => (
@@ -295,12 +289,7 @@ export default function ArtifactsPanel() {
                   prevLabel={a.prev}
                   nextLabel={a.next}
                 />
-                <div
-                  style={{
-                    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(176px, 1fr))",
-                    gap: 'var(--hms-space-2)', marginTop: 'var(--hms-space-2)',
-                  }}
-                >
+                <div className="hms-artifacts-image-grid">
                   {pagedImages.map((art, i) => (
                     <ImageCard
                       key={art.id}

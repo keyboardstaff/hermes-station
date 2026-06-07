@@ -18,9 +18,9 @@ export const ALL_PROFILES = "__all__";
 
 interface ProfileScopeState {
   /** The profile context the views are showing:
-   *  - `null` → follow the active (sticky) profile — the default.
+   *  - `ALL_PROFILES` → the aggregated every-profile view (the default).
    *  - `"<name>"` → a concrete profile (incl. `"default"`).
-   *  - `ALL_PROFILES` → the aggregated every-profile view. */
+   *  - `null` → follow the active (sticky) profile. */
   scope: string | null;
   setScope: (scope: string | null) => void;
 }
@@ -28,7 +28,9 @@ interface ProfileScopeState {
 export const useProfileScope = create<ProfileScopeState>()(
   persist(
     (set) => ({
-      scope: null,
+      // Default to the aggregated view so Recents shows every profile's sessions
+      // until the user picks a concrete profile to work in.
+      scope: ALL_PROFILES,
       setScope: (scope) => set({ scope }),
     }),
     { name: "hms-profile-scope" },

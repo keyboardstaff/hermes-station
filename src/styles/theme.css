@@ -1277,24 +1277,88 @@ body {
   color: var(--hms-text-muted);
 }
 
-/* Profile view-scope switcher — the top band of the sidebar Recents. A small
-   caption over the selector so it reads as a deliberate "current profile"
-   control rather than a stray dropdown. */
+/* Profile view-scope switcher — the top band of the sidebar Recents. A dark
+   band with a bottom-border separator; the selector keeps its own border line
+   (PopupSelect). No caption — keep it compact. */
 .hms-scope-switcher {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  padding: 8px 12px;
+  background: var(--hms-bg);
   border-bottom: 1px solid var(--hms-border);
   flex-shrink: 0;
 }
 
-.hms-scope-switcher-label {
-  font-size: var(--hms-text-caption);
-  font-weight: var(--hms-fw-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* Artifacts page — structural layer (D64 approach-C migration). */
+.hms-artifacts-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hms-artifacts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-3);
+  padding: 6px 16px;
+}
+
+.hms-artifacts-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.hms-artifacts-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hms-border);
+  background: var(--hms-surface);
   color: var(--hms-text-muted);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+}
+
+.hms-artifacts-chip[data-active] {
+  border-color: var(--hms-accent);
+  background: var(--hms-accent-weak);
+  color: var(--hms-accent);
+}
+
+.hms-artifacts-chip-count {
+  opacity: 0.7;
+}
+
+.hms-artifacts-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--hms-space-4);
+}
+
+.hms-artifacts-indexing {
+  padding: var(--hms-space-6);
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+}
+
+.hms-artifacts-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-5);
+}
+
+.hms-artifacts-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--hms-space-2);
+  margin-top: var(--hms-space-2);
 }
 
 .hms-cron-template-chip {

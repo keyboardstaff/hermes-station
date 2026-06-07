@@ -35,7 +35,6 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
   // pill (topbar) sits bare in the actions row.
   return (
     <div className={fullWidth ? "hms-scope-switcher" : undefined}>
-      {fullWidth && <span className="hms-scope-switcher-label">{t.sessions.scopeTitle}</span>}
       <PopupSelect
         icon={<Layers size={13} />}
         label={label}

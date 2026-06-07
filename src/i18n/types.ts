@@ -474,7 +474,6 @@ export interface Translations {
     empty: string;
     page: string;
     allProfiles: string;
-    scopeTitle: string;
   };
 
   channels: {

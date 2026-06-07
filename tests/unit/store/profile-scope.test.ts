@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   useProfileScope,
   ALL_PROFILES,
@@ -16,14 +16,15 @@ const rows: Row[] = [
 ];
 
 describe("profile-scope store", () => {
-  beforeEach(() => useProfileScope.setState({ scope: null }));
+  afterEach(() => useProfileScope.setState({ scope: ALL_PROFILES }));
 
-  it("defaults to follow-active (null) and setScope updates it", () => {
-    expect(useProfileScope.getState().scope).toBeNull();
+  it("setScope moves between a concrete profile, All, and follow-active", () => {
     useProfileScope.getState().setScope("creative");
     expect(useProfileScope.getState().scope).toBe("creative");
     useProfileScope.getState().setScope(ALL_PROFILES);
     expect(useProfileScope.getState().scope).toBe(ALL_PROFILES);
+    useProfileScope.getState().setScope(null);
+    expect(useProfileScope.getState().scope).toBeNull();
   });
 });
 
