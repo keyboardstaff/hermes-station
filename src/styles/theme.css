@@ -2022,6 +2022,145 @@ button.hms-artifacts-title {
   font-size: var(--hms-text-sm);
 }
 
+/* Analytics page (D64). */
+.hms-analytics-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.hms-analytics-range {
+  display: flex;
+  align-items: center;
+}
+
+.hms-analytics-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--hms-space-6);
+}
+
+.hms-analytics-warn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--hms-warning-bg);
+  border: 1px solid var(--hms-warning-border);
+  color: var(--hms-warning-text);
+  font-size: var(--hms-text-sm);
+  margin-bottom: 20px;
+}
+
+.hms-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--hms-space-3);
+}
+
+.hms-analytics-grid-wide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--hms-space-4);
+}
+
+.hms-analytics-donut {
+  min-width: 0;
+}
+
+.hms-analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--hms-text-sm);
+}
+
+.hms-analytics-table thead tr {
+  color: var(--hms-text-muted);
+  text-align: left;
+}
+
+.hms-analytics-table th {
+  padding: 4px 0;
+  font-weight: 400;
+}
+
+.hms-analytics-table tbody tr {
+  border-top: 1px solid var(--hms-border);
+}
+
+.hms-analytics-table td {
+  padding: 8px 0;
+  color: var(--hms-text-muted);
+}
+
+.hms-analytics-table .num {
+  text-align: right;
+}
+
+.hms-analytics-table td.title {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hms-text);
+}
+
+.hms-analytics-section {
+  margin-bottom: 24px;
+}
+
+.hms-analytics-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hms-space-3);
+  margin-bottom: 12px;
+}
+
+.hms-analytics-section-title {
+  margin: 0;
+  font-size: var(--hms-text-body);
+  font-weight: 600;
+}
+
+.hms-analytics-empty {
+  padding: var(--hms-space-6);
+  border: 1px dashed var(--hms-border);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+}
+
+.hms-stat {
+  padding: var(--hms-space-4);
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  cursor: default;
+}
+
+.hms-stat[data-clickable] {
+  cursor: pointer;
+}
+
+.hms-stat-label {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  margin-bottom: 8px;
+}
+
+.hms-stat-value {
+  font-size: var(--hms-text-xl);
+  font-weight: 700;
+  color: var(--hms-text);
+}
+
+.hms-stat-action {
+  margin-top: 6px;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
 /* Skills side-list — full-width scroll with a flush scrollbar (like Recents):
    only the header band is horizontally padded; the scroll fills the column. */
 .hms-skills-sidelist {

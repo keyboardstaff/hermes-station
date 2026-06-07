@@ -123,11 +123,11 @@ export default function AnalyticsPanel() {
   const ac = t.analyticsCharts;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+    <div className="hms-analytics-root">
       <PageTopBar
         title={t.nav.analytics}
         context={
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div className="hms-analytics-range">
             <TimeRangeSelector
               value={days}
               onChange={setDays}
@@ -140,34 +140,18 @@ export default function AnalyticsPanel() {
           </div>
         }
       />
-      <div style={{ flex: 1, overflow: "auto", padding: 'var(--hms-space-6)' }}>
+      <div className="hms-analytics-body">
 
       {/* Dashboard unreachable notice */}
       {statusFetched && statusError && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: 8,
-            background: "var(--hms-warning-bg)",
-            border: "1px solid var(--hms-warning-border)",
-            color: "var(--hms-warning-text)",
-            fontSize: 'var(--hms-text-sm)',
-            marginBottom: 20,
-          }}
-        >
+        <div className="hms-analytics-warn">
           {ac?.dashboardUnreachable ?? "Dashboard is not reachable -- data shown below may be incomplete. Open Settings → Connection to diagnose."}
         </div>
       )}
 
       {/* Overview cards */}
       <Section>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 'var(--hms-space-3)',
-          }}
-        >
+        <div className="hms-analytics-grid">
           <StatCard
             label={a.gatewayStatus}
             value={loading ? "…" : gatewayOk ? a.statusRunning : status?.gateway_state ?? "--"}
@@ -231,15 +215,9 @@ export default function AnalyticsPanel() {
 
       {/* Distribution donuts — side by side on desktop, stacked on mobile */}
       <Section>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 'var(--hms-space-4)',
-          }}
-        >
+        <div className="hms-analytics-grid-wide">
           {usage?.by_model?.length ? (
-            <div style={{ minWidth: 0 }}>
+            <div className="hms-analytics-donut">
               <ModelDistributionDonut
                 data={usage.by_model}
                 title={ac?.byModel ?? "By Model"}
@@ -247,7 +225,7 @@ export default function AnalyticsPanel() {
             </div>
           ) : null}
           {sources?.sources?.length ? (
-            <div style={{ minWidth: 0 }}>
+            <div className="hms-analytics-donut">
               <SourceDistributionDonut
                 data={sources.sources}
                 title={ac?.bySource ?? "By Source"}
@@ -272,63 +250,28 @@ export default function AnalyticsPanel() {
         actions={<Button size="sm" onClick={() => navigate("/sessions")}>View all</Button>}
       >
 
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 'var(--hms-text-sm)'}}>
+        <table className="hms-analytics-table">
           <thead>
-            <tr style={{ color: "var(--hms-text-muted)", textAlign: "left" }}>
-              <th style={{ padding: "4px 0", fontWeight: 400 }}>Title</th>
-              <th style={{ padding: "4px 0", fontWeight: 400 }}>{a.source}</th>
-              <th style={{ padding: "4px 0", fontWeight: 400 }}>{a.model}</th>
-              <th style={{ padding: "4px 0", fontWeight: 400, textAlign: "right" }}>
-                {a.tokens}
-              </th>
-              <th style={{ padding: "4px 0", fontWeight: 400, textAlign: "right" }}>
-                {a.time}
-              </th>
+            <tr>
+              <th>Title</th>
+              <th>{a.source}</th>
+              <th>{a.model}</th>
+              <th className="num">{a.tokens}</th>
+              <th className="num">{a.time}</th>
             </tr>
           </thead>
           <tbody>
             {(sessionsData?.sessions ?? []).map((s, index) => (
-              <tr
-                key={s.session_id ?? `fallback-${index}`}
-                style={{ borderTop: "1px solid var(--hms-border)" }}
-              >
-                <td
-                  style={{
-                    padding: "8px 0",
-                    maxWidth: 200,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {s.title || "Untitled"}
-                </td>
-                <td style={{ padding: "8px 0", color: "var(--hms-text-muted)" }}>
-                  {s.source || "--"}
-                </td>
-                <td style={{ padding: "8px 0", color: "var(--hms-text-muted)" }}>
-                  {s.model || "--"}
-                </td>
-                <td
-                  style={{
-                    padding: "8px 0",
-                    textAlign: "right",
-                    color: "var(--hms-text-muted)",
-                  }}
-                >
+              <tr key={s.session_id ?? `fallback-${index}`}>
+                <td className="title">{s.title || "Untitled"}</td>
+                <td>{s.source || "--"}</td>
+                <td>{s.model || "--"}</td>
+                <td className="num">
                   {s.input_tokens != null
                     ? formatNumber((s.input_tokens ?? 0) + (s.output_tokens ?? 0))
                     : "--"}
                 </td>
-                <td
-                  style={{
-                    padding: "8px 0",
-                    textAlign: "right",
-                    color: "var(--hms-text-muted)",
-                  }}
-                >
-                  {relativeTime(s.started_at)}
-                </td>
+                <td className="num">{relativeTime(s.started_at)}</td>
               </tr>
             ))}
           </tbody>
@@ -351,22 +294,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Card style={{ marginBottom: 24 }}>
+    <Card className="hms-analytics-section">
       {(title || actions) && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 'var(--hms-space-3)',
-            marginBottom: 12,
-          }}
-        >
-          {title && (
-            <h2 style={{ margin: 0, fontSize: 'var(--hms-text-body)', fontWeight: 600 }}>
-              {title}
-            </h2>
-          )}
+        <div className="hms-analytics-section-head">
+          {title && <h2 className="hms-analytics-section-title">{title}</h2>}
           {actions}
         </div>
       )}
@@ -376,20 +307,7 @@ function Section({
 }
 
 function EmptyState({ text }: { text: string }) {
-  return (
-    <div
-      style={{
-        padding: 'var(--hms-space-6)',
-        border: "1px dashed var(--hms-border)",
-        borderRadius: 8,
-        textAlign: "center",
-        color: "var(--hms-text-muted)",
-        fontSize: 'var(--hms-text-sm)',
-      }}
-    >
-      {text}
-    </div>
-  );
+  return <div className="hms-analytics-empty">{text}</div>;
 }
 
 function StatCard({
@@ -411,7 +329,8 @@ function StatCard({
       onClick={onClick}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
-      className={clickable ? "hms-card-hoverable" : undefined}
+      className={`hms-stat${clickable ? " hms-card-hoverable" : ""}`}
+      data-clickable={clickable || undefined}
       onKeyDown={
         clickable
           ? (e) => {
@@ -419,25 +338,12 @@ function StatCard({
             }
           : undefined
       }
-      style={{
-        padding: 'var(--hms-space-4)',
-        background: "var(--hms-surface)",
-        border: "1px solid var(--hms-border)",
-        borderRadius: 10,
-        cursor: clickable ? "pointer" : "default",
-      }}
     >
-      <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginBottom: 8 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 'var(--hms-text-xl)', fontWeight: 700, color: accent ?? "var(--hms-text)" }}>
+      <div className="hms-stat-label">{label}</div>
+      <div className="hms-stat-value" style={accent ? { color: accent } : undefined}>
         {value}
       </div>
-      {actionLabel && (
-        <div style={{ marginTop: 6, fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>
-          {actionLabel}
-        </div>
-      )}
+      {actionLabel && <div className="hms-stat-action">{actionLabel}</div>}
     </div>
   );
 }

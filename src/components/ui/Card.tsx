@@ -11,6 +11,7 @@ export default function Card({
   style,
   onClick,
   accent,
+  className,
 }: {
   children: ReactNode;
   padding?: boolean;
@@ -18,10 +19,12 @@ export default function Card({
   onClick?: () => void;
   /** Optional left status stripe colour (token var). */
   accent?: string;
+  className?: string;
 }) {
   return (
     <div
       onClick={onClick}
+      className={className}
       style={{
         border: "1px solid var(--hms-border)",
         borderLeft: accent ? `3px solid ${accent}` : undefined,
