@@ -1803,6 +1803,62 @@ button.hms-artifacts-title {
   font-size: var(--hms-text-sm);
 }
 
+/* Skills side-list — full-width scroll with a flush scrollbar (like Recents):
+   only the header band is horizontally padded; the scroll fills the column. */
+.hms-skills-sidelist {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: var(--hms-space-3);
+}
+
+.hms-skills-sidelist-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  padding: 0 var(--hms-space-3) var(--hms-space-2);
+  flex-shrink: 0;
+}
+
+.hms-skills-sidelist-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hms-skills-sidelist-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hms-text-muted);
+}
+
+.hms-skills-sidelist-actions {
+  display: flex;
+  gap: var(--hms-space-1);
+}
+
+.hms-skills-sidelist-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-1);
+  padding: 0 6px 6px;
+}
+
+.hms-skills-sidelist-msg {
+  padding: 10px;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-skills-sidelist-msg[data-error] {
+  color: var(--hms-error-text);
+}
+
 /* Skills side-list rows — hover background + active selection (D64 + hover). */
 .hms-skills-row {
   display: flex;

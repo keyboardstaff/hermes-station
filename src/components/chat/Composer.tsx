@@ -7,6 +7,7 @@ import { useDiscoverSlashCommands } from "@/store/discovery";
 import { useChatStore } from "@/store/chat";
 import { useCapabilityStore } from "@/store/capabilities";
 import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
+import { useActiveSessionProfile } from "@/hooks/useActiveSessionProfile";
 import { useProfileScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
 import { useI18n } from "@/i18n";
 import type { ComposerAttachment } from "@/lib/hermes-types";
@@ -92,10 +93,14 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   const activeProfileQuery = useActiveProfile();
   const scope = useProfileScope((s) => s.scope);
   const setScope = useProfileScope((s) => s.setScope);
-  // The concrete profile in view (scope, or the running profile when following /
-  // browsing "All profiles" — the pill is a single-profile control).
+  const sessionProfile = useActiveSessionProfile();
+  // The concrete profile in view: a chosen scope, else — while browsing "All
+  // profiles" — the open session's own profile (so the pill shows which profile
+  // this chat runs in), else the running profile.
   const activeProfileName = activeProfileQuery.data?.current ?? activeProfileQuery.data?.sticky ?? "default";
-  const currentProfileName = effectiveScopeName(scope, activeProfileName) ?? activeProfileName;
+  const currentProfileName = scope === ALL_PROFILES
+    ? (sessionProfile ?? activeProfileName)
+    : (effectiveScopeName(scope, activeProfileName) ?? activeProfileName);
   const profileChoices = profileNames.length > 0 ? profileNames : [currentProfileName];
   const handleProfileChange = useCallback((next: string) => {
     if (next !== currentProfileName || scope === ALL_PROFILES) setScope(next);

@@ -53,22 +53,21 @@ export default function SkillsSideList() {
   const mcpActive = view?.kind === "mcp";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-2)", padding: "var(--hms-space-3)", height: "100%", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--hms-text-muted)" }}>
-          {s?.listLabel ?? "Skills"}
-        </span>
-        <div style={{ display: "flex", gap: "var(--hms-space-1)" }}>
-          <IconButton size="sm" title={s?.refresh ?? "Refresh"} onClick={() => refetch()}><RefreshCw size={12} /></IconButton>
-          <IconButton size="sm" title={s?.install ?? "Install from Hub"} onClick={() => setInstallOpen(true)} style={{ color: "var(--hms-success-text)" }}><Plus size={13} /></IconButton>
+    <div className="hms-skills-sidelist">
+      <div className="hms-skills-sidelist-head">
+        <div className="hms-skills-sidelist-title-row">
+          <span className="hms-skills-sidelist-label">{s?.listLabel ?? "Skills"}</span>
+          <div className="hms-skills-sidelist-actions">
+            <IconButton size="sm" title={s?.refresh ?? "Refresh"} onClick={() => refetch()}><RefreshCw size={12} /></IconButton>
+            <IconButton size="sm" title={s?.install ?? "Install from Hub"} onClick={() => setInstallOpen(true)} style={{ color: "var(--hms-success-text)" }}><Plus size={13} /></IconButton>
+          </div>
         </div>
+        <SearchInput size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={s?.searchPlaceholder ?? "Search skills…"} />
       </div>
 
-      <SearchInput size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={s?.searchPlaceholder ?? "Search skills…"} />
-
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)' }}>
-        {isLoading && <div style={{ padding: 10, fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)" }}>{s?.loading ?? "Loading…"}</div>}
-        {isError && <div style={{ padding: 10, fontSize: "var(--hms-text-xs)", color: "var(--hms-error-text)" }}>{s?.errorLoading ?? "Failed to load skills."}</div>}
+      <div className="hms-skills-sidelist-scroll">
+        {isLoading && <div className="hms-skills-sidelist-msg">{s?.loading ?? "Loading…"}</div>}
+        {isError && <div className="hms-skills-sidelist-msg" data-error>{s?.errorLoading ?? "Failed to load skills."}</div>}
 
         {!isLoading && !isError && (
           <>
