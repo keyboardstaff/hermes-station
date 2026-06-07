@@ -1205,6 +1205,23 @@ body {
   outline: none;
 }
 
+.hms-session-recents-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.hms-session-recents-pinned {
+  flex-shrink: 0;
+}
+
+.hms-session-recents-pinned-scroll {
+  overflow-y: auto;
+  max-height: 240px;
+  padding: 0 6px 6px;
+}
+
 .hms-session-recents-subheader {
   padding: 12px 12px 4px;
   display: flex;
@@ -1257,6 +1274,26 @@ body {
 .hms-session-recents-empty {
   padding: 8px 6px;
   font-size: var(--hms-text-caption);
+  color: var(--hms-text-muted);
+}
+
+/* Profile view-scope switcher — the top band of the sidebar Recents. A small
+   caption over the selector so it reads as a deliberate "current profile"
+   control rather than a stray dropdown. */
+.hms-scope-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hms-border);
+  flex-shrink: 0;
+}
+
+.hms-scope-switcher-label {
+  font-size: var(--hms-text-caption);
+  font-weight: var(--hms-fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--hms-text-muted);
 }
 

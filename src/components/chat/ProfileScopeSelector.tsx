@@ -31,9 +31,11 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
   ];
   const label = current === ALL_PROFILES ? t.sessions.allProfiles : current;
 
-  // Sidebar (fullWidth) wants breathing room; the inline pill (topbar) doesn't.
+  // Sidebar (fullWidth) renders as a deliberate top band (own class); the inline
+  // pill (topbar) sits bare in the actions row.
   return (
-    <div style={fullWidth ? { padding: "var(--hms-space-1) var(--hms-space-2)" } : undefined}>
+    <div className={fullWidth ? "hms-scope-switcher" : undefined}>
+      {fullWidth && <span className="hms-scope-switcher-label">{t.sessions.scopeTitle}</span>}
       <PopupSelect
         icon={<Layers size={13} />}
         label={label}

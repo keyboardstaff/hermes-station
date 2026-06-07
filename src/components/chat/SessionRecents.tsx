@@ -434,15 +434,16 @@ export default function SessionRecents({
       });
   })();
 
-  // Scope the recents to the viewed profile (the workspace switcher). Pinned
-  // favourites are explicit cross-profile picks, so they stay unscoped.
+  // Scope BOTH the recents and the pinned section to the viewed profile (the
+  // workspace switcher) — you're "in" one profile, so even pinned favourites
+  // show only that profile's (the All-profiles scope shows everything).
   const scopedSessions = showScopeSelector
     ? filterSessionsByScope(sessions, profileScope, activeProfile?.current)
     : sessions;
 
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
-    ? sessions.filter((s) => pinnedIds.has(s.session_id))
+    ? scopedSessions.filter((s) => pinnedIds.has(s.session_id))
     : [];
   const displaySessions = pinnedIds
     ? scopedSessions.filter((s) => !pinnedIds.has(s.session_id)).slice(0, limit)
@@ -457,13 +458,16 @@ export default function SessionRecents({
   return (
     <div
       className="hms-session-recents-root"
-      style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}
       onMouseEnter={() => setContainerHovered(true)}
       onMouseLeave={() => setContainerHovered(false)}
     >
+      {/* Profile view-scope picker (the workspace switcher) sits at the very top,
+          above Pinned + Recents — it scopes both. Self-hides for single-profile. */}
+      {showScopeSelector && <ProfileScopeSelector />}
+
       {/* Pinned section — only when caller provides pinnedIds and list is non-empty */}
       {pinnedSessions.length > 0 && (
-        <div style={{ flexShrink: 0 }}>
+        <div className="hms-session-recents-pinned">
           <div className="hms-session-recents-subheader">
             <button
               onClick={() => setPinnedCollapsed((c) => !c)}
@@ -488,7 +492,7 @@ export default function SessionRecents({
             transition: "max-height 0.22s ease, opacity 0.18s ease",
             opacity: pinnedCollapsed ? 0 : 1,
           }}>
-            <div style={{ overflowY: "auto", maxHeight: "240px", padding: "0 6px 6px" }}>
+            <div className="hms-session-recents-pinned-scroll">
               {pinnedSessions.map((s) => (
                 <SessionItem
                   key={s.session_id}
@@ -565,10 +569,6 @@ export default function SessionRecents({
           )}
         </div>
       </div>
-
-      {/* Profile view-scope picker (the workspace switcher) — self-hides for
-          single-profile users, so it's a no-op there. */}
-      {showScopeSelector && !collapsed && <ProfileScopeSelector />}
 
       {/* Session list — animated collapse/expand (Sidebar Recents). */}
       <div className="hms-session-recents-body" style={{
