@@ -672,6 +672,7 @@ export interface Translations {
     noSkills: string;
     noMatches: string;
     listLabel: string;
+    allSkills: string;
     toolsets: string;
     selected: string;
     clear: string;

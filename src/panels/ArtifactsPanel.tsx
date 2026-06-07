@@ -473,15 +473,12 @@ function ImageCard({
   // "no preview" placeholder instead of firing a doomed request per card.
   const previewable = isWebOpenable(art.href) && !failed;
   return (
-    <article style={{ display: "flex", flexDirection: "column", borderRadius: 'var(--hms-radius-md)', border: "1px solid var(--hms-border)", background: "var(--hms-surface)", overflow: "hidden" }}>
+    <article className="hms-artifacts-img-card">
       <div
         onClick={previewable ? onOpenImage : undefined}
         title={previewable ? art.label : t.noPreview}
-        style={{
-          height: 150, display: "flex", alignItems: "center", justifyContent: "center",
-          background: "var(--hms-hover-bg)", color: "var(--hms-text-muted)",
-          borderBottom: "1px solid var(--hms-border)", cursor: previewable ? "zoom-in" : "default",
-        }}
+        className="hms-artifacts-img-preview"
+        data-previewable={previewable || undefined}
       >
         {previewable ? (
           <img
@@ -490,27 +487,19 @@ function ImageCard({
             loading="lazy"
             decoding="async"
             onError={onFail}
-            style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
+            className="hms-artifacts-img"
           />
         ) : (
           <ImageOff size={22} />
         )}
       </div>
-      <div style={{ padding: 'var(--hms-space-2)', display: "flex", flexDirection: "column", gap: 'var(--hms-space-1)', minWidth: 0 }}>
-        <div style={{ fontSize: 'var(--hms-text-xs)', textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--hms-text-muted)" }}>{t.kindImage}</div>
-        <div title={art.label} style={{ fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.label}</div>
-        <div title={art.value} style={{ fontSize: 'var(--hms-text-xs)', fontFamily: "monospace", color: "var(--hms-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.value}</div>
-        <button
-          type="button"
-          onClick={onOpenChat}
-          title={t.openInChat}
-          style={{
-            marginTop: 'var(--hms-space-1)', display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-            border: "none", background: "none", cursor: "pointer", padding: 0,
-            color: "var(--hms-accent)", fontSize: 'var(--hms-text-xs)', textAlign: "left", minWidth: 0,
-          }}
-        >
-          <FolderOpen size={12} style={{ flexShrink: 0 }} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{art.sessionTitle}</span>
+      <div className="hms-artifacts-img-meta">
+        <div className="hms-artifacts-img-kind">{t.kindImage}</div>
+        <div title={art.label} className="hms-artifacts-img-label">{art.label}</div>
+        <div title={art.value} className="hms-artifacts-img-value">{art.value}</div>
+        <button type="button" onClick={onOpenChat} title={t.openInChat} className="hms-artifacts-img-chat">
+          <FolderOpen size={12} className="hms-artifacts-row-icon" />{" "}
+          <span className="hms-artifacts-ellipsis">{art.sessionTitle}</span>
         </button>
       </div>
     </article>

@@ -647,6 +647,7 @@ export const zh: Translations = {
     errorLoading: "加载技能失败。",
     noSkills: "尚未安装技能。",
     listLabel: "技能列表",
+    allSkills: "全部技能",
     toolsets: "工具集",
     noMatches: "没有匹配的技能。",
     selected: "已选",

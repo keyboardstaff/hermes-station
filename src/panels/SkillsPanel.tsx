@@ -32,10 +32,13 @@ export default function SkillsPanel() {
   } else if (view.kind === "mcp") {
     content = <McpServersView />;
   } else {
-    const inCategory = (skills ?? []).filter((sk) => (sk.category?.trim() || "other") === view.key);
+    // "all" → every skill; "category" → that category's skills.
+    const list = view.kind === "all"
+      ? (skills ?? [])
+      : (skills ?? []).filter((sk) => (sk.category?.trim() || "other") === view.key);
     content = (
       <Grid>
-        {inCategory.map((sk) => (
+        {list.map((sk) => (
           <SkillCard key={sk.name} skill={sk} confirmUninstall={s?.confirmUninstall ?? "Uninstall skill"} />
         ))}
       </Grid>

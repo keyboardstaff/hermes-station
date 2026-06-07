@@ -45,6 +45,7 @@ export const useCronSelection = create<CronSelectionState>((set) => ({
 // Two-level selection: the left list picks a category or the Toolsets view;
 // within a category, an optional skill is expanded for its SKILL.md.
 export type SkillsView =
+  | { kind: "all" }
   | { kind: "category"; key: string }
   | { kind: "toolsets" }
   | { kind: "mcp" };

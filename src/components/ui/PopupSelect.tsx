@@ -39,6 +39,9 @@ export interface PopupSelectProps<T extends SelectValue = string> {
   popupWidth?: number;
   /** Renders trigger label in muted color (e.g. when value represents "none/default"). */
   muted?: boolean;
+  /** fullWidth only: drop the box (border/background/radius) so the trigger
+   *  blends into its container like a plain header row. */
+  plain?: boolean;
 }
 
 interface PosState {
@@ -60,6 +63,7 @@ export function PopupSelect<T extends SelectValue = string>({
   fullWidth = false,
   popupWidth = 160,
   muted = false,
+  plain = false,
 }: PopupSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PosState>({ anchor: 0, left: 0, triggerWidth: 0, above: true, maxH: 320 });
@@ -119,11 +123,11 @@ export function PopupSelect<T extends SelectValue = string>({
     display: "flex",
     alignItems: "center",
     width: "100%",
-    padding: "6px 10px",
+    padding: plain ? "4px 2px" : "6px 10px",
     fontSize: "var(--hms-text-caption)",
-    background: "var(--hms-bg)",
-    border: "1px solid var(--hms-border)",
-    borderRadius: 6,
+    background: plain ? "transparent" : "var(--hms-bg)",
+    border: plain ? "none" : "1px solid var(--hms-border)",
+    borderRadius: plain ? 0 : 6,
     cursor: disabledHint ? "not-allowed" : "pointer",
     userSelect: "none",
     opacity: disabledHint ? 0.45 : 1,

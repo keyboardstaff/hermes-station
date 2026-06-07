@@ -42,6 +42,7 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
         options={options}
         onChange={(v) => setScope(v)}
         fullWidth={fullWidth}
+        plain={fullWidth}
         muted={current === ALL_PROFILES}
         popupWidth={200}
       />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Wrench, Folder, Server } from "lucide-react";
+import { Plus, RefreshCw, Wrench, Folder, Server, LayoutGrid } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useSkills, useToolsets } from "@/hooks/useSkills";
 import { useMcpServers } from "@/hooks/useMcp";
@@ -49,14 +49,6 @@ export default function SkillsSideList() {
     setView({ kind: "category", key: categories[0].category });
   }, [categories, view, setView, isMobile]);
 
-  const rowStyle = (active: boolean): React.CSSProperties => ({
-    display: "flex", alignItems: "center", gap: "var(--hms-space-2)", width: "100%",
-    padding: "7px 10px", border: "none", borderRadius: "var(--hms-radius-md)",
-    background: active ? "var(--hms-selected-bg)" : "transparent",
-    color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
-    cursor: "pointer", textAlign: "left", fontSize: "var(--hms-text-sm)",
-  });
-
   const toolsetsActive = view?.kind === "toolsets";
   const mcpActive = view?.kind === "mcp";
 
@@ -80,29 +72,58 @@ export default function SkillsSideList() {
 
         {!isLoading && !isError && (
           <>
+            <button
+              type="button"
+              onClick={() => setView({ kind: "all" })}
+              className="hms-skills-row"
+              data-active={view?.kind === "all" || undefined}
+            >
+              <LayoutGrid size={13} className="hms-skills-row-icon" />
+              <span className="hms-skills-row-name">{s?.allSkills ?? "All skills"}</span>
+              <span className="hms-skills-row-count">{skills?.length ?? 0}</span>
+            </button>
+
+            <div className="hms-skills-row-divider" aria-hidden="true" />
+
             {categories.map(({ category, count }) => {
               const active = view?.kind === "category" && view.key === category;
               return (
-                <button key={category} type="button" onClick={() => setView({ kind: "category", key: category })} style={rowStyle(active)}>
-                  <Folder size={13} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{category}</span>
-                  <span style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{count}</span>
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setView({ kind: "category", key: category })}
+                  className="hms-skills-row"
+                  data-active={active || undefined}
+                >
+                  <Folder size={13} className="hms-skills-row-icon" />
+                  <span className="hms-skills-row-name">{category}</span>
+                  <span className="hms-skills-row-count">{count}</span>
                 </button>
               );
             })}
 
-            <div style={{ height: 1, background: "var(--hms-border)", margin: "var(--hms-space-2) 0" }} aria-hidden="true" />
+            <div className="hms-skills-row-divider" aria-hidden="true" />
 
-            <button type="button" onClick={() => setView({ kind: "toolsets" })} style={rowStyle(toolsetsActive)}>
-              <Wrench size={13} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{s?.toolsets ?? "Toolsets"}</span>
-              {toolsets && <span style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{toolsets.length}</span>}
+            <button
+              type="button"
+              onClick={() => setView({ kind: "toolsets" })}
+              className="hms-skills-row"
+              data-active={toolsetsActive || undefined}
+            >
+              <Wrench size={13} className="hms-skills-row-icon" />
+              <span className="hms-skills-row-name">{s?.toolsets ?? "Toolsets"}</span>
+              {toolsets && <span className="hms-skills-row-count">{toolsets.length}</span>}
             </button>
 
-            <button type="button" onClick={() => setView({ kind: "mcp" })} style={rowStyle(mcpActive)}>
-              <Server size={13} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{t.mcp?.title ?? "MCP Servers"}</span>
-              {mcp && <span style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)" }}>{mcp.servers.length}</span>}
+            <button
+              type="button"
+              onClick={() => setView({ kind: "mcp" })}
+              className="hms-skills-row"
+              data-active={mcpActive || undefined}
+            >
+              <Server size={13} className="hms-skills-row-icon" />
+              <span className="hms-skills-row-name">{t.mcp?.title ?? "MCP Servers"}</span>
+              {mcp && <span className="hms-skills-row-count">{mcp.servers.length}</span>}
             </button>
           </>
         )}

@@ -648,6 +648,7 @@ export const en: Translations = {
     errorLoading: "Failed to load skills.",
     noSkills: "No skills installed.",
     listLabel: "Skills",
+    allSkills: "All skills",
     toolsets: "Toolsets",
     noMatches: "No skills match the filter.",
     selected: "selected",

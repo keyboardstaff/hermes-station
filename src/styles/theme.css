@@ -1252,7 +1252,8 @@ body {
 
 .hms-session-recents-heading {
   font-size: var(--hms-text-sm);
-  font-weight: var(--hms-fw-semibold);
+  font-weight: var(--hms-fw-medium);
+  color: var(--hms-text-muted);
 }
 
 .hms-session-recents-actions {
@@ -1277,13 +1278,11 @@ body {
   color: var(--hms-text-muted);
 }
 
-/* Profile view-scope switcher — the top band of the sidebar Recents. A dark
-   band with a bottom-border separator; the selector keeps its own border line
-   (PopupSelect). No caption — keep it compact. */
+/* Profile view-scope switcher — a plain, borderless row at the top of the
+   sidebar Recents (blends in; no box / dark band), aligned with the section
+   headers' horizontal padding. */
 .hms-scope-switcher {
-  padding: 8px 12px;
-  background: var(--hms-bg);
-  border-bottom: 1px solid var(--hms-border);
+  padding: 8px 12px 4px;
   flex-shrink: 0;
 }
 
@@ -1359,6 +1358,142 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
   gap: var(--hms-space-2);
   margin-top: var(--hms-space-2);
+}
+
+/* Artifacts image card (row-level). */
+.hms-artifacts-img-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--hms-radius-md);
+  border: 1px solid var(--hms-border);
+  background: var(--hms-surface);
+  overflow: hidden;
+}
+
+.hms-artifacts-img-preview {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hms-hover-bg);
+  color: var(--hms-text-muted);
+  border-bottom: 1px solid var(--hms-border);
+  cursor: default;
+}
+
+.hms-artifacts-img-preview[data-previewable] {
+  cursor: zoom-in;
+}
+
+.hms-artifacts-img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.hms-artifacts-img-meta {
+  padding: var(--hms-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-1);
+  min-width: 0;
+}
+
+.hms-artifacts-img-kind {
+  font-size: var(--hms-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hms-text-muted);
+}
+
+.hms-artifacts-img-label {
+  font-size: var(--hms-text-sm);
+  font-weight: var(--hms-fw-semibold);
+  color: var(--hms-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-artifacts-img-value {
+  font-size: var(--hms-text-xs);
+  font-family: monospace;
+  color: var(--hms-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-artifacts-img-chat {
+  margin-top: var(--hms-space-1);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--hms-accent);
+  font-size: var(--hms-text-xs);
+  text-align: left;
+  min-width: 0;
+}
+
+.hms-artifacts-row-icon {
+  flex-shrink: 0;
+}
+
+.hms-artifacts-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Skills side-list rows — hover background + active selection (D64 + hover). */
+.hms-skills-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--hms-radius-md);
+  background: transparent;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--hms-text-sm);
+}
+
+.hms-skills-row:hover {
+  background: var(--hms-hover-bg);
+}
+
+.hms-skills-row[data-active] {
+  background: var(--hms-selected-bg);
+  color: var(--hms-text);
+}
+
+.hms-skills-row-icon {
+  flex-shrink: 0;
+}
+
+.hms-skills-row-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-skills-row-count {
+  font-size: 0.625rem;
+  color: var(--hms-text-muted);
+}
+
+.hms-skills-row-divider {
+  height: 1px;
+  background: var(--hms-border);
+  margin: var(--hms-space-2) 0;
 }
 
 .hms-cron-template-chip {
