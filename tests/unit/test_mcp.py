@@ -7,7 +7,9 @@ for the list view; mutations write the real temp config.yaml.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
+from unittest.mock import patch
 
 import aiohttp
 import pytest
@@ -165,3 +167,80 @@ async def test_remove_server(app_server):
         async with cs.delete(f"{base}/api/mcp/servers/linear", headers=_CSRF) as r:
             assert r.status == 200, await r.text()
     assert "linear" not in yaml.safe_load(cfg_path.read_text(encoding="utf-8"))["mcp_servers"]
+
+
+# ── Profile view-scope (?profile=) — read + write route under the viewed home ──
+
+
+@contextlib.contextmanager
+def _spy_override(seen: list):
+    """Replace profile_home_override with a no-op that records the profile, so
+    tests can assert the scope was applied without setting up a second home."""
+
+    @contextlib.contextmanager
+    def _spy(profile):
+        seen.append(profile)
+        yield None
+
+    with patch("server.routes.mcp.profile_home_override", _spy):
+        yield
+
+
+@pytest.mark.asyncio
+async def test_list_servers_profile_scoped(app_server):
+    base, _ = app_server
+    seen: list = []
+    with _spy_override(seen):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{base}/api/mcp/servers?profile=creative") as r:
+                assert r.status == 200
+    assert seen == ["creative"]  # the read ran under the creative home override
+
+
+@pytest.mark.asyncio
+async def test_mcp_invalid_profile_400(app_server):
+    base, _ = app_server
+    seen: list = []
+    with _spy_override(seen):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{base}/api/mcp/servers?profile=Bad!Name") as r:
+                assert r.status == 400
+                assert (await r.json())["error"] == "invalid_profile"
+    assert seen == []  # rejected before the override
+
+
+@pytest.mark.asyncio
+async def test_toggle_named_profile_scopes_write_and_skips_live_reload(app_server):
+    """A toggle under ?profile=creative writes under that home's override and does
+    NOT reload the live config (which would pollute the active process)."""
+    base, cfg_path = app_server
+    seen: list = []
+    with _spy_override(seen), patch("server.routes.mcp.config_reader.reload") as reload_mock:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.patch(
+                f"{base}/api/mcp/servers/local?profile=creative",
+                json={"enabled": True},
+                headers=_CSRF,
+            ) as r:
+                assert r.status == 200, await r.text()
+    assert seen == ["creative"]
+    reload_mock.assert_not_called()
+    # The write still landed (the spy override is a no-op → the test home's file).
+    assert yaml.safe_load(cfg_path.read_text(encoding="utf-8"))["mcp_servers"]["local"]["enabled"] is True
+
+
+@pytest.mark.asyncio
+async def test_toggle_default_reloads_live_config(app_server):
+    """A default-home toggle DOES reload the live config (it IS the live config)."""
+    base, _ = app_server
+    seen: list = []
+    with _spy_override(seen), patch("server.routes.mcp.config_reader.reload") as reload_mock:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.patch(
+                f"{base}/api/mcp/servers/local",
+                json={"enabled": True},
+                headers=_CSRF,
+            ) as r:
+                assert r.status == 200, await r.text()
+    assert seen == [None]
+    reload_mock.assert_called_once()
