@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ChatThread, type ChatThreadLabels } from "./ChatThread";
+import AssistantThread from "./assistant-ui/AssistantThread";
 import { Loader2, ArrowDown } from "lucide-react";
 import type { ChatMessage } from "@/lib/hermes-types";
 import { useChatStore } from "@/store/chat";
@@ -12,15 +12,9 @@ interface ChatStreamProps {
   isTransitioningOut?: boolean;
 }
 
-// ChatStream owns its own full-height loading / empty / transition states
-// (with spinner + session-switch animations); these labels are passed to
-// ChatThread only for completeness — the bubble-present branch is the one
-// ChatStream delegates.
-const THREAD_LABELS: ChatThreadLabels = {
-  loading: "Loading…",
-  empty: "Start a conversation…",
-  error: "Could not load messages",
-};
+// ChatStream owns its own full-height loading / empty / transition states (with
+// spinner + session-switch animations); the bubble-present branch delegates to
+// AssistantThread (assistant-ui runtime) for the transcript itself.
 
 export default function ChatStream({ messages, isLoadingHistory, isTransitioningOut }: ChatStreamProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -148,9 +142,7 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
         <ChatIntro />
       ) : (
         <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-          <ChatThread
-            messages={messages}
-            labels={THREAD_LABELS}
+          <AssistantThread
             scrollRef={scrollContainerRef}
             onScroll={handleScroll}
             footer={<div ref={bottomRef} />}

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useCapabilityStore } from "@/store/capabilities";
 import { useChatStore } from "@/store/chat";
 import { useRunsStream } from "@/hooks/useRunsStream";
+import { useChatRuntime } from "@/components/chat/assistant-ui/useChatRuntime";
 import { useApprovalBridge } from "@/hooks/useApprovalBridge";
 import ChatStream from "@/components/chat/ChatStream";
 import Composer, { type ComposerHandle } from "@/components/chat/Composer";
@@ -75,6 +77,9 @@ export default function ChatPanel() {
   } = useChatStore();
   const appendApprovalNoticeSegment = useChatStore((s) => s.appendApprovalNoticeSegment);
   const { sendMessage, stopRun } = useRunsStream();
+  // assistant-ui runtime bridging the chat store ↔ <Thread>. sendMessage /
+  // stopRun stay the single drivers; the composer is still Station's own.
+  const runtime = useChatRuntime({ onSend: (text) => void sendMessage(text), onCancel: stopRun });
   const { pending: pendingApproval, clear: clearPendingApproval } = useDangerousCommandApproval();
   // WS approval.requested → pendingApproval; resolveApproval wakes the same run via WS.
   const { resolveApproval } = useApprovalBridge();
@@ -276,11 +281,13 @@ export default function ChatPanel() {
             </div>
           )}
 
-          <ChatStream
-            messages={messages}
-            isLoadingHistory={isHistoryPending}
-            isTransitioningOut={isTransitioningOut}
-          />
+          <AssistantRuntimeProvider runtime={runtime}>
+            <ChatStream
+              messages={messages}
+              isLoadingHistory={isHistoryPending}
+              isTransitioningOut={isTransitioningOut}
+            />
+          </AssistantRuntimeProvider>
 
           {pendingApproval && (
             <ApprovalDrawer

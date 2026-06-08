@@ -15,6 +15,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.12.28",
     "@monaco-editor/react": "^4.7.0",
     "@nous-research/ui": "^0.10.0",
     "@tailwindcss/vite": "^4.2.1",
