@@ -1680,7 +1680,6 @@ button.hms-artifacts-title {
   display: flex;
   flex-direction: column;
   gap: var(--hms-space-3);
-  max-width: var(--hms-content-max-w);
 }
 
 .hms-mcp-head {
@@ -2827,6 +2826,45 @@ button.hms-artifacts-title {
 
 /* Skills side-list — full-width scroll with a flush scrollbar (like Recents):
    only the header band is horizontally padded; the scroll fills the column. */
+/* Plugins page (D64 + layout): full-width config band above a master-detail
+   browser that fills the remaining height (no content-max cap, no magic
+   min-height, single scroll owned by the two-column's panes). */
+.hms-plugins {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.hms-plugins-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hms-plugins-config {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-4);
+  padding: var(--hms-space-6);
+}
+
+.hms-plugins-section {
+  margin: var(--hms-space-2) 0 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hms-text-muted);
+}
+
+.hms-plugins-browser {
+  flex: 1;
+  min-height: 0;
+}
+
 .hms-skills-panel {
   display: flex;
   flex-direction: column;

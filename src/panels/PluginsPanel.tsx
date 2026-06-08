@@ -24,7 +24,7 @@ export default function PluginsPanel() {
 
   return (
     <CapabilityGate require="agent">
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div className="hms-plugins">
         <PageTopBar
           title={t.nav.plugins}
           actions={
@@ -33,15 +33,15 @@ export default function PluginsPanel() {
             </IconButton>
           }
         />
-        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-4)", padding: "var(--hms-space-6)", maxWidth: "var(--hms-content-max-w)", width: "100%" }}>
+        <div className="hms-plugins-body">
+          <div className="hms-plugins-config">
             <RuntimeProvidersCard />
             <GitInstallCard />
-            <h3 style={{ margin: "var(--hms-space-2) 0 0", fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--hms-text-muted)" }}>
+            <h3 className="hms-plugins-section">
               {p?.installedTitle ?? "Installed plugins"}
             </h3>
           </div>
-          <div style={{ flex: 1, minHeight: 360 }}>
+          <div className="hms-plugins-browser">
             <PanelTwoColumn
               list={<PluginSideList />}
               detail={<PluginDetail />}

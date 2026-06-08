@@ -177,7 +177,7 @@ function PluginRow({
       ) : hasToolOverride ? (
         <Wrench size={13} style={{ color: "var(--hms-warning)", flexShrink: 0 }} />
       ) : (
-        <Puzzle size={13} style={{ color: isEnabled ? "var(--hms-success)" : "#94a3b8", flexShrink: 0 }} />
+        <Puzzle size={13} style={{ color: isEnabled ? "var(--hms-success)" : "var(--hms-text-muted)", flexShrink: 0 }} />
       )}
       <span
         style={{
