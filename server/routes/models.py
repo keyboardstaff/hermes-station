@@ -12,6 +12,8 @@ from typing import Any
 from aiohttp import ClientSession, ClientTimeout, web
 
 from server.lib import config_reader
+from server.lib.profile_run import profile_home_override
+from server.lib.route_helpers import profile_arg
 from server.lib.upstream_shim import shim
 
 logger = logging.getLogger(__name__)
@@ -84,18 +86,45 @@ async def _dashboard_request(
         return None
 
 
-async def _fetch_dashboard_env() -> dict[str, dict] | None:
-    """Returns the rich per-key metadata dict from upstream /api/env; None when unreachable."""
-    result = await _dashboard_request("GET", "/api/env")
-    if result is None:
+def _build_env_vars() -> dict[str, dict] | None:
+    """In-process replica of the dashboard's ``get_env_vars()``.
+
+    Reads the current ``HERMES_HOME`` ``.env`` (honouring an active
+    ``profile_home_override``) and joins it with upstream's ``OPTIONAL_ENV_VARS``
+    catalog. Returns ``None`` when the upstream catalog/loader isn't importable
+    (the caller surfaces that as ``env_unavailable``). Unlike the dashboard HTTP
+    proxy, this sees the per-coroutine profile override, so the Keys view is
+    scopable without spawning a sibling gateway.
+    """
+    optional = shim.env.optional_vars
+    load_env = shim.env.load_env
+    redact = shim.env.redact_key
+    if optional is None or load_env is None or redact is None:
         return None
-    status, body = result
-    if status != 200 or not isinstance(body, dict):
+    try:
+        on_disk = load_env()
+    except Exception:
+        logger.debug("[hms.models] load_env failed", exc_info=True)
         return None
-    # Reject the {raw: ...} fallback shape — caller treats None as unavailable.
-    if set(body.keys()) == {"raw"}:
-        return None
-    return body
+    chan_fn = shim.env.channel_managed_keys
+    try:
+        channel_keys = chan_fn() if chan_fn is not None else frozenset()
+    except Exception:
+        channel_keys = frozenset()
+    result: dict[str, dict] = {}
+    for name, info in optional.items():
+        value = on_disk.get(name)
+        result[name] = {
+            "is_set": bool(value),
+            "redacted_value": redact(value) if value else None,
+            "description": info.get("description", ""),
+            "url": info.get("url"),
+            "category": info.get("category", ""),
+            "is_password": info.get("password", False),
+            "advanced": info.get("advanced", False),
+            "channel_managed": name in channel_keys,
+        }
+    return result
 
 
 @router.get("/api/models/vision-check")
@@ -155,9 +184,13 @@ async def model_context(request: web.Request) -> web.Response:
 
 @router.get("/api/models/keys")
 async def get_keys(request: web.Request) -> web.Response:
-    env = await _fetch_dashboard_env()
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+    with profile_home_override(profile):
+        env = _build_env_vars()
     if env is None:
-        return web.json_response({"keys": [], "error": "dashboard_unavailable"})
+        return web.json_response({"keys": [], "error": "env_unavailable"})
 
     keys = []
     for name in sorted(env.keys()):
@@ -197,20 +230,23 @@ async def reveal_key(request: web.Request) -> web.Response:
     if not name:
         return web.json_response({"error": "name_required"}, status=400)
 
-    # Upstream's reveal is rate-limited + audit-logged.
-    result = await _dashboard_request("POST", "/api/env/reveal", json_body={"key": name})
-    if result is None:
-        return web.json_response({"error": "dashboard_unavailable"}, status=503)
-    status, body = result
-    if status == 404:
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    load_env = shim.env.load_env
+    if load_env is None:
+        return web.json_response({"error": "env_unavailable"}, status=503)
+    # Read the *selected* profile's .env directly (the file, not process env) so
+    # a reveal while scoped to profile X never leaks the active profile's value.
+    try:
+        with profile_home_override(profile):
+            value = (load_env() or {}).get(name)
+    except Exception:
+        logger.debug("[hms.models] reveal load_env failed", exc_info=True)
+        value = None
+    if not value:
         return web.json_response({"error": "key_not_found"}, status=404)
-    if status == 429:
-        return web.json_response({"error": "rate_limited"}, status=429)
-    if status != 200 or not isinstance(body, dict):
-        return web.json_response({"error": "upstream_error", "status": status}, status=502)
-    value = body.get("value")
-    if value is None:
-        return web.json_response({"error": "no_value"}, status=502)
     return web.json_response({"name": name, "value": value})
 
 
@@ -228,17 +264,22 @@ async def set_key(request: web.Request) -> web.Response:
     if not isinstance(value, str):
         return web.json_response({"error": "value_must_be_string"}, status=400)
 
-    result = await _dashboard_request(
-        "PUT", "/api/env", json_body={"key": name, "value": value}
-    )
-    if result is None:
-        return web.json_response({"error": "dashboard_unavailable"}, status=503)
-    status, resp_body = result
-    if status != 200:
-        return web.json_response(
-            {"error": "upstream_error", "status": status, "detail": resp_body},
-            status=status if 400 <= status < 600 else 502,
-        )
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    save = shim.env.save_value
+    if save is None:
+        return web.json_response({"error": "env_unavailable"}, status=503)
+    try:
+        with profile_home_override(profile):
+            save(name, value)
+    except ValueError as exc:
+        # Invalid name / denylisted var (PATH, LD_PRELOAD, …).
+        return web.json_response({"error": "invalid", "detail": str(exc)}, status=400)
+    except Exception:
+        logger.exception("[hms.models] set_key %s failed", name)
+        return web.json_response({"error": "write_failed"}, status=500)
     return web.json_response({"ok": True, "name": name})
 
 
@@ -253,19 +294,21 @@ async def delete_key(request: web.Request) -> web.Response:
     if not name:
         return web.json_response({"error": "name_required"}, status=400)
 
-    result = await _dashboard_request(
-        "DELETE", "/api/env", json_body={"key": name}
-    )
-    if result is None:
-        return web.json_response({"error": "dashboard_unavailable"}, status=503)
-    status, resp_body = result
-    if status == 404:
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    remove = shim.env.remove_value
+    if remove is None:
+        return web.json_response({"error": "env_unavailable"}, status=503)
+    try:
+        with profile_home_override(profile):
+            found = remove(name)
+    except Exception:
+        logger.exception("[hms.models] delete_key %s failed", name)
+        return web.json_response({"error": "write_failed"}, status=500)
+    if not found:
         return web.json_response({"error": "key_not_found"}, status=404)
-    if status != 200:
-        return web.json_response(
-            {"error": "upstream_error", "status": status, "detail": resp_body},
-            status=status if 400 <= status < 600 else 502,
-        )
     return web.json_response({"ok": True, "name": name})
 
 

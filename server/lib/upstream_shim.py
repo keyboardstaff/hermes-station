@@ -417,6 +417,41 @@ class _Toolsets:
 
 
 @dataclass
+class _Env:
+    """API-key / env-var catalog + ``.env`` IO.
+
+    Every accessor is ``HERMES_HOME``-relative (``load_env`` / ``save_env_value``
+    / ``remove_env_value`` / ``redact_key`` all resolve through
+    ``get_env_path()`` → ``get_hermes_home()``), so wrapping a call in
+    ``profile_home_override`` reads/writes the *selected* profile's ``.env``.
+    This lets the Keys view replicate the dashboard's ``get_env_vars()``
+    in-process — the dashboard HTTP proxy runs in a separate request task and so
+    can't see the per-coroutine ContextVar override.
+    """
+
+    optional_vars: Any = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "OPTIONAL_ENV_VARS")
+    )
+    load_env: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "load_env")
+    )
+    redact_key: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "redact_key")
+    )
+    save_value: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "save_env_value")
+    )
+    remove_value: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "remove_env_value")
+    )
+    channel_managed_keys: Callable | None = field(
+        default_factory=lambda: _try_import(
+            "hermes_cli.web_server", "_channel_managed_env_keys"
+        )
+    )
+
+
+@dataclass
 class _Mcp:
     """MCP server management — the *configured* ``mcp_servers`` block.
     We deliberately surface the config layer (list/enable/disable/
@@ -527,6 +562,7 @@ class Shim:
     skills: _Skills = field(default_factory=_Skills)
     toolsets: _Toolsets = field(default_factory=_Toolsets)
     mcp: _Mcp = field(default_factory=_Mcp)
+    env: _Env = field(default_factory=_Env)
     profiles: _Profiles = field(default_factory=_Profiles)
     commands: _Commands = field(default_factory=_Commands)
     platforms: _Platforms = field(default_factory=_Platforms)
@@ -605,6 +641,7 @@ class Shim:
         self.skills = _Skills()
         self.toolsets = _Toolsets()
         self.mcp = _Mcp()
+        self.env = _Env()
         self.profiles = _Profiles()
         self.commands = _Commands()
         self.platforms = _Platforms()

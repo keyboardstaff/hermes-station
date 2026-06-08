@@ -7,6 +7,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useProfileScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
+import { useActiveProfile } from "@/hooks/useProfiles";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -114,20 +116,38 @@ export function useAssignModel() {
 
 // ── Keys ─────────────────────────────────────────────────────────────
 
+// The Keys surface is profile-scoped end-to-end: the backend reads/writes the
+// selected profile's .env in-process (profile_home_override). ALL-profiles and
+// the default scope both resolve to undefined → the process/active home, since
+// env vars aren't meaningfully aggregatable across profiles.
+function useKeysProfile(): string | undefined {
+  const scope = useProfileScope((s) => s.scope);
+  const { data: active } = useActiveProfile();
+  return scope === ALL_PROFILES
+    ? undefined
+    : (effectiveScopeName(scope, active?.current) ?? undefined);
+}
+
+function profileQuery(profile: string | undefined): string {
+  return profile ? `?profile=${encodeURIComponent(profile)}` : "";
+}
+
 export function useKeys() {
+  const profile = useKeysProfile();
   return useQuery<KeysPayload>({
-    queryKey: ["models-keys"],
-    queryFn: () => api.get<KeysPayload>("/api/models/keys"),
+    queryKey: ["models-keys", profile ?? null],
+    queryFn: () => api.get<KeysPayload>(`/api/models/keys${profileQuery(profile)}`),
     staleTime: 15_000,
     retry: 1,
   });
 }
 
 export function useRevealKey() {
+  const profile = useKeysProfile();
   return useMutation({
     mutationFn: (name: string) =>
       api.json<{ name: string; value: string }>(
-        "/api/models/keys/reveal",
+        `/api/models/keys/reveal${profileQuery(profile)}`,
         "POST",
         { name },
       ),
@@ -136,9 +156,10 @@ export function useRevealKey() {
 
 export function useSetKey() {
   const qc = useQueryClient();
+  const profile = useKeysProfile();
   return useMutation({
     mutationFn: (body: { name: string; value: string }) =>
-      api.json<{ ok: boolean }>("/api/models/keys", "PUT", body),
+      api.json<{ ok: boolean }>(`/api/models/keys${profileQuery(profile)}`, "PUT", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["models-keys"] });
       qc.invalidateQueries({ queryKey: ["models"] });
@@ -148,9 +169,10 @@ export function useSetKey() {
 
 export function useDeleteKey() {
   const qc = useQueryClient();
+  const profile = useKeysProfile();
   return useMutation({
     mutationFn: (name: string) =>
-      api.json<{ ok: boolean }>("/api/models/keys", "DELETE", { name }),
+      api.json<{ ok: boolean }>(`/api/models/keys${profileQuery(profile)}`, "DELETE", { name }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["models-keys"] });
       qc.invalidateQueries({ queryKey: ["models"] });

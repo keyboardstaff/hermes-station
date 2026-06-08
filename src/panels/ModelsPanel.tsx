@@ -68,7 +68,7 @@ export default function ModelsPanel() {
 
   return (
     <div className="hms-models-root">
-      <PageTopBar title={t.nav.models} />
+      <PageTopBar title={t.nav.models} showProfileScope />
       <div className="hms-models-body">
         {/* Primary */}
         <SectionCard title={tabLabels.primary}>

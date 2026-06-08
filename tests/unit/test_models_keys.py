@@ -46,37 +46,47 @@ async def app_server(quiet_hms_env, tmp_path: Path):
         config_reader.reload()
 
 
-def _fake_env_metadata():
-    return {
-        "OPENAI_API_KEY": {
-            "is_set": True,
-            "redacted_value": "sk-p******xyz1",
-            "description": "OpenAI API key",
-            "url": "https://platform.openai.com/api-keys",
-            "category": "provider",
-            "is_password": True,
-            "tools": [],
-            "advanced": False,
-        },
-        "TELEGRAM_BOT_TOKEN": {
-            "is_set": False,
-            "redacted_value": None,
-            "description": "Telegram bot token",
-            "url": None,
-            "category": "messaging",
-            "is_password": True,
-            "tools": [],
-            "advanced": False,
-        },
-    }
+_FAKE_OPTIONAL = {
+    "OPENAI_API_KEY": {
+        "description": "OpenAI API key",
+        "url": "https://platform.openai.com/api-keys",
+        "category": "provider",
+        "password": True,
+        "advanced": False,
+    },
+    "TELEGRAM_BOT_TOKEN": {
+        "description": "Telegram bot token",
+        "url": None,
+        "category": "messaging",
+        "password": True,
+        "advanced": False,
+    },
+}
+
+
+def _patch_env(*, on_disk=None, optional=None, channel=None):
+    """Patch the in-process env shim with a fake ``.env`` + catalog.
+
+    ``optional``/``channel`` default to the OpenAI+Telegram catalog and an
+    empty channel-managed set; ``on_disk`` is the fake ``.env`` mapping.
+    """
+    on_disk = dict(on_disk or {})
+    optional = _FAKE_OPTIONAL if optional is None else optional
+    channel = frozenset() if channel is None else channel
+    env = models_mod.shim.env
+    return (
+        patch.object(env, "optional_vars", optional),
+        patch.object(env, "load_env", lambda: dict(on_disk)),
+        patch.object(env, "redact_key", lambda v: f"{v[:4]}******{v[-4:]}"),
+        patch.object(env, "channel_managed_keys", lambda: channel),
+    )
 
 
 @pytest.mark.asyncio
 async def test_keys_returns_categories(app_server) -> None:
-    """GET /api/models/keys returns rich metadata with categories."""
-    with patch.object(
-        models_mod, "_fetch_dashboard_env", new=AsyncMock(return_value=_fake_env_metadata())
-    ):
+    """GET /api/models/keys joins the catalog with the profile .env in-process."""
+    p1, p2, p3, p4 = _patch_env(on_disk={"OPENAI_API_KEY": "sk-proj-secret-xyz1"})
+    with p1, p2, p3, p4:
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"{app_server}/api/models/keys") as r:
                 assert r.status == 200
@@ -95,23 +105,51 @@ async def test_keys_returns_categories(app_server) -> None:
 
 
 @pytest.mark.asyncio
-async def test_keys_dashboard_unavailable(app_server) -> None:
-    with patch.object(models_mod, "_fetch_dashboard_env", new=AsyncMock(return_value=None)):
+async def test_keys_env_unavailable(app_server) -> None:
+    """No upstream catalog → graceful empty list + env_unavailable marker."""
+    with patch.object(models_mod.shim.env, "optional_vars", None):
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"{app_server}/api/models/keys") as r:
                 assert r.status == 200
                 data = await r.json()
 
     assert data["keys"] == []
-    assert data["error"] == "dashboard_unavailable"
+    assert data["error"] == "env_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_keys_invalid_profile_rejected(app_server) -> None:
+    """A malformed ?profile= is a 400 before any env read."""
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{app_server}/api/models/keys?profile=Bad!Name") as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "invalid_profile"
+
+
+@pytest.mark.asyncio
+async def test_keys_profile_scopes_override(app_server) -> None:
+    """A well-formed ?profile= threads through profile_home_override."""
+    seen: list[str | None] = []
+    real = models_mod.profile_home_override
+
+    def spy(profile):
+        seen.append(profile)
+        return real(profile)
+
+    p1, p2, p3, p4 = _patch_env(on_disk={})
+    with p1, p2, p3, p4, patch.object(models_mod, "profile_home_override", spy):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/models/keys?profile=work") as r:
+                assert r.status == 200
+    assert seen == ["work"]
 
 
 @pytest.mark.asyncio
 async def test_reveal_returns_clear_value(app_server) -> None:
-    """Reveal proxies upstream and returns the clear value."""
-    upstream_resp = (200, {"key": "OPENAI_API_KEY", "value": "sk-proj-real"})
+    """Reveal reads the selected profile's .env directly and returns the value."""
     with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
+        models_mod.shim.env, "load_env", lambda: {"OPENAI_API_KEY": "sk-proj-real"}
     ):
         async with aiohttp.ClientSession() as cs:
             async with cs.post(
@@ -129,10 +167,7 @@ async def test_reveal_returns_clear_value(app_server) -> None:
 @pytest.mark.asyncio
 async def test_reveal_rate_limited(app_server) -> None:
     """Local rate limit kicks in on the 6th call."""
-    upstream_resp = (200, {"key": "KEY", "value": "val"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ):
+    with patch.object(models_mod.shim.env, "load_env", lambda: {"KEY": "val"}):
         async with aiohttp.ClientSession() as cs:
             for i in range(5):
                 async with cs.post(
@@ -166,12 +201,9 @@ async def test_reveal_missing_name_returns_400(app_server) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reveal_upstream_404(app_server) -> None:
-    """Upstream 404 → station 404."""
-    upstream_resp = (404, {"detail": "not found"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ):
+async def test_reveal_key_not_set(app_server) -> None:
+    """A key absent from the profile .env → 404 key_not_found."""
+    with patch.object(models_mod.shim.env, "load_env", lambda: {}):
         async with aiohttp.ClientSession() as cs:
             async with cs.post(
                 f"{app_server}/api/models/keys/reveal",
@@ -185,11 +217,14 @@ async def test_reveal_upstream_404(app_server) -> None:
 
 @pytest.mark.asyncio
 async def test_set_key_success(app_server) -> None:
-    """PUT /api/models/keys proxies to upstream PUT /api/env."""
-    upstream_resp = (200, {"ok": True, "key": "OPENAI_API_KEY"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ) as mock_req:
+    """PUT /api/models/keys writes via upstream save_env_value, in-process."""
+    saved: dict[str, str] = {}
+
+    def fake_save(name, value):
+        saved["name"] = name
+        saved["value"] = value
+
+    with patch.object(models_mod.shim.env, "save_value", fake_save):
         async with aiohttp.ClientSession() as cs:
             async with cs.put(
                 f"{app_server}/api/models/keys",
@@ -201,10 +236,25 @@ async def test_set_key_success(app_server) -> None:
 
     assert data["ok"] is True
     assert data["name"] == "OPENAI_API_KEY"
-    # Verify upstream was called with the right body
-    mock_req.assert_called_once_with(
-        "PUT", "/api/env", json_body={"key": "OPENAI_API_KEY", "value": "sk-new"}
-    )
+    assert saved == {"name": "OPENAI_API_KEY", "value": "sk-new"}
+
+
+@pytest.mark.asyncio
+async def test_set_key_invalid_name(app_server) -> None:
+    """save_env_value raising ValueError (denylist / bad name) → 400."""
+    def boom(name, value):
+        raise ValueError("denylisted")
+
+    with patch.object(models_mod.shim.env, "save_value", boom):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.put(
+                f"{app_server}/api/models/keys",
+                json={"name": "PATH", "value": "x"},
+                headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+            ) as r:
+                assert r.status == 400
+                data = await r.json()
+                assert data["error"] == "invalid"
 
 
 @pytest.mark.asyncio
@@ -219,8 +269,8 @@ async def test_set_key_missing_name(app_server) -> None:
 
 
 @pytest.mark.asyncio
-async def test_set_key_dashboard_unavailable(app_server) -> None:
-    with patch.object(models_mod, "_dashboard_request", new=AsyncMock(return_value=None)):
+async def test_set_key_env_unavailable(app_server) -> None:
+    with patch.object(models_mod.shim.env, "save_value", None):
         async with aiohttp.ClientSession() as cs:
             async with cs.put(
                 f"{app_server}/api/models/keys",
@@ -232,10 +282,13 @@ async def test_set_key_dashboard_unavailable(app_server) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_key_success(app_server) -> None:
-    upstream_resp = (200, {"ok": True, "key": "OPENAI_API_KEY"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ):
+    removed: dict[str, str] = {}
+
+    def fake_remove(name):
+        removed["name"] = name
+        return True
+
+    with patch.object(models_mod.shim.env, "remove_value", fake_remove):
         async with aiohttp.ClientSession() as cs:
             async with cs.delete(
                 f"{app_server}/api/models/keys",
@@ -246,14 +299,13 @@ async def test_delete_key_success(app_server) -> None:
                 data = await r.json()
 
     assert data["ok"] is True
+    assert removed["name"] == "OPENAI_API_KEY"
 
 
 @pytest.mark.asyncio
 async def test_delete_key_not_found(app_server) -> None:
-    upstream_resp = (404, {"detail": "not found"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ):
+    """remove_env_value returning False (key absent) → 404."""
+    with patch.object(models_mod.shim.env, "remove_value", lambda name: False):
         async with aiohttp.ClientSession() as cs:
             async with cs.delete(
                 f"{app_server}/api/models/keys",
