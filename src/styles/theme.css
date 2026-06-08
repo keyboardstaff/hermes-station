@@ -362,6 +362,13 @@ body {
 }
 
 .hms-session-recents-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
   background: transparent;
   transition: background var(--hms-transition-fast);
 }
@@ -369,6 +376,38 @@ body {
 .hms-session-recents-item:hover,
 .hms-session-recents-item[data-active="true"] {
   background: var(--hms-border);
+}
+
+.hms-session-recents-icon {
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+}
+
+/* Trailing action button — absolute overlay (out of flow), so revealing it on
+   hover never reflows the row. The date sits underneath in normal flow and is
+   hidden (visibility, so its box is kept) when the overlay is shown → the
+   title's width is constant whether hovered or not → no hover jitter. */
+.hms-session-recents-action {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hms-transition-fast);
+}
+
+.hms-session-recents-item:hover .hms-session-recents-action,
+.hms-session-recents-item:focus-within .hms-session-recents-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hms-session-recents-item:hover .hms-session-recents-time,
+.hms-session-recents-item:focus-within .hms-session-recents-time,
+.hms-session-recents-item[data-running] .hms-session-recents-time {
+  visibility: hidden;
 }
 
 .hms-session-recents-title {
@@ -388,7 +427,10 @@ body {
 }
 
 .hms-session-recents-spinner {
-  flex-shrink: 0;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;

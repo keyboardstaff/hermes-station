@@ -12,7 +12,6 @@ import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
 import type { SessionSummary } from "@/lib/hermes-types";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useI18n } from "@/i18n";
-import Tooltip from "@/components/ui/Tooltip";
 import IconButton from "@/components/ui/IconButton";
 
 function relativeTime(ts?: number): string {
@@ -100,7 +99,6 @@ function SessionItem({
   onMenuOpen,
   onDelete,
 }: SessionItemProps) {
-  const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -110,21 +108,11 @@ function SessionItem({
   return (
     <div
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       className="hms-session-recents-item"
       data-active={isActive}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 'var(--hms-space-2)',
-        padding: "7px 8px",
-        borderRadius: 8,
-        cursor: "pointer",
-        position: "relative",
-      }}
+      data-running={isRunning || undefined}
     >
-      <MessageSquare size={13} style={{ flexShrink: 0, color: "var(--hms-text-muted)" }} />
+      <MessageSquare size={13} className="hms-session-recents-icon" />
       {isRenaming ? (
         <div className="hms-session-recents-rename" onClick={(e) => e.stopPropagation()}>
           <input
@@ -150,50 +138,36 @@ function SessionItem({
           <span className="hms-session-recents-title">
             {formatSessionTitle(s.title)}
           </span>
-          {/* Relative time */}
+          {/* Relative time — auto-hidden on hover/active/running so the action
+              button (absolute overlay) can take its place without reflow. */}
           <span className="hms-session-recents-time">
             {relativeTime(s.updated_at ?? s.started_at)}
           </span>
-          {/* While a run is streaming for the active session, replace the
-              action button with a spinner so the user can see something is
-              still in flight even if the chat scrolled off-screen. */}
+          {/* While a run is streaming, a spinner overlays the trailing slot. */}
           {isRunning ? (
-            <span
-              title="Run in progress"
-              aria-label="loading"
-              className="hms-session-recents-spinner"
-            >
+            <span aria-label="loading" className="hms-session-recents-spinner">
               <Loader2 size={13} className="hms-spin" />
             </span>
-          ) : (hovered || isActive) && !isRenaming && (
-            shiftHeld ? (
-              <Tooltip label="Delete session" placement="left">
-                <IconButton
-                  aria-label="Delete session"
-                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  size="sm"
-                  danger
-                  style={{ width: 20, height: 20, borderRadius: 4 }}
-                >
-                  <Trash2 size={13} />
-                </IconButton>
-              </Tooltip>
-            ) : (
-              <Tooltip label="More options" placement="left">
-                <IconButton
-                  aria-label="More options"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    onMenuOpen(rect.right + 4, rect.top);
-                  }}
-                  size="sm"
-                  style={{ width: 20, height: 20, borderRadius: 4 }}
-                >
-                  <MoreHorizontal size={13} />
-                </IconButton>
-              </Tooltip>
-            )
+          ) : !isRenaming && (
+            // ONE action button: the icon is a Shift hint (🗑 vs •••) but the
+            // ACTION reads e.shiftKey from the click itself — so Shift+click
+            // deletes reliably even if the global Shift state lagged. No tooltip.
+            <span className="hms-session-recents-action">
+              <IconButton
+                aria-label={shiftHeld ? "Delete session" : "More options"}
+                danger={shiftHeld}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (e.shiftKey) { onDelete(); return; }
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  onMenuOpen(rect.right + 4, rect.top);
+                }}
+                size="sm"
+                style={{ width: 20, height: 20, borderRadius: 4 }}
+              >
+                {shiftHeld ? <Trash2 size={13} /> : <MoreHorizontal size={13} />}
+              </IconButton>
+            </span>
           )}
         </>
       )}
@@ -302,15 +276,20 @@ export default function SessionRecents({
     return () => document.removeEventListener("mousedown", handler);
   }, [menu]);
 
-  // Global Shift key tracker for instant-delete mode
+  // Global Shift tracker — drives the trash/••• icon HINT only. The delete
+  // ACTION reads e.shiftKey off the click, so a missed/stale event here never
+  // breaks Shift+click. The blur reset stops the state sticking "true" when a
+  // keyup is lost to a window switch while Shift is down.
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { if (e.key === "Shift") setShiftHeld(true); };
-    const up = (e: KeyboardEvent) => { if (e.key === "Shift") setShiftHeld(false); };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
+    const sync = (e: KeyboardEvent) => setShiftHeld(e.shiftKey);
+    const clear = () => setShiftHeld(false);
+    window.addEventListener("keydown", sync);
+    window.addEventListener("keyup", sync);
+    window.addEventListener("blur", clear);
     return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
+      window.removeEventListener("keydown", sync);
+      window.removeEventListener("keyup", sync);
+      window.removeEventListener("blur", clear);
     };
   }, []);
 
