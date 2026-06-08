@@ -24,8 +24,8 @@ test.describe("boot & shell", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Sessions" })).toBeVisible();
 
-    // Click the "Tasks" module tab → should navigate to its first route (/cron).
-    await page.getByRole("button", { name: "Tasks" }).first().click();
+    // Click the "Activity" module tab → should navigate to its first route (/cron).
+    await page.getByRole("button", { name: "Activity" }).first().click();
     await expect(page).toHaveURL(/\/cron$/);
   });
 });

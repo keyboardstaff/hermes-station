@@ -70,8 +70,7 @@ export interface Translations {
     newTask: string;
     logout: string;
     moduleAgent: string;
-    moduleTasks: string;
-    moduleManage: string;
+    moduleActivity: string;
     workspacesDrawer: string;
     exportSession: string;
     renameSession: string;
@@ -212,6 +211,8 @@ export interface Translations {
       system: string;
       advanced: string;
     };
+    groupCapabilities: string;
+    groupApplication: string;
     preferences: {
       displaySection: string;
       showReasoning: string;

@@ -30,7 +30,12 @@ export default function OverlayModals() {
 
   const container: React.CSSProperties = isMobile
     ? { position: "fixed", inset: 0, width: "100%", height: "100%" }
-    : { width: "min(960px, 94vw)", height: "min(86vh, 900px)" };
+    // Settings now hosts the embedded capability panels (Models / Plugins /
+    // Channels) in a two-column layout, so it gets a wider frame than Profile.
+    : {
+        width: modal === "settings" ? "min(1120px, 95vw)" : "min(960px, 94vw)",
+        height: "min(88vh, 920px)",
+      };
 
   return createPortal(
     <div

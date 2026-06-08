@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Zap, Settings2 } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Activity } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { ROUTES, moduleNavTarget, type RouteModule } from "@/routes/registry";
@@ -30,16 +30,15 @@ const MODULE_STORAGE_KEY = "hms:sidebar:module";
 
 // ── Module definitions ────────────────────────────────────────────
 
-const MODULES: { id: RouteModule; icon: typeof MessageSquare; labelKey: "moduleAgent" | "moduleTasks" | "moduleManage" }[] = [
-  { id: "agent",  icon: MessageSquare, labelKey: "moduleAgent" },
-  { id: "tasks",  icon: Zap,           labelKey: "moduleTasks" },
-  { id: "manage", icon: Settings2,     labelKey: "moduleManage" },
+const MODULES: { id: RouteModule; icon: typeof MessageSquare; labelKey: "moduleAgent" | "moduleActivity" }[] = [
+  { id: "agent",    icon: MessageSquare, labelKey: "moduleAgent" },
+  { id: "activity", icon: Activity,      labelKey: "moduleActivity" },
 ];
 
 function readStoredModule(): RouteModule {
   try {
     const v = localStorage.getItem(MODULE_STORAGE_KEY);
-    if (v === "agent" || v === "tasks" || v === "manage") return v;
+    if (v === "agent" || v === "activity") return v;
   } catch { /* private browsing */ }
   return "agent";
 }

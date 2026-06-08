@@ -11,11 +11,14 @@ import {
 describe("moduleForPath", () => {
   it("maps visible + hidden routes to their module", () => {
     expect(moduleForPath("/sessions")).toBe("agent");
+    expect(moduleForPath("/skills")).toBe("agent"); // Tools
     expect(moduleForPath("/chat")).toBe("agent"); // hidden, still agent
-    expect(moduleForPath("/cron")).toBe("tasks");
     expect(moduleForPath("/files")).toBe("agent"); // hidden, the chat workspace's full page
-    expect(moduleForPath("/models")).toBe("manage");
-    expect(moduleForPath("/logs")).toBe("manage");
+    expect(moduleForPath("/cron")).toBe("activity");
+    expect(moduleForPath("/logs")).toBe("activity");
+    // Folded into the Settings modal — routed (hidden), grouped under agent.
+    expect(moduleForPath("/models")).toBe("agent");
+    expect(moduleForPath("/channels")).toBe("agent");
   });
 
   it("returns null for an unknown path", () => {
@@ -26,8 +29,7 @@ describe("moduleForPath", () => {
 describe("firstRouteForModule", () => {
   it("is the lowest-order visible route", () => {
     expect(firstRouteForModule("agent")?.path).toBe("/sessions");
-    expect(firstRouteForModule("tasks")?.path).toBe("/cron");
-    expect(firstRouteForModule("manage")?.path).toBe("/skills");
+    expect(firstRouteForModule("activity")?.path).toBe("/cron");
   });
 
   it("never returns a hidden route", () => {
@@ -37,19 +39,19 @@ describe("firstRouteForModule", () => {
 
 describe("moduleNavTarget", () => {
   it("navigates to the module's first route from a different module", () => {
-    expect(moduleNavTarget("tasks", "/sessions")).toBe("/cron");
-    expect(moduleNavTarget("manage", "/cron")).toBe("/skills");
-    expect(moduleNavTarget("agent", "/models")).toBe("/sessions");
+    expect(moduleNavTarget("activity", "/sessions")).toBe("/cron");
+    expect(moduleNavTarget("agent", "/cron")).toBe("/sessions");
   });
 
   it("stays put when already on a visible route of that module", () => {
     expect(moduleNavTarget("agent", "/sessions")).toBeNull();
-    expect(moduleNavTarget("manage", "/models")).toBeNull();
+    expect(moduleNavTarget("activity", "/cron")).toBeNull();
   });
 
-  it("stays put when on a hidden in-module route (e.g. /chat, /files)", () => {
+  it("stays put when on a hidden in-module route (e.g. /chat, /files, /models)", () => {
     // The whole point: clicking "Agent" while on /chat must not yank to /sessions.
     expect(moduleNavTarget("agent", "/chat")).toBeNull();
     expect(moduleNavTarget("agent", "/files")).toBeNull();
+    expect(moduleNavTarget("agent", "/models")).toBeNull();
   });
 });

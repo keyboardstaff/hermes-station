@@ -2912,9 +2912,31 @@ button.hms-artifacts-title {
   font-weight: 600;
 }
 
-.hms-settings-body {
+.hms-settings-nav-group {
+  padding: var(--hms-space-3) 12px 4px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hms-text-muted);
+}
+
+.hms-settings-nav-group:first-child {
+  padding-top: 4px;
+}
+
+/* Right pane: an embedded capability panel fills it (own topbar + scroll); the
+   Application tabs scroll inside -pane-scroll. */
+.hms-settings-pane {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hms-settings-pane-scroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: var(--hms-space-6);
 }

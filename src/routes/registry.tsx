@@ -17,7 +17,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Translations } from "@/i18n/types";
 
-export type RouteModule = "agent" | "tasks" | "manage";
+export type RouteModule = "agent" | "activity";
 
 export interface RouteRecord {
   path: string;
@@ -35,28 +35,29 @@ export interface RouteRecord {
 }
 
 export const ROUTES: RouteRecord[] = [
-  // ── agent ─────────────────────────────────────────────────────────
+  // ── Agent (interactive work with the agent) ───────────────────────
   { path: "/sessions", labelKey: "sessions", icon: LayoutList,    panel: lazy(() => import("@/panels/SessionsPanel")), module: "agent", order: 1 },
   { path: "/agents",   labelKey: "agents",   icon: Users,         panel: lazy(() => import("@/panels/AgentsPanel")),   module: "agent", order: 2 },
-  { path: "/artifacts", labelKey: "artifacts", icon: Files,        panel: lazy(() => import("@/panels/ArtifactsPanel")), module: "agent", order: 3 },
+  // "Tools" = the agent's skills + toolsets + MCP (labelKey `skills`, relabeled).
+  { path: "/skills",   labelKey: "skills",   icon: Sparkles,      panel: lazy(() => import("@/panels/SkillsPanel")),   module: "agent", order: 3 },
+  { path: "/artifacts", labelKey: "artifacts", icon: Files,       panel: lazy(() => import("@/panels/ArtifactsPanel")), module: "agent", order: 4 },
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",     labelKey: "chat",     icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),     module: "agent", order: 99, hidden: true },
   // /files is the chat workspace's full page — reached from there + deep links.
   { path: "/files",    labelKey: "files",    icon: FolderOpen,    panel: lazy(() => import("@/panels/FilesPanel")),    module: "agent", order: 99, hidden: true },
 
-  // ── tasks ─────────────────────────────────────────────────────────
-  { path: "/cron",     labelKey: "cron",     icon: Clock,         panel: lazy(() => import("@/panels/CronPanel")),     module: "tasks", order: 1 },
-  { path: "/kanban",   labelKey: "kanban",   icon: Kanban,        panel: lazy(() => import("@/panels/KanbanPanel")),   module: "tasks", order: 2 },
+  // ── Activity (the agent's background work + observability) ─────────
+  { path: "/cron",     labelKey: "cron",     icon: Clock,         panel: lazy(() => import("@/panels/CronPanel")),     module: "activity", order: 1 },
+  { path: "/kanban",   labelKey: "kanban",   icon: Kanban,        panel: lazy(() => import("@/panels/KanbanPanel")),   module: "activity", order: 2 },
+  { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), module: "activity", order: 3 },
+  { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      module: "activity", order: 4 },
 
-  // ── manage ────────────────────────────────────────────────────────
-  // Group A (capabilities): skills, plugins, models, channels   (order 1–4)
-  { path: "/skills",   labelKey: "skills",   icon: Sparkles,      panel: lazy(() => import("@/panels/SkillsPanel")),   module: "manage", order: 1 },
-  { path: "/plugins",  labelKey: "plugins",  icon: Puzzle,        panel: lazy(() => import("@/panels/PluginsPanel")),  module: "manage", order: 2 },
-  { path: "/models",   labelKey: "models",   icon: Cpu,           panel: lazy(() => import("@/panels/ModelsPanel")),   module: "manage", order: 3 },
-  { path: "/channels", labelKey: "channels", icon: Globe,         panel: lazy(() => import("@/panels/ChannelsPanel")), module: "manage", order: 4 },
-  // Group B (observability): analytics, logs                    (order 5–6)
-  { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), module: "manage", order: 5 },
-  { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      module: "manage", order: 6 },
+  // ── Folded into the Settings modal (Capabilities) ─────────────────
+  // Routed (deep-link / palette compat) but hidden from the sidebar — the
+  // Settings two-column list is their home; SettingsPanel embeds these panels.
+  { path: "/models",   labelKey: "models",   icon: Cpu,           panel: lazy(() => import("@/panels/ModelsPanel")),   module: "agent", order: 99, hidden: true },
+  { path: "/plugins",  labelKey: "plugins",  icon: Puzzle,        panel: lazy(() => import("@/panels/PluginsPanel")),  module: "agent", order: 99, hidden: true },
+  { path: "/channels", labelKey: "channels", icon: Globe,         panel: lazy(() => import("@/panels/ChannelsPanel")), module: "agent", order: 99, hidden: true },
 
   // Profile + Settings are NOT routes — they open as modals (see
   // `useOverlays` / OverlayModals), so config pops in over the current view.
