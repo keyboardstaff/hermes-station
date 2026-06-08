@@ -162,6 +162,7 @@ async def list_toolsets(request: web.Request) -> web.Response:
             enabled = set(
                 ts.get_platform_tools(config, "cli", include_default_mcp_servers=False) or []
             )
+            gui_label = ts.gui_label
             out = []
             for name, label, desc in ts.list_configurable():
                 try:
@@ -171,7 +172,9 @@ async def list_toolsets(request: web.Request) -> web.Response:
                 is_enabled = name in enabled
                 out.append({
                     "name": name,
-                    "label": label,
+                    # Strip the registry emoji so the label fits Station's
+                    # lucide-icon UI (upstream's HTTP/GUI-surface convention).
+                    "label": gui_label(label) if gui_label else label,
                     "description": desc,
                     "enabled": is_enabled,
                     "configured": bool(ts.has_keys(name, config)) if ts.has_keys else False,
