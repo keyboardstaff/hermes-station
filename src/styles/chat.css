@@ -1,0 +1,973 @@
+
+.hms-agents-chip-button {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-size: var(--hms-text-caption);
+}
+
+.hms-agents-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--hms-text-muted);
+}
+
+.hms-session-recents-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+  transition: background var(--hms-transition-fast);
+}
+
+.hms-session-recents-item:hover,
+.hms-session-recents-item[data-active="true"] {
+  background: var(--hms-border);
+}
+
+.hms-session-recents-icon {
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+}
+
+/* Trailing action button — absolute overlay (out of flow), so revealing it on
+   hover never reflows the row. The date sits underneath in normal flow and is
+   hidden (visibility, so its box is kept) when the overlay is shown → the
+   title's width is constant whether hovered or not → no hover jitter. */
+.hms-session-recents-action {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hms-transition-fast);
+}
+
+.hms-session-recents-item:hover .hms-session-recents-action,
+.hms-session-recents-item:focus-within .hms-session-recents-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hms-session-recents-item:hover .hms-session-recents-time,
+.hms-session-recents-item:focus-within .hms-session-recents-time,
+.hms-session-recents-item[data-running] .hms-session-recents-time {
+  visibility: hidden;
+}
+
+.hms-session-recents-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--hms-text-sm);
+  color: var(--hms-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-session-recents-time {
+  flex-shrink: 0;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-session-recents-spinner {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--hms-text);
+}
+
+.hms-session-recents-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-session-recents-menu-item {
+  color: var(--hms-text);
+}
+
+.hms-session-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  max-width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--hms-radius-md);
+  color: var(--hms-text);
+  font-size: var(--hms-text-body);
+  font-weight: var(--hms-fw-bold);
+  cursor: pointer;
+}
+
+.hms-session-actions-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-session-actions-trigger-icon {
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+}
+
+.hms-session-actions-panel {
+  z-index: 9999;
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: var(--hms-radius-lg);
+  padding: 4px 0;
+  min-width: 200px;
+  box-shadow: var(--hms-shadow-popover);
+}
+
+.hms-session-actions-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: var(--hms-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hms-session-actions-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hms-session-actions-dialog {
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: var(--hms-radius-xl);
+  padding: var(--hms-space-4);
+  min-width: 320px;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+}
+
+.hms-session-actions-dialog-title {
+  font-size: var(--hms-text-sm);
+  font-weight: var(--hms-fw-semibold);
+  color: var(--hms-text);
+}
+
+.hms-session-actions-dialog-input {
+  width: 100%;
+  margin-top: var(--hms-space-3);
+  padding: 8px 10px;
+  background: var(--hms-bg);
+  border: 1px solid var(--hms-border);
+  border-radius: var(--hms-radius-lg);
+  color: var(--hms-text);
+  font-size: var(--hms-text-sm);
+}
+
+.hms-session-actions-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hms-space-2);
+  margin-top: var(--hms-space-4);
+}
+
+.hms-chat-approval-notice {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: var(--hms-text-xs);
+  margin: 4px 0;
+}
+
+.hms-chat-approval-notice[data-kind="approve"] {
+  background: color-mix(in srgb, var(--hms-success) 10%, transparent);
+  color: var(--hms-success-text);
+}
+
+.hms-chat-approval-notice[data-kind="deny"] {
+  background: color-mix(in srgb, var(--hms-error) 10%, transparent);
+  color: var(--hms-error-dark);
+}
+
+.hms-chat-approval-label {
+  font-weight: var(--hms-fw-semibold);
+}
+
+.hms-chat-approval-command {
+  font-family: monospace;
+  font-size: 0.625rem;
+  padding: 1px 6px;
+  border-radius: var(--hms-radius-sm);
+  color: var(--hms-text);
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-chat-streaming-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  margin-left: 2px;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-xs);
+  font-variant-numeric: tabular-nums;
+  vertical-align: text-bottom;
+}
+
+.hms-chat-reasoning {
+  margin-bottom: 6px;
+  border-radius: var(--hms-radius-lg);
+  background: color-mix(in srgb, var(--hms-border) 80%, transparent);
+  font-size: var(--hms-text-caption);
+}
+
+.hms-chat-reasoning-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 5px 10px;
+  background: transparent;
+  border: none;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.hms-chat-reasoning-label {
+  flex: 1;
+}
+
+.hms-chat-reasoning-body {
+  padding: 8px 10px;
+  color: var(--hms-text-muted);
+  white-space: pre-wrap;
+  line-height: 1.55;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: var(--hms-text-caption);
+}
+
+.hms-chat-bubble-row {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  gap: var(--hms-space-1);
+}
+
+.hms-chat-bubble-row[data-role="user"] {
+  align-items: flex-end;
+}
+
+.hms-chat-bubble-row[data-role="assistant"] {
+  align-items: flex-start;
+}
+
+.hms-chat-bubble-role {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  padding-inline: 4px;
+}
+
+.hms-chat-bubble {
+  border: none;
+  font-size: var(--hms-text-body);
+  line-height: 1.6;
+  color: var(--hms-text);
+}
+
+.hms-chat-bubble[data-role="user"] {
+  max-width: 80%;
+  background: var(--hms-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.hms-chat-bubble[data-role="assistant"] {
+  max-width: 100%;
+  background: transparent;
+  padding: 4px 0;
+}
+
+.hms-chat-bubble-agent-note {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--hms-text-xs);
+}
+
+.hms-chat-bubble-agent-note--user {
+  color: var(--hms-text-muted);
+}
+
+.hms-chat-bubble-agent-note--assistant {
+  color: var(--hms-accent);
+  font-weight: var(--hms-fw-semibold);
+}
+
+.hms-chat-bubble-actions {
+  display: flex;
+  gap: var(--hms-space-1);
+}
+
+.hms-chat-bubble-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--hms-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hms-session-recents-rename {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  flex: 1;
+}
+
+.hms-session-recents-rename-input {
+  flex: 1;
+  font-size: var(--hms-text-sm);
+  padding: 2px 6px;
+  border-radius: var(--hms-radius-sm);
+  border: 1px solid var(--hms-border);
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  outline: none;
+}
+
+.hms-session-recents-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.hms-session-recents-pinned {
+  flex-shrink: 0;
+}
+
+.hms-session-recents-pinned-scroll {
+  overflow-y: auto;
+  max-height: 240px;
+  padding: 0 6px 6px;
+}
+
+.hms-session-recents-subheader {
+  padding: 12px 12px 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hms-session-recents-header {
+  padding: 12px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.hms-session-recents-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: var(--hms-text);
+  text-align: left;
+}
+
+.hms-session-recents-heading {
+  font-size: var(--hms-text-sm);
+  font-weight: var(--hms-fw-medium);
+  color: var(--hms-text-muted);
+}
+
+.hms-session-recents-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+}
+
+.hms-session-recents-body {
+  min-height: 0;
+}
+
+.hms-session-recents-scroll {
+  overflow-y: auto;
+  padding: 6px 6px;
+  height: 100%;
+}
+
+.hms-session-recents-empty {
+  padding: 8px 6px;
+  font-size: var(--hms-text-caption);
+  color: var(--hms-text-muted);
+}
+
+/* Profile view-scope switcher — a plain, borderless row at the top of the
+   sidebar Recents (blends in; no box / dark band), aligned with the section
+   headers' horizontal padding. */
+.hms-mp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--hms-border);
+  background: var(--hms-surface);
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.hms-mp-pill[data-set] {
+  color: var(--hms-text);
+}
+
+.hms-mp-icon {
+  flex-shrink: 0;
+}
+
+.hms-mp-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hms-mp-pill-chevron {
+  color: var(--hms-text-muted);
+  flex-shrink: 0;
+}
+
+.hms-mp-panel {
+  position: fixed;
+  width: 300px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  box-shadow: var(--hms-shadow-popover);
+  z-index: 9999;
+  padding: 6px 0;
+}
+
+.hms-mp-search-wrap {
+  flex-shrink: 0;
+  padding: 0 10px 8px;
+  background: var(--hms-surface);
+}
+
+.hms-mp-search {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  border: 1px solid var(--hms-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--hms-bg);
+}
+
+.hms-mp-search-icon {
+  color: var(--hms-text-muted);
+  flex-shrink: 0;
+}
+
+.hms-mp-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--hms-text);
+  font-size: var(--hms-text-caption);
+}
+
+.hms-mp-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.hms-mp-empty {
+  padding: 8px 14px;
+  font-size: var(--hms-text-caption);
+  color: var(--hms-text-muted);
+}
+
+.hms-mp-prov-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--hms-text-xs);
+  font-weight: 600;
+  color: var(--hms-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hms-mp-prov-name {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+}
+
+.hms-mp-prov-chevron {
+  transition: transform 240ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform: rotate(-90deg);
+}
+
+.hms-mp-prov-chevron[data-expanded] {
+  transform: rotate(0deg);
+}
+
+.hms-mp-spinner {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--hms-text-muted);
+  border-top-color: var(--hms-text);
+  flex-shrink: 0;
+}
+
+.hms-mp-badge {
+  font-size: 0.5625rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.hms-mp-badge--custom {
+  background: var(--hms-accent-weak);
+  color: var(--hms-accent);
+}
+
+.hms-mp-badge--builtin {
+  background: color-mix(in srgb, var(--hms-info) 15%, transparent);
+  color: var(--hms-info);
+}
+
+.hms-mp-prov-count {
+  font-size: 0.625rem;
+  font-weight: 400;
+}
+
+.hms-mp-model {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px 5px 28px;
+  cursor: pointer;
+  font-size: var(--hms-text-caption);
+  color: var(--hms-text-muted);
+}
+
+.hms-mp-model[data-active="true"] {
+  color: var(--hms-text);
+}
+
+.hms-mp-model-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-mp-model-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  flex-shrink: 0;
+}
+
+.hms-mp-icon-success {
+  color: var(--hms-success);
+}
+
+.hms-mp-icon-accent {
+  color: var(--hms-accent);
+  flex-shrink: 0;
+}
+
+.hms-mp-brain {
+  color: var(--hms-text-muted);
+  opacity: 0.6;
+}
+
+.hms-mp-flyout {
+  position: fixed;
+  width: 190px;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  box-shadow: var(--hms-shadow-popover);
+  z-index: 10000;
+  padding: 6px 0;
+}
+
+.hms-mp-flyout-head {
+  padding: 4px 12px;
+  font-size: var(--hms-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hms-text-muted);
+}
+
+.hms-mp-flyout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--hms-text);
+  font-size: var(--hms-text-caption);
+}
+
+.hms-mp-flyout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+}
+
+.hms-mp-divider {
+  height: 1px;
+  background: var(--hms-border);
+  margin: 4px 0;
+}
+
+.hms-mp-flyout-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-caption);
+}
+
+.hms-mp-flyout-opt[data-active="true"] {
+  color: var(--hms-text);
+}
+
+.hms-mp-switch {
+  display: inline-flex;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--hms-border);
+  padding: 2px;
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+
+.hms-mp-switch[data-on] {
+  background: var(--hms-accent);
+}
+
+.hms-mp-switch-knob {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--hms-on-accent, #fff);
+  transform: translateX(0);
+  transition: transform 150ms;
+}
+
+.hms-mp-switch[data-on] .hms-mp-switch-knob {
+  transform: translateX(12px);
+}
+
+/* Skills side-list — full-width scroll with a flush scrollbar (like Recents):
+   only the header band is horizontally padded; the scroll fills the column. */
+/* Settings — two-column section list (desktop) / segmented (mobile). */
+.hms-mark {
+  flex-shrink: 0;
+  color: var(--hms-text);
+}
+
+/* /chat empty-state intro (the Hermes mark's home). */
+.hms-chat-intro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hms-space-3);
+  padding: var(--hms-space-6);
+  text-align: center;
+}
+
+.hms-chat-intro .hms-mark {
+  color: var(--hms-text-muted);
+  opacity: 0.85;
+}
+
+.hms-chat-intro-headline {
+  font-size: var(--hms-text-xl);
+  font-weight: 700;
+  color: var(--hms-text);
+}
+
+.hms-chat-intro-body {
+  max-width: 420px;
+  font-size: var(--hms-text-sm);
+  color: var(--hms-text-muted);
+  line-height: 1.6;
+}
+
+/* Right pane: an embedded capability panel fills it (own topbar + scroll); the
+   Application tabs scroll inside -pane-scroll. */
+.hms-msg-row .hms-msg-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.hms-msg-row:hover .hms-msg-actions {
+  opacity: 1;
+}
+/* Touch devices: always show actions since there's no hover. */
+@media (hover: none) and (pointer: coarse) {
+  .hms-msg-row .hms-msg-actions {
+    opacity: 1;
+  }
+}
+
+/* Slide-up entrance for the approval drawer, anchored at the composer edge. */
+@keyframes hms-drawer-up {
+  from {
+    transform: translateY(20%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.hms-approval-drawer {
+  animation: hms-drawer-up 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.98);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 200ms ease-in forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 200ms ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 200ms ease-in forwards;
+}
+
+/* Command palette enter/exit — keeps the top anchor (translateX only), unlike
+   slideUp/Down which re-center vertically. */
+@keyframes hms-palette-in {
+  from { opacity: 0; transform: translate(-50%, -6px) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes hms-palette-out {
+  from { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -6px) scale(0.98); }
+}
+
+.animate-paletteIn {
+  animation: hms-palette-in 200ms ease-out forwards;
+}
+
+.animate-paletteOut {
+  animation: hms-palette-out 200ms ease-in forwards;
+}
+
+@keyframes contentUp {
+  from {
+    opacity: 0.92;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-contentUp {
+  animation: contentUp 200ms ease-out forwards;
+}
+
+/* Session transition animations */
+@keyframes sessionFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sessionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sessionFadeOut {
+  animation: sessionFadeOut 200ms ease-in forwards;
+}
+
+.animate-sessionFadeIn {
+  animation: sessionFadeIn 300ms ease-out forwards;
+}
+
+@keyframes hms-drawer-in {
+  from { transform: translateX(8%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+/* Remove focus outline on recharts SVG elements */
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none !important;
+}
+
+
+/* ── Popup picker animation (ModelPicker) ──────────────── */
+@keyframes hms-popup-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hms-popup-panel {
+  animation: hms-popup-up 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom left;
+}
+
+/* Collapsible model list inside picker — smooth transition without hard snap */
+.hms-picker-models {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    max-height 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    opacity 240ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 260ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: max-height, opacity, transform;
+}
+
+.hms-picker-models.expanded {
+  max-height: 12000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Base reset ───────────────────────────────────────────────────────────── */

@@ -1,0 +1,273 @@
+
+/* ── Three-column layout ──────────────────────────────────────────────────── */
+.hms-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.hms-nav {
+  width: var(--hms-nav-width);
+  flex-shrink: 0;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: 8px;
+  gap: 2px;
+  /* Do NOT set overflow: hidden — tooltips (absolute) must escape the nav column */
+}
+
+.hms-sidebar {
+  width: var(--hms-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  overflow: hidden;
+  transition: width var(--hms-transition);
+}
+
+.hms-sidebar.collapsed,
+.hms-sidebar.hidden {
+  width: 0;
+  border-right: none;
+}
+
+.hms-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background-color: var(--hms-bg);
+  position: relative; /* anchor for floating CapabilityBadge */
+}
+
+/* ── New unified Sidebar (P2a) ────────────────────────────────────────────── */
+.hms-sidebar-root {
+  width: var(--hms-sidebar-expanded-w);
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--hms-surface);
+  border-right: 1px solid var(--hms-border);
+  /* overflow stays visible — More / UserButton popovers anchor inside the
+     Sidebar and must escape its bounds. Internal scrollable regions
+     (e.g. SidebarRecents body) declare their own overflow. */
+  overflow: visible;
+  transition: width var(--hms-transition);
+}
+
+.hms-sidebar-root.collapsed {
+  width: var(--hms-sidebar-collapsed-w);
+}
+
+/* When dropped inside the mobile Drawer it stretches to the Drawer's
+   width — the Drawer already caps to 80vw / 360px. */
+.hms-sidebar-root.mobile {
+  width: 100%;
+  border-right: none;
+}
+
+/* ── Sidebar row — shared by Pinned / More / UserButton ───────────
+   Hover background lives in CSS so :hover wins over inline transparent.
+   Active state is signalled either by NavLink's auto-injected `.active`
+   class (Pinned routes) or by data-active="true" (More toggle when
+   open / UserButton when popover open). */
+.hms-sidebar-row {
+  background: transparent;
+  transition: background var(--hms-transition);
+}
+.hms-sidebar-row:hover {
+  background: var(--hms-hover-bg);
+}
+.hms-sidebar-row.active,
+.hms-sidebar-row[data-active="true"] {
+  background: var(--hms-selected-bg);
+}
+.hms-sidebar-row.active:hover,
+.hms-sidebar-row[data-active="true"]:hover {
+  /* Active rows are already highlighted; hover is a no-op to avoid a
+     second-level shade on top of the selected colour. */
+  background: var(--hms-selected-bg);
+}
+
+.hms-page-topbar {
+  flex-shrink: 0;
+}
+
+.hms-page-topbar-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  height: var(--hms-header-h);
+  padding: 0 var(--hms-space-4);
+  border-bottom: 1px solid var(--hms-border);
+}
+
+.hms-page-topbar-title {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--hms-space-2);
+}
+
+.hms-page-topbar-heading {
+  margin: 0;
+  font-size: var(--hms-text-body);
+  font-weight: var(--hms-fw-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hms-page-topbar-subtitle {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hms-page-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  flex-shrink: 0;
+}
+
+.hms-page-topbar-context {
+  padding: var(--hms-space-2) var(--hms-space-4);
+}
+
+.hms-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--hms-hover-bg);
+  border-radius: var(--hms-radius-md);
+}
+
+.hms-segmented-item {
+  border: none;
+  border-radius: var(--hms-radius-sm);
+  background: transparent;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+  font-weight: var(--hms-fw-normal);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hms-segmented-item[data-active="true"] {
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  font-weight: var(--hms-fw-semibold);
+}
+
+.hms-segmented[data-size="sm"] .hms-segmented-item {
+  padding: 2px 8px;
+}
+
+.hms-segmented[data-size="md"] .hms-segmented-item {
+  padding: 4px 12px;
+}
+
+.hms-main-centered > * {
+  max-width: 960px;
+  margin-inline: auto;
+  padding: 0;
+}
+
+/* ── Module switcher tabs (pill segmented control) ────────────────── */
+.hms-module-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  margin: 8px 8px 4px;
+  background: var(--hms-hover-bg);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.hms-module-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.hms-module-tabs .hms-module-tab {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  gap: 5px;
+  width: auto;
+  height: auto;
+  padding: 5px 6px;
+  border-radius: 7px;
+  font-size: var(--hms-text-sm);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+.hms-module-tab:hover,
+.hms-module-tabs .hms-module-tab:hover {
+  background: var(--hms-hover-bg);
+  color: var(--hms-text);
+}
+.hms-module-tab[aria-pressed="true"] {
+  background: var(--hms-selected-bg);
+  color: var(--hms-text);
+}
+.hms-module-tabs .hms-module-tab[aria-pressed="true"] {
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.hms-module-tab[aria-pressed="true"]:hover,
+.hms-module-tabs .hms-module-tab[aria-pressed="true"]:hover {
+  background: var(--hms-bg);
+}
+/* Larger touch targets on mobile */
+.hms-sidebar-root.mobile .hms-module-tabs {
+  margin: 4px 12px 8px;
+}
+.hms-sidebar-root.mobile .hms-module-tabs .hms-module-tab {
+  padding: 8px 6px;
+  gap: 6px;
+}
+
+/* Keyboard shortcut hint — fades in on parent :hover */
+.hms-shortcut-hint {
+  opacity: 0;
+  transition: opacity var(--hms-transition);
+  pointer-events: none;
+}
+.hms-sidebar-row:hover .hms-shortcut-hint {
+  opacity: 1;
+}
+
+/* Search "jump to message" — brief highlight when the chat view scrolls a
+   matched message into view (set by ChatStream via .classList.add). */
+.hms-msg-flash {
+  animation: hms-msg-flash 1.6s ease;
+  border-radius: 8px;
+}
+@keyframes hms-msg-flash {
+  0%, 100% { background: transparent; }
+  12% { background: var(--hms-accent-weak); }
+}
+
+/* Agents room list — reveal the delete affordance on row hover. */
+.hms-room-del { opacity: 0; transition: opacity 120ms; }
+.hms-room-row:hover .hms-room-del { opacity: 1; }

@@ -6,6 +6,10 @@ import { I18nProvider } from "@/i18n";
 import App from "./App";
 import "./styles/tokens.css";
 import "./styles/theme.css";
+import "./styles/layout.css";
+import "./styles/chat.css";
+import "./styles/files.css";
+import "./styles/components.css";
 import "./styles/skin-bridge.css";
 
 // The PWA / service worker was removed (see vite.config.ts). Any SW still
