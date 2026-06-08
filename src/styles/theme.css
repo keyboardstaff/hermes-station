@@ -2868,6 +2868,66 @@ button.hms-artifacts-title {
 
 /* Skills side-list — full-width scroll with a flush scrollbar (like Recents):
    only the header band is horizontally padded; the scroll fills the column. */
+/* Settings — two-column section list (desktop) / segmented (mobile). */
+.hms-settings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.hms-settings-2col {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.hms-settings-nav {
+  flex-shrink: 0;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--hms-space-3) var(--hms-space-2);
+  border-right: 1px solid var(--hms-border);
+  overflow-y: auto;
+}
+
+.hms-settings-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--hms-radius-md);
+  background: transparent;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hms-settings-nav-item[data-active="true"] {
+  color: var(--hms-text);
+  font-weight: 600;
+}
+
+.hms-settings-body {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--hms-space-6);
+}
+
+.hms-settings-section {
+  max-width: var(--hms-content-max-w);
+}
+
+.hms-settings-segmented {
+  display: flex;
+  overflow-x: auto;
+}
+
 /* Plugins page (D64 + layout): full-width config band above a master-detail
    browser that fills the remaining height (no content-max cap, no magic
    min-height, single scroll owned by the two-column's panes). */

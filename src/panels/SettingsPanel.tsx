@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 import PageTopBar from "@/components/layout/PageTopBar";
 import { AdvancedTab } from "@/components/settings/AdvancedTab";
 import { PreferencesTab } from "@/components/settings/PreferencesTab";
@@ -9,14 +10,14 @@ import { SystemTab } from "@/components/settings/SystemTab";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 
 // Preferences (Station-global knobs) · Appearance · Security · System
-// (integration + runtime status) · Advanced (the config.yaml editor).
+// (integration + runtime status) · Advanced (the config.yaml editor — last,
+// it's the raw/destructive power-user surface).
 type Tab = "preferences" | "appearance" | "security" | "system" | "advanced";
 
 const ALL_TABS: Tab[] = ["preferences", "appearance", "security", "system", "advanced"];
 
 const SETTINGS_TAB_KEY = "hms:settings:tab";
 
-/** Resolve tab from the current hash (used for deep links). */
 /** Normalise a requested tab key to a real tab. Legacy aliases stay supported
  *  for callers (connection→system, theme→appearance, config→advanced). */
 function normalizeTab(key: string | undefined): Tab | null {
@@ -40,6 +41,7 @@ function readTabInitial(initialTab?: string): Tab {
 
 export default function SettingsPanel({ initialTab }: { initialTab?: string } = {}) {
   const { t } = useI18n();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>(() => readTabInitial(initialTab));
 
   // Persist selected tab to localStorage (so the modal reopens on the last tab).
@@ -47,36 +49,69 @@ export default function SettingsPanel({ initialTab }: { initialTab?: string } = 
     try { localStorage.setItem(SETTINGS_TAB_KEY, tab); } catch { /* localStorage disabled */ }
   }, [tab]);
 
+  // The Advanced (config.yaml) editor wants the full pane width; the other tabs
+  // read more comfortably capped.
+  const body = (
+    <div className="hms-settings-body">
+      {tab === "advanced" ? (
+        <AdvancedTab />
+      ) : (
+        <div className="hms-settings-section">
+          {tab === "preferences" && <PreferencesTab />}
+          {tab === "appearance" && <AppearanceTab />}
+          {tab === "security" && <SecurityTab />}
+          {tab === "system" && <SystemTab />}
+        </div>
+      )}
+    </div>
+  );
+
+  // Mobile: the modal is full-screen and narrow, so a left rail would starve the
+  // content — keep the horizontal segmented control on top.
+  if (isMobile) {
+    return (
+      <div className="hms-settings">
+        <PageTopBar
+          title={t.nav.settings}
+          context={
+            <div className="hms-settings-segmented">
+              <SegmentedControl
+                value={tab}
+                onChange={setTab}
+                ariaLabel={t.nav.settings}
+                options={ALL_TABS.map((tabKey) => ({
+                  value: tabKey,
+                  label: t.settings.tabs[tabKey] ?? tabKey,
+                }))}
+              />
+            </div>
+          }
+        />
+        {body}
+      </div>
+    );
+  }
+
+  // Desktop: a left vertical section list + right detail (two-column, matching
+  // the rest of the app's list-detail panels).
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <PageTopBar
-        title={t.nav.settings}
-        context={
-          <div style={{ display: "flex", overflowX: "auto" }}>
-            <SegmentedControl
-              value={tab}
-              onChange={setTab}
-              ariaLabel={t.nav.settings}
-              options={ALL_TABS.map((tabKey) => ({
-                value: tabKey,
-                label: t.settings.tabs[tabKey] ?? tabKey,
-              }))}
-            />
-          </div>
-        }
-      />
-      <div style={{ flex: 1, overflow: "auto", padding: 'var(--hms-space-6)' }}>
-        {tab === "advanced" ? (
-          // The config.yaml editor (profile-scoped) wants the full pane width.
-          <AdvancedTab />
-        ) : (
-          <div style={{ maxWidth: "var(--hms-content-max-w)" }}>
-            {tab === "preferences" && <PreferencesTab />}
-            {tab === "appearance" && <AppearanceTab />}
-            {tab === "security" && <SecurityTab />}
-            {tab === "system" && <SystemTab />}
-          </div>
-        )}
+    <div className="hms-settings">
+      <PageTopBar title={t.nav.settings} />
+      <div className="hms-settings-2col">
+        <nav className="hms-settings-nav" aria-label={t.nav.settings}>
+          {ALL_TABS.map((tabKey) => (
+            <button
+              key={tabKey}
+              type="button"
+              className="hms-sidebar-row hms-settings-nav-item"
+              data-active={tab === tabKey}
+              onClick={() => setTab(tabKey)}
+            >
+              {t.settings.tabs[tabKey] ?? tabKey}
+            </button>
+          ))}
+        </nav>
+        {body}
       </div>
     </div>
   );
