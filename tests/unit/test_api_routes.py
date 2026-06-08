@@ -206,6 +206,27 @@ async def test_get_models_returns_expected_shape(app_server) -> None:
     assert isinstance(data["providers"], list)
 
 
+@pytest.mark.asyncio
+async def test_get_models_invalid_profile_rejected(app_server) -> None:
+    """A malformed ?profile= is a 400 before any provider probe."""
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{app_server}/api/models?profile=Bad!Name") as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "invalid_profile"
+
+
+@pytest.mark.asyncio
+async def test_get_models_well_formed_profile_ok(app_server) -> None:
+    """A well-formed but unknown ?profile= no-ops back to the process home."""
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{app_server}/api/models?profile=work") as r:
+            assert r.status == 200
+            data = await r.json()
+    assert "providers" in data
+    assert isinstance(data["providers"], list)
+
+
 # memory (profile-scoped: /api/profiles/{name}/memory/{tab})
 
 

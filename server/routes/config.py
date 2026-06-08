@@ -10,6 +10,8 @@ import time
 import aiohttp as _aiohttp
 from aiohttp import web
 
+from server.lib.profile_run import profile_home_override, resolve_profile_home
+from server.lib.route_helpers import profile_arg
 from server.lib.upstream_shim import shim
 
 logger = logging.getLogger(__name__)
@@ -17,11 +19,11 @@ logger = logging.getLogger(__name__)
 router = web.RouteTableDef()
 
 
-# Keyed by config (mtime, size) so out-of-band edits show up next call; TTL caps stale window.
+# Per-profile providers cache: ``profile (None=active) → (mtime_key, at, payload)``.
+# Keyed by that profile's config (mtime, size) so out-of-band edits show up next
+# call; TTL caps the stale window.
 _MODELS_CACHE_TTL_S = 120.0
-_models_cache: dict | None = None
-_models_cache_key: tuple = ()
-_models_cache_at: float = 0.0
+_models_cache: dict[str | None, tuple[tuple, float, dict]] = {}
 
 
 def _safe_load_config() -> dict:
@@ -32,6 +34,45 @@ def _safe_load_config() -> dict:
     except Exception:
         logger.exception("[hms.config] _cached_doc failed")
         return {}
+
+
+def _scoped_config(profile: str | None) -> dict:
+    """Config doc for ``profile`` — must be called under ``profile_home_override``.
+
+    Default/unset scope reuses the live ``config_reader`` cache (active home, so
+    a ``/api/settings`` write reloads here too). A concrete profile reads its own
+    ``config.yaml`` home-relatively via upstream ``load_config_readonly`` (which
+    resolves ``get_hermes_home()`` per call → honours the active override).
+    """
+    if profile is None:
+        return _safe_load_config()
+    loader = shim.models.load_config
+    if loader is None:
+        return _safe_load_config()
+    try:
+        return dict(loader() or {})
+    except Exception:
+        logger.exception("[hms.config] scoped load_config failed")
+        return {}
+
+
+def _models_mtime_key(profile: str | None) -> tuple:
+    """Cache key = that profile's config.yaml (mtime_ns, size).
+
+    The active home uses the lru-cached ``hermes_home()``; a concrete profile
+    stats its resolved home directly, since ``hermes_home()`` is memoised and so
+    wouldn't reflect the override.
+    """
+    if profile is None:
+        return _config_mtime_key()
+    home = resolve_profile_home(profile)
+    if home is None:
+        return _config_mtime_key()
+    try:
+        st = (home / "config.yaml").stat()
+        return (st.st_mtime_ns, st.st_size)
+    except Exception:
+        return ()
 
 
 def _safe_personalities(cfg: dict) -> list[str]:
@@ -80,9 +121,14 @@ def _config_mtime_key() -> tuple:
         return ()
 
 
-def _compute_models_payload() -> dict:
-    """Synchronous payload build (runs in executor)."""
-    cfg = _safe_load_config()
+def _compute_models_payload(cfg: dict) -> dict:
+    """Synchronous payload build (runs in a worker thread).
+
+    Takes the resolved config so the caller controls which home it came from;
+    ``shim.models.list_picker_providers`` still validates keys against the live
+    ``HERMES_HOME`` (honouring a ``profile_home_override`` propagated through
+    ``asyncio.to_thread``'s context copy).
+    """
     default = _safe_model_default(cfg)
     current_provider = _safe_model_field(cfg, "provider")
     current_base_url = _safe_model_field(cfg, "base_url")
@@ -155,24 +201,32 @@ def _compute_models_payload() -> dict:
 
 @router.get("/api/models")
 async def get_models(request: web.Request) -> web.Response:
-    """Cached non-blocking variant; refresh=1 forces re-probe."""
-    global _models_cache, _models_cache_key, _models_cache_at
+    """Provider list for the active or a ``?profile=``-scoped home.
 
-    key = _config_mtime_key()
+    Cached per profile; ``refresh=1`` forces a re-probe. The whole build runs
+    under ``profile_home_override`` so the config read AND upstream key
+    validation resolve against the selected profile's home.
+    """
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    key = _models_mtime_key(profile)
     now = time.monotonic()
     force = request.query.get("refresh") in ("1", "true", "yes")
 
-    if (
-        not force
-        and _models_cache is not None
-        and _models_cache_key == key
-        and (now - _models_cache_at) < _MODELS_CACHE_TTL_S
-    ):
-        return web.json_response(_models_cache)
+    cached = _models_cache.get(profile)
+    if not force and cached is not None:
+        ckey, cat, cpayload = cached
+        if ckey == key and (now - cat) < _MODELS_CACHE_TTL_S:
+            return web.json_response(cpayload)
 
-    loop = asyncio.get_running_loop()
     try:
-        payload = await loop.run_in_executor(None, _compute_models_payload)
+        with profile_home_override(profile):
+            cfg = _scoped_config(profile)
+            # to_thread (not run_in_executor) so the override ContextVar is
+            # copied into the worker thread — keeps key validation home-scoped.
+            payload = await asyncio.to_thread(_compute_models_payload, cfg)
     except Exception:
         logger.exception("[hms.models] payload build failed")
         payload = {
@@ -180,9 +234,7 @@ async def get_models(request: web.Request) -> web.Response:
             "provider": "", "model": "", "models": [],
         }
 
-    _models_cache = payload
-    _models_cache_key = key
-    _models_cache_at = now
+    _models_cache[profile] = (key, now, payload)
     return web.json_response(payload)
 
 

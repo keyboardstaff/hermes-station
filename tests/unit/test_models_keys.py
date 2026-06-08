@@ -317,36 +317,49 @@ async def test_delete_key_not_found(app_server) -> None:
 
 @pytest.mark.asyncio
 async def test_get_auxiliary(app_server) -> None:
-    upstream_resp = (200, {
-        "tasks": [
-            {"task": "vision", "provider": "auto", "model": "", "base_url": ""},
-            {"task": "compression", "provider": "openai", "model": "gpt-4o", "base_url": ""},
-        ],
-        "main": {"provider": "openrouter", "model": "anthropic/claude-opus"},
-    })
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ):
+    """Aux slots + main are read in-process from the (scoped) config.yaml."""
+    fake_cfg = {
+        "model": {"provider": "openrouter", "default": "anthropic/claude-opus"},
+        "auxiliary": {
+            "compression": {"provider": "openai", "model": "gpt-4o"},
+        },
+    }
+    with patch.object(models_mod.shim.models, "load_config", lambda: dict(fake_cfg)):
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"{app_server}/api/models/auxiliary") as r:
                 assert r.status == 200
                 data = await r.json()
 
-    assert len(data["tasks"]) == 2
-    assert data["tasks"][0]["task"] == "vision"
+    slots = {t["task"]: t for t in data["tasks"]}
+    # All nine canonical slots are present; unset ones default to auto.
+    assert set(slots) == set(models_mod.AUX_TASK_SLOTS)
+    assert slots["vision"]["provider"] == "auto"
+    assert slots["compression"]["provider"] == "openai"
+    assert slots["compression"]["model"] == "gpt-4o"
     assert data["main"]["provider"] == "openrouter"
+    assert data["main"]["model"] == "anthropic/claude-opus"
 
 
 @pytest.mark.asyncio
 async def test_get_auxiliary_unavailable(app_server) -> None:
-    with patch.object(models_mod, "_dashboard_request", new=AsyncMock(return_value=None)):
+    """No upstream config loader → graceful empty + env_unavailable marker."""
+    with patch.object(models_mod.shim.models, "load_config", None):
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"{app_server}/api/models/auxiliary") as r:
                 assert r.status == 200
                 data = await r.json()
 
     assert data["tasks"] == []
-    assert data["error"] == "dashboard_unavailable"
+    assert data["error"] == "env_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_get_auxiliary_invalid_profile(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get(f"{app_server}/api/models/auxiliary?profile=Bad!") as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "invalid_profile"
 
 
 @pytest.mark.asyncio

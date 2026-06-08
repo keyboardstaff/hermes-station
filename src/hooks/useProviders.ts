@@ -70,12 +70,30 @@ export interface AssignBody {
   task?: string;
 }
 
+// The Models page (providers / auxiliary / keys) is profile-scoped end-to-end:
+// the backend reads the selected profile's config + .env in-process
+// (profile_home_override). ALL-profiles and the default scope both resolve to
+// undefined → the process/active home, since neither providers nor env vars are
+// meaningfully aggregatable across profiles.
+function useModelScopeProfile(): string | undefined {
+  const scope = useProfileScope((s) => s.scope);
+  const { data: active } = useActiveProfile();
+  return scope === ALL_PROFILES
+    ? undefined
+    : (effectiveScopeName(scope, active?.current) ?? undefined);
+}
+
+function profileQuery(profile: string | undefined): string {
+  return profile ? `?profile=${encodeURIComponent(profile)}` : "";
+}
+
 // ── Provider list ────────────────────────────────────────────────────
 
 export function useProviders(opts?: { enabled?: boolean }) {
+  const profile = useModelScopeProfile();
   return useQuery<ModelsPayload>({
-    queryKey: ["models"],
-    queryFn: () => api.get<ModelsPayload>("/api/models"),
+    queryKey: ["models", profile ?? null],
+    queryFn: () => api.get<ModelsPayload>(`/api/models${profileQuery(profile)}`),
     staleTime: 30_000,
     refetchInterval: 60_000,
     retry: 1,
@@ -91,9 +109,10 @@ export function useRefreshProviders() {
 // ── Auxiliary slots ──────────────────────────────────────────────────
 
 export function useAuxiliary() {
+  const profile = useModelScopeProfile();
   return useQuery<AuxiliaryPayload>({
-    queryKey: ["models-auxiliary"],
-    queryFn: () => api.get<AuxiliaryPayload>("/api/models/auxiliary"),
+    queryKey: ["models-auxiliary", profile ?? null],
+    queryFn: () => api.get<AuxiliaryPayload>(`/api/models/auxiliary${profileQuery(profile)}`),
     staleTime: 30_000,
     retry: 1,
   });
@@ -116,24 +135,8 @@ export function useAssignModel() {
 
 // ── Keys ─────────────────────────────────────────────────────────────
 
-// The Keys surface is profile-scoped end-to-end: the backend reads/writes the
-// selected profile's .env in-process (profile_home_override). ALL-profiles and
-// the default scope both resolve to undefined → the process/active home, since
-// env vars aren't meaningfully aggregatable across profiles.
-function useKeysProfile(): string | undefined {
-  const scope = useProfileScope((s) => s.scope);
-  const { data: active } = useActiveProfile();
-  return scope === ALL_PROFILES
-    ? undefined
-    : (effectiveScopeName(scope, active?.current) ?? undefined);
-}
-
-function profileQuery(profile: string | undefined): string {
-  return profile ? `?profile=${encodeURIComponent(profile)}` : "";
-}
-
 export function useKeys() {
-  const profile = useKeysProfile();
+  const profile = useModelScopeProfile();
   return useQuery<KeysPayload>({
     queryKey: ["models-keys", profile ?? null],
     queryFn: () => api.get<KeysPayload>(`/api/models/keys${profileQuery(profile)}`),
@@ -143,7 +146,7 @@ export function useKeys() {
 }
 
 export function useRevealKey() {
-  const profile = useKeysProfile();
+  const profile = useModelScopeProfile();
   return useMutation({
     mutationFn: (name: string) =>
       api.json<{ name: string; value: string }>(
@@ -156,7 +159,7 @@ export function useRevealKey() {
 
 export function useSetKey() {
   const qc = useQueryClient();
-  const profile = useKeysProfile();
+  const profile = useModelScopeProfile();
   return useMutation({
     mutationFn: (body: { name: string; value: string }) =>
       api.json<{ ok: boolean }>(`/api/models/keys${profileQuery(profile)}`, "PUT", body),
@@ -169,7 +172,7 @@ export function useSetKey() {
 
 export function useDeleteKey() {
   const qc = useQueryClient();
-  const profile = useKeysProfile();
+  const profile = useModelScopeProfile();
   return useMutation({
     mutationFn: (name: string) =>
       api.json<{ ok: boolean }>(`/api/models/keys${profileQuery(profile)}`, "DELETE", { name }),

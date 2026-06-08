@@ -314,17 +314,50 @@ async def delete_key(request: web.Request) -> web.Response:
 
 @router.get("/api/models/auxiliary")
 async def get_auxiliary(request: web.Request) -> web.Response:
-    result = await _dashboard_request("GET", "/api/model/auxiliary")
-    if result is None:
-        return web.json_response(
-            {"tasks": [], "main": {}, "error": "dashboard_unavailable"},
-        )
-    status, body = result
-    if status != 200 or not isinstance(body, dict):
-        return web.json_response(
-            {"tasks": [], "main": {}, "error": "upstream_error", "status": status},
-        )
-    return web.json_response(body)
+    """Per-task auxiliary slots + the main assignment, read in-process.
+
+    Replicates the dashboard's ``GET /api/model/auxiliary`` (a pure
+    ``config.yaml`` read) so a ``?profile=`` scope resolves the selected
+    profile's home via ``profile_home_override`` — the dashboard loopback
+    couldn't see that override.
+    """
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    loader = shim.models.load_config
+    if loader is None:
+        return web.json_response({"tasks": [], "main": {}, "error": "env_unavailable"})
+    try:
+        with profile_home_override(profile):
+            cfg = dict(loader() or {})
+    except Exception:
+        logger.exception("[hms.models] auxiliary load_config failed")
+        return web.json_response({"tasks": [], "main": {}, "error": "config_error"})
+
+    aux_cfg = cfg.get("auxiliary") if isinstance(cfg.get("auxiliary"), dict) else {}
+    aux_cfg = aux_cfg or {}
+    tasks = []
+    for slot in AUX_TASK_SLOTS:
+        slot_cfg = aux_cfg.get(slot) if isinstance(aux_cfg.get(slot), dict) else {}
+        slot_cfg = slot_cfg or {}
+        tasks.append({
+            "task": slot,
+            "provider": str(slot_cfg.get("provider", "auto") or "auto"),
+            "model": str(slot_cfg.get("model", "") or ""),
+            "base_url": str(slot_cfg.get("base_url", "") or ""),
+        })
+
+    model_cfg = cfg.get("model", {})
+    if isinstance(model_cfg, dict):
+        main = {
+            "provider": str(model_cfg.get("provider", "") or ""),
+            "model": str(model_cfg.get("default", model_cfg.get("name", "")) or ""),
+        }
+    else:
+        main = {"provider": "", "model": str(model_cfg) if model_cfg else ""}
+
+    return web.json_response({"tasks": tasks, "main": main})
 
 
 @router.post("/api/models/assign")

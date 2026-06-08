@@ -377,6 +377,13 @@ class _Models:
             "agent.models_dev", "lookup_models_dev_context"
         )
     )
+    # Home-relative config read (``get_hermes_home()/config.yaml``, cached per
+    # config path) — lets the providers/auxiliary reads resolve under a
+    # ``profile_home_override`` instead of the live process ``config_reader``
+    # cache, so the Models page can show another profile's assignments.
+    load_config: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "load_config_readonly")
+    )
 
 
 @dataclass
