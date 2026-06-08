@@ -46,9 +46,9 @@ export default function SkillsPanel() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+    <div className="hms-skills-panel">
       <PageTopBar title={t.nav.skills} showProfileScope />
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="hms-skills-panel-body">
         <PanelTwoColumn
           list={<SkillsSideList />}
           detail={content}
@@ -61,27 +61,13 @@ export default function SkillsPanel() {
 }
 
 function Grid({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        padding: "var(--hms-space-6)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--hms-space-3)",
-        maxWidth: "var(--hms-content-max-w)",
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="hms-skills-grid">{children}</div>;
 }
 
 function Empty({ text }: { text: string }) {
   return (
-    <div style={{ padding: "var(--hms-space-6)" }}>
-      <div style={{ padding: 32, border: "1px dashed var(--hms-border)", borderRadius: "var(--hms-radius-lg)", textAlign: "center", color: "var(--hms-text-muted)", fontSize: "var(--hms-text-sm)" }}>
-        {text}
-      </div>
+    <div className="hms-skills-empty-wrap">
+      <div className="hms-skills-empty">{text}</div>
     </div>
   );
 }
