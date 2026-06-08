@@ -135,9 +135,8 @@ export default function SettingsPanel({ initialTab }: { initialTab?: string } = 
       <PageTopBar title={t.nav.settings} />
       <div className="hms-settings-2col">
         <nav className="hms-settings-nav" aria-label={t.nav.settings}>
-          <div className="hms-settings-nav-group">{t.settings.groupCapabilities}</div>
           {CAPABILITIES.map(navItem)}
-          <div className="hms-settings-nav-group">{t.settings.groupApplication}</div>
+          <div className="hms-settings-nav-sep" role="separator" />
           {APPLICATION.map(navItem)}
         </nav>
         {pane}

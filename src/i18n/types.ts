@@ -211,8 +211,6 @@ export interface Translations {
       system: string;
       advanced: string;
     };
-    groupCapabilities: string;
-    groupApplication: string;
     preferences: {
       displaySection: string;
       showReasoning: string;
@@ -811,8 +809,12 @@ export interface Translations {
     aux_title_generation: string;
     aux_curator: string;
     /** Fallback tab */
-    fallbackUnsupportedTitle: string;
-    fallbackUnsupportedBody: string;
+    fallbackHint: string;
+    fallbackEmpty: string;
+    addFallback: string;
+    moveUp: string;
+    moveDown: string;
+    remove: string;
     /** Keys tab */
     keysHintV2: string;
     keysUnavailable: string;
