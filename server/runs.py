@@ -210,6 +210,42 @@ class SlashUnavailable(RuntimeError):
     commands work when Station runs as the real gateway plugin."""
 
 
+class BranchTargetError(RuntimeError):
+    """The user message a regenerate / edit targets is no longer in the session
+    transcript (it was already truncated away by a prior branch). The client
+    should refetch and retry instead of branching from a stale ordinal."""
+
+
+async def _truncate_session_history(
+    session_id: str, profile: str | None, ordinal: int
+) -> list[dict[str, Any]]:
+    """Truncate a session's persisted transcript before its ``ordinal``-th user
+    turn and return the surviving conversation history.
+
+    In-session regenerate / branch: re-running the Nth user prompt drops that
+    turn and everything after it from ``state.db`` (matching the gateway's
+    ``prompt.submit`` ``truncate_before_user_ordinal``), so the new turn extends
+    the truncated transcript. The superseded answer survives only in the
+    client's in-memory branch list, exactly like upstream desktop.
+    """
+    profile_home = resolve_profile_home(profile)
+    session_db = db() if profile_home is None else db_for_home(profile_home)
+    loop = asyncio.get_running_loop()
+
+    def _do() -> list[dict[str, Any]]:
+        conv = session_db.get_messages_as_conversation(session_id)
+        user_indices = [i for i, m in enumerate(conv) if m.get("role") == "user"]
+        if ordinal >= len(user_indices):
+            raise BranchTargetError(
+                "target user message is no longer in session history"
+            )
+        truncated = conv[: user_indices[ordinal]]
+        session_db.replace_messages(session_id, truncated)
+        return truncated
+
+    return await loop.run_in_executor(None, _do)
+
+
 def _terminal_frame(handle: RunHandle, event: str, **fields: Any) -> dict:
     """Build + stamp a terminal ``run.event`` frame — the single definition of
     the run-completion contract shared by *both* run paths (AIAgent + slash).
@@ -250,12 +286,26 @@ async def start_run(
     reasoning_effort: str | None = None,
     profile: str | None = None,
     conversation_history: list[dict[str, Any]] | None = None,
+    truncate_before_user_ordinal: int | None = None,
 ) -> RunHandle:
     registry = get_registry()
     sem = await registry._semaphore()
 
     run_id = f"run_{uuid.uuid4().hex}"
     effective_session_id = session_id or run_id
+
+    # In-session regenerate / branch: drop the targeted user turn (and the rest
+    # of the transcript) from state.db, then re-run from there. Done before the
+    # handle is reserved so a stale target fails cleanly with nothing to unwind;
+    # the truncated transcript becomes this run's history.
+    if truncate_before_user_ordinal is not None:
+        if session_id is None:
+            raise BranchTargetError(
+                "truncate_before_user_ordinal requires an existing session"
+            )
+        conversation_history = await _truncate_session_history(
+            session_id, profile, truncate_before_user_ordinal
+        )
     handle = RunHandle(
         run_id=run_id,
         session_id=effective_session_id,

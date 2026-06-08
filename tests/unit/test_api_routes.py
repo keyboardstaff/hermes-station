@@ -293,3 +293,32 @@ async def test_logs_unknown_file_400(app_server) -> None:
     async with aiohttp.ClientSession() as cs:
         async with cs.get(f"{app_server}/api/fs/logs/secrets?tail=5") as r:
             assert r.status == 400
+
+
+# runs: in-session regenerate / branch truncation validation
+
+
+@pytest.mark.asyncio
+async def test_runs_truncate_negative_ordinal_rejected(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(
+            f"{app_server}/api/runs",
+            json={"input": "hi", "session_id": "sess-x", "truncate_before_user_ordinal": -1},
+            headers={"X-HMS-CSRF": "1"},
+        ) as r:
+            assert r.status == 400
+            body = await r.json()
+            assert body["error"] == "invalid_truncate_ordinal"
+
+
+@pytest.mark.asyncio
+async def test_runs_truncate_requires_session(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(
+            f"{app_server}/api/runs",
+            json={"input": "hi", "truncate_before_user_ordinal": 0},
+            headers={"X-HMS-CSRF": "1"},
+        ) as r:
+            assert r.status == 400
+            body = await r.json()
+            assert body["error"] == "truncate_requires_session"

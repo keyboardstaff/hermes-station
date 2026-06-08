@@ -617,3 +617,103 @@ async def test_transcript_endpoint_404_for_unknown_run() -> None:
     )
     resp = await get_run_transcript(req)
     assert resp.status == 404
+
+
+# In-session regenerate / branch: transcript truncation
+
+
+def _conv(*roles: str) -> list[dict[str, Any]]:
+    """Build a conversation transcript from a role sequence."""
+    return [{"role": r, "content": f"{r}-{i}"} for i, r in enumerate(roles)]
+
+
+@pytest.mark.asyncio
+async def test_truncate_session_history_drops_target_and_after() -> None:
+    """Truncating before the 2nd user turn keeps everything before it and
+    rewrites state.db with exactly that prefix."""
+    from server.runs import _truncate_session_history
+
+    # u(0) a a u(1) a  → truncate ordinal 1 keeps [u, a, a]
+    conv = _conv("user", "assistant", "assistant", "user", "assistant")
+    mock_db = MagicMock()
+    mock_db.get_messages_as_conversation.return_value = conv
+
+    with (
+        patch("server.runs.resolve_profile_home", lambda p: None),
+        patch("server.runs.db", return_value=mock_db),
+    ):
+        out = await _truncate_session_history("sess-1", None, 1)
+
+    assert out == conv[:3]
+    mock_db.replace_messages.assert_called_once_with("sess-1", conv[:3])
+
+
+@pytest.mark.asyncio
+async def test_truncate_session_history_ordinal_zero_clears() -> None:
+    """Regenerating the first user turn truncates to an empty transcript."""
+    from server.runs import _truncate_session_history
+
+    conv = _conv("user", "assistant", "user", "assistant")
+    mock_db = MagicMock()
+    mock_db.get_messages_as_conversation.return_value = conv
+
+    with (
+        patch("server.runs.resolve_profile_home", lambda p: None),
+        patch("server.runs.db", return_value=mock_db),
+    ):
+        out = await _truncate_session_history("sess-1", None, 0)
+
+    assert out == []
+    mock_db.replace_messages.assert_called_once_with("sess-1", [])
+
+
+@pytest.mark.asyncio
+async def test_truncate_session_history_stale_target_raises() -> None:
+    """An ordinal past the last user turn means the target was already
+    truncated away — raise instead of corrupting the transcript."""
+    from server.runs import BranchTargetError, _truncate_session_history
+
+    conv = _conv("user", "assistant")  # one user turn → ordinal 1 is out of range
+    mock_db = MagicMock()
+    mock_db.get_messages_as_conversation.return_value = conv
+
+    with (
+        patch("server.runs.resolve_profile_home", lambda p: None),
+        patch("server.runs.db", return_value=mock_db),
+    ):
+        with pytest.raises(BranchTargetError):
+            await _truncate_session_history("sess-1", None, 1)
+
+    mock_db.replace_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_truncate_uses_profile_scoped_db() -> None:
+    """A named-profile run truncates that profile's own state.db."""
+    from server.runs import _truncate_session_history
+
+    conv = _conv("user", "assistant")
+    profile_db = MagicMock()
+    profile_db.get_messages_as_conversation.return_value = conv
+    default_db = MagicMock()
+
+    with (
+        patch("server.runs.resolve_profile_home", lambda p: "/home/creative"),
+        patch("server.runs.db", return_value=default_db),
+        patch("server.runs.db_for_home", return_value=profile_db) as m_home,
+    ):
+        await _truncate_session_history("sess-1", "creative", 0)
+
+    m_home.assert_called_once_with("/home/creative")
+    profile_db.replace_messages.assert_called_once_with("sess-1", [])
+    default_db.replace_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_start_run_truncate_without_session_raises() -> None:
+    """Truncation needs an existing session — there's nothing to truncate in a
+    brand-new one."""
+    from server.runs import BranchTargetError, start_run
+
+    with pytest.raises(BranchTargetError):
+        await start_run(input_data="hi", session_id=None, truncate_before_user_ordinal=0)

@@ -173,6 +173,20 @@ async def create_run(request: web.Request) -> web.Response:
     if not isinstance(history, list):
         return web.json_response({"error": "invalid_history"}, status=400)
 
+    # In-session regenerate / branch: truncate the transcript before the Nth
+    # user turn, then re-run. Requires an existing session (there's nothing to
+    # truncate in a brand-new one).
+    truncate_ordinal = body.get("truncate_before_user_ordinal")
+    if truncate_ordinal is not None:
+        if (
+            not isinstance(truncate_ordinal, int)
+            or isinstance(truncate_ordinal, bool)
+            or truncate_ordinal < 0
+        ):
+            return web.json_response({"error": "invalid_truncate_ordinal"}, status=400)
+        if session_id is None:
+            return web.json_response({"error": "truncate_requires_session"}, status=400)
+
     try:
         resolved_input = await _resolve_upload_images(input_data)
         # Slash commands route through upstream's GatewayRunner._handle_message
@@ -195,6 +209,7 @@ async def create_run(request: web.Request) -> web.Response:
                 provider=provider,
                 profile=profile,
                 conversation_history=history,
+                truncate_before_user_ordinal=truncate_ordinal,
             )
     except runs.RunCapExceeded as exc:
         return web.json_response(
@@ -203,6 +218,10 @@ async def create_run(request: web.Request) -> web.Response:
     except runs.SlashUnavailable as exc:
         return web.json_response(
             {"error": "slash_unavailable", "detail": str(exc)}, status=503
+        )
+    except runs.BranchTargetError as exc:
+        return web.json_response(
+            {"error": "stale_branch_target", "detail": str(exc)}, status=409
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("[hms.runs] start_run failed")
