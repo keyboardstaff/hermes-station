@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hermes-station"
-version = "0.1.0.dev1"
+version = "0.1.0.dev2"
 description = "Hermes Station — framework-level web client for hermes-agent's gateway"
 readme = "README.md"
 requires-python = ">=3.11"

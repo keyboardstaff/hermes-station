@@ -1,7 +1,7 @@
 name: station
 label: Station
 kind: platform
-version: 0.1.0.dev1
+version: 0.1.0.dev2
 description: >
   Hermes Station — a React-based unified management UI served from
   an in-process aiohttp adapter. Exposes REST + WebSocket for chat,
