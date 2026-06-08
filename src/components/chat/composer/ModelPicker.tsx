@@ -149,7 +149,6 @@ export function ModelPicker({
   // compact effort suffix (· Med / · Off). maxWidth lets it grow with the name.
   const baseLabel = value ? modelLabel(value) : (modelDefault ? modelLabel(modelDefault) : "model");
   const displayLabel = `${baseLabel} · ${reasoningShort(reasoningValue)}`;
-  const panelMaxH = 340;
   const searchQuery = search.trim().toLowerCase();
   const filteredProviders = providers
     .map((p) => {
@@ -175,93 +174,43 @@ export function ModelPicker({
         ref={btnRef}
         type="button"
         onClick={handleOpen}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-          padding: "2px 6px",
-          borderRadius: 6,
-          border: "1px solid var(--hms-border)",
-          background: "var(--hms-surface)",
-          color: value ? "var(--hms-text)" : "var(--hms-text-muted)",
-          fontSize: 'var(--hms-text-caption)',
-          cursor: "pointer",
-          maxWidth: 260,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-        }}
+        className="hms-mp-pill"
+        data-set={value ? true : undefined}
         title={value ?? modelDefault ?? "Select model"}
       >
-        <Cpu size={12} style={{ flexShrink: 0 }} />
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{displayLabel}</span>
-        <ChevronDown size={10} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+        <Cpu size={12} className="hms-mp-icon" />
+        <span className="hms-mp-pill-label">{displayLabel}</span>
+        <ChevronDown size={10} className="hms-mp-pill-chevron" />
       </button>
 
       {/* Fixed positioning escapes overflow:hidden parents. */}
       {open && (
         <div
           ref={panelRef}
-          className="hms-popup-panel"
+          className="hms-popup-panel hms-mp-panel"
           style={{
-            position: "fixed",
             bottom: `${window.innerHeight - pos.top + 6}px`,
             left: Math.min(pos.left, window.innerWidth - 300) + "px",
-            width: 300,
-            maxHeight: panelMaxH,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            background: "var(--hms-surface)",
-            border: "1px solid var(--hms-border)",
-            borderRadius: 10,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
-            zIndex: 9999,
-            padding: "6px 0",
           }}
         >
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "0 10px 8px",
-              background: "var(--hms-surface)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 'var(--hms-space-2)',
-                border: "1px solid var(--hms-border)",
-                borderRadius: 8,
-                padding: "6px 8px",
-                background: "var(--hms-bg)",
-              }}
-            >
-              <Search size={12} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+          <div className="hms-mp-search-wrap">
+            <div className="hms-mp-search">
+              <Search size={12} className="hms-mp-search-icon" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search models"
-                style={{
-                  width: "100%",
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  color: "var(--hms-text)",
-                  fontSize: 'var(--hms-text-caption)',
-                }}
+                className="hms-mp-search-input"
               />
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <div className="hms-mp-list">
           {providers.length === 0 && (
-            <div style={{ padding: "8px 14px", fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
-              No providers configured
-            </div>
+            <div className="hms-mp-empty">No providers configured</div>
           )}
           {providers.length > 0 && !hasSearchResults && (
-            <div style={{ padding: "8px 14px", fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
-              No matching models
-            </div>
+            <div className="hms-mp-empty">No matching models</div>
           )}
           {filteredProviders.map((p) => {
             const isCollapsed = collapsed[p.slug] ?? !p.models.includes(value ?? "");
@@ -273,41 +222,21 @@ export function ModelPicker({
                     ...prev,
                     [p.slug]: !(prev[p.slug] ?? !p.models.includes(value ?? "")),
                   }))}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "5px 12px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    fontSize: 'var(--hms-text-xs)',
-                    fontWeight: 600,
-                    color: "var(--hms-text-muted)",
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                  }}
+                  className="hms-mp-prov-head"
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)' }}>
-                    <ChevronDown
-                      size={11}
-                      style={{
-                        transition: "transform 240ms cubic-bezier(0.25, 0.1, 0.25, 1)",
-                        transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-                      }}
-                    />
+                  <span className="hms-mp-prov-name">
+                    <ChevronDown size={11} className="hms-mp-prov-chevron" data-expanded={isExpanded || undefined} />
                     {p.name}
                     {p.slug === "openrouter" && catalogLoading && (
-                      <span className="hms-spin" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", border: "1.5px solid var(--hms-text-muted)", borderTopColor: "var(--hms-text)", flexShrink: 0 }} />
+                      <span className="hms-spin hms-mp-spinner" />
                     )}
                     {p.is_user_defined ? (
-                      <span style={{ fontSize: '0.5625rem', padding: "1px 4px", borderRadius: 3, background: "var(--hms-accent-weak)", color: "var(--hms-accent)", textTransform: "none", letterSpacing: 0 }}>
-                        Custom
-                      </span>
+                      <span className="hms-mp-badge hms-mp-badge--custom">Custom</span>
                     ) : (
-                      <span style={{ fontSize: '0.5625rem', padding: "1px 4px", borderRadius: 3, background: "color-mix(in srgb, var(--hms-info) 15%, transparent)", color: "var(--hms-info)", textTransform: "none", letterSpacing: 0 }}>
-                        Built-in
-                      </span>
+                      <span className="hms-mp-badge hms-mp-badge--builtin">Built-in</span>
                     )}
                   </span>
-                  <span style={{ fontSize: '0.625rem', fontWeight: 400 }}>{p.models.length} model{p.models.length !== 1 ? "s" : ""}</span>
+                  <span className="hms-mp-prov-count">{p.models.length} model{p.models.length !== 1 ? "s" : ""}</span>
                 </div>
 
                 <div className={`hms-picker-models${isExpanded ? " expanded" : ""}`}>
@@ -320,15 +249,8 @@ export function ModelPicker({
                           onChange(m, providerConfigKey(p));
                           setOpen(false);
                         }}
-                        className="hms-sidebar-row"
+                        className="hms-sidebar-row hms-mp-model"
                         data-active={isSelected}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                          padding: "5px 12px 5px 28px",
-                          cursor: "pointer",
-                          fontSize: 'var(--hms-text-caption)',
-                          color: isSelected ? "var(--hms-text)" : "var(--hms-text-muted)",
-                        }}
                         onMouseEnter={() => {
                           if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current);
                           setEffortFlyout(true);
@@ -337,12 +259,10 @@ export function ModelPicker({
                           effortLeaveRef.current = setTimeout(() => setEffortFlyout(false), 160);
                         }}
                       >
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {modelLabel(m)}
-                        </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', flexShrink: 0 }}>
-                          {isSelected && <Check size={11} style={{ color: "var(--hms-success)" }} />}
-                          <Brain size={11} style={{ color: "var(--hms-text-muted)", opacity: 0.6 }} />
+                        <span className="hms-mp-model-label">{modelLabel(m)}</span>
+                        <span className="hms-mp-model-meta">
+                          {isSelected && <Check size={11} className="hms-mp-icon-success" />}
+                          <Brain size={11} className="hms-mp-brain" />
                         </span>
                       </div>
                     );
@@ -362,38 +282,25 @@ export function ModelPicker({
           ref={flyoutRef}
           onMouseEnter={() => { if (effortLeaveRef.current) clearTimeout(effortLeaveRef.current); }}
           onMouseLeave={() => setEffortFlyout(false)}
+          className="hms-mp-flyout"
           style={{
-            position: "fixed",
             bottom: `${window.innerHeight - pos.top + 6}px`,
             left: effortFlyoutLeft(pos.left),
-            width: 190,
-            maxHeight: panelMaxH,
-            overflowY: "auto",
-            background: "var(--hms-surface)",
-            border: "1px solid var(--hms-border)",
-            borderRadius: 10,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
-            zIndex: 10000,
-            padding: "6px 0",
           }}
         >
-          <div style={{ padding: "4px 12px", fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>
-            {t.composer.options}
-          </div>
+          <div className="hms-mp-flyout-head">{t.composer.options}</div>
           <button
             type="button"
             onClick={() => onReasoningChange(isThinkingOn(reasoningValue) ? "none" : normalizedEffort(reasoningValue))}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: "var(--hms-text)", fontSize: 'var(--hms-text-caption)' }}
+            className="hms-mp-flyout-row"
           >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)' }}>
-              <Brain size={12} style={{ flexShrink: 0 }} /> {t.composer.thinking}
+            <span className="hms-mp-flyout-label">
+              <Brain size={12} className="hms-mp-icon" /> {t.composer.thinking}
             </span>
             <MiniSwitch on={isThinkingOn(reasoningValue)} />
           </button>
-          <div style={{ height: 1, background: "var(--hms-border)", margin: "4px 0" }} />
-          <div style={{ padding: "4px 12px", fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--hms-text-muted)" }}>
-            {t.composer.effort}
-          </div>
+          <div className="hms-mp-divider" />
+          <div className="hms-mp-flyout-head">{t.composer.effort}</div>
           {EFFORT_OPTIONS.map((opt) => {
             const checked = isThinkingOn(reasoningValue) && normalizedEffort(reasoningValue) === opt.value;
             return (
@@ -401,12 +308,11 @@ export function ModelPicker({
                 key={opt.value}
                 type="button"
                 onClick={() => onReasoningChange(opt.value)}
-                className="hms-sidebar-row"
+                className="hms-sidebar-row hms-mp-flyout-opt"
                 data-active={checked}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: checked ? "var(--hms-text)" : "var(--hms-text-muted)", fontSize: 'var(--hms-text-caption)' }}
               >
                 {opt.label}
-                {checked && <Check size={12} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />}
+                {checked && <Check size={12} className="hms-mp-icon-accent" />}
               </button>
             );
           })}
@@ -426,28 +332,8 @@ function effortFlyoutLeft(anchorLeft: number): number {
 
 function MiniSwitch({ on }: { on: boolean }) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        width: 28,
-        height: 16,
-        borderRadius: 999,
-        background: on ? "var(--hms-accent)" : "var(--hms-border)",
-        padding: "2px",
-        flexShrink: 0,
-        transition: "background 150ms",
-      }}
-    >
-      <span
-        style={{
-          width: 12,
-          height: 12,
-          borderRadius: "50%",
-          background: "var(--hms-on-accent, #fff)",
-          transform: on ? "translateX(12px)" : "translateX(0)",
-          transition: "transform 150ms",
-        }}
-      />
+    <span className="hms-mp-switch" data-on={on || undefined}>
+      <span className="hms-mp-switch-knob" />
     </span>
   );
 }

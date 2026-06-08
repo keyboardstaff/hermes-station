@@ -34,10 +34,10 @@ function relativeTime(iso?: string | null): string {
   return `${Math.round(diff / 86400)}d ago`;
 }
 
-function statusColor(job: CronJob): string {
-  if (job.last_status === "error") return "var(--hms-error, #ef4444)";
-  if (job.state === "paused" || job.enabled === false) return "var(--hms-warning, #f59e0b)";
-  return "var(--hms-success, #22c55e)";
+function statusOf(job: CronJob): "error" | "paused" | "ok" {
+  if (job.last_status === "error") return "error";
+  if (job.state === "paused" || job.enabled === false) return "paused";
+  return "ok";
 }
 
 function scheduleDisplay(job: CronJob): string {
@@ -56,57 +56,28 @@ function CronJobCard({ job, expanded, onToggle, onDeleted, detailLabels }: CardP
   const errored = job.last_status === "error";
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--hms-border)",
-        borderLeft: `3px solid ${statusColor(job)}`,
-        borderRadius: 8,
-        overflow: "hidden",
-        background: "var(--hms-surface)",
-      }}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--hms-space-3)",
-          padding: "12px 16px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--hms-text)",
-          textAlign: "left",
-        }}
-      >
-        <span style={{ flexShrink: 0 }}>
+    <div className="hms-cron-card" data-status={statusOf(job)}>
+      <button type="button" onClick={onToggle} className="hms-cron-card-toggle">
+        <span className="hms-cron-card-status">
           {job.state === "paused" || job.enabled === false ? (
-            <PauseCircle size={14} style={{ color: "var(--hms-warning)" }} />
+            <PauseCircle size={14} className="hms-cron-icon-warning" />
           ) : errored ? (
-            <AlertCircle size={14} style={{ color: "var(--hms-error)" }} />
+            <AlertCircle size={14} className="hms-cron-icon-error" />
           ) : (
-            <CheckCircle2 size={14} style={{ color: "var(--hms-success)" }} />
+            <CheckCircle2 size={14} className="hms-cron-icon-success" />
           )}
         </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: "var(--hms-text-sm)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {job.name || job.id}
-          </div>
-          <div style={{ fontSize: "0.625rem", color: "var(--hms-text-muted)", fontFamily: "monospace", marginTop: 2 }}>
-            {scheduleDisplay(job)}
-          </div>
+        <div className="hms-cron-card-main">
+          <div className="hms-cron-card-name">{job.name || job.id}</div>
+          <div className="hms-cron-card-sched">{scheduleDisplay(job)}</div>
         </div>
-        <div style={{ fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
-          {relativeTime(job.last_run_at)}
-        </div>
-        <span style={{ flexShrink: 0, color: "var(--hms-text-muted)" }}>
+        <div className="hms-cron-card-lastrun">{relativeTime(job.last_run_at)}</div>
+        <span className="hms-cron-card-chevron">
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </button>
       {expanded && (
-        <div style={{ borderTop: "1px solid var(--hms-border)", padding: "0 16px 16px" }}>
+        <div className="hms-cron-card-body">
           <CronJobDetail job={job} onDeleted={onDeleted} labels={detailLabels} />
         </div>
       )}
@@ -193,7 +164,7 @@ export default function CronPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div className="hms-cron-root">
       <PageTopBar
         title={t.nav.cron}
         showProfileScope
@@ -208,41 +179,25 @@ export default function CronPanel() {
           </>
         }
         context={
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--hms-space-2)",
-              padding: "5px 8px",
-              border: "1px solid var(--hms-border)",
-              borderRadius: 6,
-              background: "var(--hms-bg)",
-            }}
-          >
-            <Search size={13} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+          <div className="hms-cron-search">
+            <Search size={13} className="hms-cron-search-icon" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={c?.searchPlaceholder ?? "Search jobs…"}
-              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: "var(--hms-text-xs)", color: "var(--hms-text)" }}
+              className="hms-cron-search-input"
             />
           </div>
         }
       />
       <CronInfoBar />
-      <div
-        style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: "var(--hms-space-2)" }}
-      >
+      <div className="hms-cron-list">
         {isLoading && (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--hms-text-muted)", fontSize: "var(--hms-text-sm)" }}>
-            {c?.loading ?? "Loading…"}
-          </div>
+          <div className="hms-cron-msg">{c?.loading ?? "Loading…"}</div>
         )}
         {isError && (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--hms-error-text)", fontSize: "var(--hms-text-sm)" }}>
-            {c?.errorLoading ?? "Failed to load."}
-          </div>
+          <div className="hms-cron-msg hms-cron-msg--error">{c?.errorLoading ?? "Failed to load."}</div>
         )}
         {!isLoading && !isError && filtered.length === 0 && (
           jobs && jobs.length === 0 ? (
@@ -256,9 +211,7 @@ export default function CronPanel() {
               }}
             />
           ) : (
-            <div style={{ padding: 24, textAlign: "center", color: "var(--hms-text-muted)", fontSize: "var(--hms-text-sm)" }}>
-              {c?.noJobs ?? "No matching jobs."}
-            </div>
+            <div className="hms-cron-msg">{c?.noJobs ?? "No matching jobs."}</div>
           )
         )}
         {!isLoading && !isError && filtered.map((job) => (

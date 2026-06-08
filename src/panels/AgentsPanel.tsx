@@ -68,7 +68,7 @@ export default function AgentsPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+    <div className="hms-agents-root">
       <PageTopBar
         title={t.nav.agents}
         subtitle={g.subtitle}
@@ -79,7 +79,7 @@ export default function AgentsPanel() {
                 <Trash2 size={13} /> {g.clearRoom}
               </Button>
             )}
-            <div ref={addRef} style={{ position: "relative" }}>
+            <div ref={addRef} className="hms-agents-addwrap">
               <Button
                 type="button"
                 size="sm"
@@ -89,27 +89,15 @@ export default function AgentsPanel() {
                 <Plus size={13} /> {g.addAgent}
               </Button>
               {addOpen && addable.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 9999,
-                    minWidth: 160, padding: "4px 0", borderRadius: 8,
-                    background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
-                    boxShadow: "var(--hms-shadow-popover)",
-                  }}
-                >
+                <div className="hms-agents-addmenu">
                   {addable.map((name) => (
                     <button
                       key={name}
                       type="button"
                       onClick={() => { addMember(name); setAddOpen(false); }}
-                      className="hms-sidebar-row"
-                      style={{
-                        display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', width: "100%",
-                        padding: "7px 14px", border: "none", background: "none",
-                        color: "var(--hms-text)", fontSize: 'var(--hms-text-sm)', cursor: "pointer", textAlign: "left",
-                      }}
+                      className="hms-sidebar-row hms-agents-additem"
                     >
-                      <Users size={13} style={{ color: "var(--hms-accent)" }} /> {name}
+                      <Users size={13} className="hms-agents-icon-accent" /> {name}
                     </button>
                   ))}
                 </div>
@@ -119,33 +107,16 @@ export default function AgentsPanel() {
         }
       />
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden", padding: 'var(--hms-space-4)', gap: 'var(--hms-space-4)' }}>
+      <div className="hms-agents-body">
         {/* Room list */}
-        <Card
-          padding={false}
-          style={{
-            width: 220,
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "8px 12px", borderBottom: "1px solid var(--hms-border)",
-              fontSize: 'var(--hms-text-xs)', fontWeight: 600, letterSpacing: "0.04em",
-              textTransform: "uppercase", color: "var(--hms-text-muted)",
-            }}
-          >
+        <Card padding={false} className="hms-agents-roomlist">
+          <div className="hms-agents-roomlist-head">
             {g.rooms}
             <IconButton type="button" size="sm" onClick={() => createRoom()} title={g.newRoom} aria-label={g.newRoom}>
               <Plus size={14} />
             </IconButton>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "4px 0" }}>
+          <div className="hms-agents-roomlist-scroll">
             {rooms.map((r) => {
               const active = r.id === currentRoomId;
               return (
@@ -153,21 +124,12 @@ export default function AgentsPanel() {
                   key={r.id}
                   onClick={() => selectRoom(r.id)}
                   onDoubleClick={() => handleRename(r.id, r.name)}
-                  className="hms-sidebar-row"
+                  className="hms-sidebar-row hms-agents-room"
                   data-active={active}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 'var(--hms-space-2)',
-                    padding: "7px 12px", cursor: "pointer",
-                    color: active ? "var(--hms-text)" : "var(--hms-text-muted)",
-                  }}
                 >
-                  <MessageSquare size={13} style={{ flexShrink: 0, color: active ? "var(--hms-accent)" : "var(--hms-text-muted)" }} />
-                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 'var(--hms-text-sm)' }}>
-                    {r.name}
-                  </span>
-                  {r.activeRunId && (
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--hms-accent)", flexShrink: 0 }} />
-                  )}
+                  <MessageSquare size={13} className="hms-agents-room-icon" />
+                  <span className="hms-agents-room-name">{r.name}</span>
+                  {r.activeRunId && <span className="hms-agents-dot hms-agents-dot--sm" />}
                   {rooms.length > 1 && (
                     <IconButton
                       type="button"
@@ -185,69 +147,30 @@ export default function AgentsPanel() {
         </Card>
 
         {/* Current room */}
-        <Card
-          padding={false}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 'var(--hms-space-3)',
-              padding: "10px 16px",
-              borderBottom: "1px solid var(--hms-border)",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-              <MessageSquare size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
-              <div style={{ minWidth: 0, fontSize: 'var(--hms-text-sm)', fontWeight: 600, color: "var(--hms-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {room.name}
-              </div>
+        <Card padding={false} className="hms-agents-room-card">
+          <div className="hms-agents-room-head">
+            <div className="hms-agents-room-title-wrap">
+              <MessageSquare size={14} className="hms-agents-icon-accent" />
+              <div className="hms-agents-room-title">{room.name}</div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', flexShrink: 0 }}>
+            <div className="hms-agents-room-meta">
               {target && (
-                <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", whiteSpace: "nowrap" }}>
-                  {g.respondsLabel}: <span style={{ color: "var(--hms-text)" }}>@{target}</span>
+                <span className="hms-agents-responds">
+                  {g.respondsLabel}: <span className="hms-agents-responds-target">@{target}</span>
                 </span>
               )}
-              {running && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hms-accent)" }} />}
+              {running && <span className="hms-agents-dot" />}
             </div>
           </div>
 
           {/* Roster — members as chips; click to set the responder. */}
           {members.length > 0 && (
-            <div
-              style={{
-                display: "flex", flexWrap: "wrap", alignItems: "center", gap: 'var(--hms-space-2)',
-                padding: "8px 16px", borderBottom: "1px solid var(--hms-border)",
-              }}
-            >
-              <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginRight: 2 }}>
-                {g.respondsLabel}:
-              </span>
+            <div className="hms-agents-roster">
+              <span className="hms-agents-roster-label">{g.respondsLabel}:</span>
               {members.map((name) => {
                 const isResp = target === name;
                 return (
-                  <span
-                    key={name}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 'var(--hms-space-1)',
-                      padding: "3px 6px 3px 10px", borderRadius: 999,
-                      border: `1px solid ${isResp ? "var(--hms-accent)" : "var(--hms-border)"}`,
-                      background: isResp ? "var(--hms-accent-weak)" : "var(--hms-surface)",
-                      color: isResp ? "var(--hms-accent)" : "var(--hms-text)",
-                      fontSize: 'var(--hms-text-caption)',
-                    }}
-                  >
+                  <span key={name} className="hms-agents-chip" data-resp={isResp || undefined}>
                     <button
                       type="button"
                       onClick={() => setResponder(name)}
@@ -270,15 +193,10 @@ export default function AgentsPanel() {
           )}
 
           {members.length === 0 ? (
-            <div
-              style={{
-                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                gap: 'var(--hms-space-3)', color: "var(--hms-text-muted)", padding: 'var(--hms-space-6)', textAlign: "center",
-              }}
-            >
-              <Users size={36} style={{ color: "var(--hms-text-muted)" }} />
-              <div style={{ fontWeight: 600, color: "var(--hms-text)", fontSize: 'var(--hms-text-body)' }}>{g.noMembers}</div>
-              <div style={{ maxWidth: 420, fontSize: 'var(--hms-text-sm)' }}>{g.noMembersHint}</div>
+            <div className="hms-agents-empty">
+              <Users size={36} className="hms-agents-icon-muted" />
+              <div className="hms-agents-empty-title">{g.noMembers}</div>
+              <div className="hms-agents-empty-hint">{g.noMembersHint}</div>
             </div>
           ) : (
             <>
