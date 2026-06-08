@@ -124,7 +124,7 @@ export default function ConfigYamlEditor({ profile }: { profile?: string }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-3)' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-3)', flex: 1, minHeight: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
         <FileText size={14} style={{ flexShrink: 0 }} />
         <code style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)" }}>
@@ -155,7 +155,8 @@ export default function ConfigYamlEditor({ profile }: { profile?: string }) {
         border: "1px solid var(--hms-border)",
         borderRadius: 8,
         overflow: "hidden",
-        height: "min(60vh, 480px)",
+        flex: 1,
+        minHeight: 200,
       }}>
         <Editor
           language="yaml"

@@ -2928,9 +2928,8 @@ button.hms-artifacts-title {
   overflow-x: auto;
 }
 
-/* Plugins page (D64 + layout): full-width config band above a master-detail
-   browser that fills the remaining height (no content-max cap, no magic
-   min-height, single scroll owned by the two-column's panes). */
+/* Plugins page (D71): single scrolling column — config modules on top, then
+   the installed plugins as grouped cards (no master-detail). */
 .hms-plugins {
   display: flex;
   flex-direction: column;
@@ -2938,15 +2937,10 @@ button.hms-artifacts-title {
   min-height: 0;
 }
 
-.hms-plugins-body {
+.hms-plugins-scroll {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.hms-plugins-config {
-  flex-shrink: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: var(--hms-space-4);
@@ -2954,7 +2948,7 @@ button.hms-artifacts-title {
 }
 
 .hms-plugins-section {
-  margin: var(--hms-space-2) 0 0;
+  margin: 0;
   font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -2962,9 +2956,156 @@ button.hms-artifacts-title {
   color: var(--hms-text-muted);
 }
 
-.hms-plugins-browser {
+.hms-plugins-installed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hms-space-3);
+  margin-top: var(--hms-space-2);
+}
+
+.hms-plugins-search {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 5px 8px;
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+  background: var(--hms-bg);
+  min-width: 180px;
+}
+
+.hms-plugins-search-icon {
+  color: var(--hms-text-muted);
+  flex-shrink: 0;
+}
+
+.hms-plugins-search-input {
   flex: 1;
-  min-height: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text);
+}
+
+.hms-plugins-msg {
+  padding: 24px;
+  text-align: center;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+}
+
+.hms-plugins-msg--error {
+  color: var(--hms-error-text);
+}
+
+.hms-plugins-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+}
+
+.hms-plugins-group-label {
+  font-size: var(--hms-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hms-text-muted);
+}
+
+.hms-plugins-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--hms-space-3);
+}
+
+/* Plugin card (single-page) */
+.hms-plugin-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-3);
+  padding: var(--hms-space-4);
+  border: 1px solid var(--hms-border);
+  border-radius: var(--hms-radius-lg);
+  background: var(--hms-surface);
+}
+
+.hms-plugin-card[data-inactive] {
+  opacity: 0.6;
+}
+
+.hms-plugin-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hms-space-3);
+}
+
+.hms-plugin-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--hms-surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hms-plugin-icon-success { color: var(--hms-success); }
+.hms-plugin-icon-accent { color: var(--hms-accent); }
+.hms-plugin-icon-muted { color: var(--hms-text-muted); }
+
+.hms-plugin-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.hms-plugin-card-title {
+  font-size: var(--hms-text-lg, 1.125rem);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-plugin-card-badges {
+  display: flex;
+  gap: var(--hms-space-2);
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.hms-plugin-card-desc {
+  margin: 0;
+  font-size: var(--hms-text-sm);
+  color: var(--hms-text-muted);
+  line-height: 1.6;
+}
+
+.hms-plugin-card-path-label {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  margin-bottom: 4px;
+}
+
+.hms-plugin-card-path {
+  display: block;
+  font-size: 0.7rem;
+  padding: 6px 10px;
+  background: var(--hms-surface-hover);
+  border-radius: 6px;
+  word-break: break-all;
+  color: var(--hms-text-muted);
+}
+
+.hms-plugin-auth-label { font-weight: 600; }
+.hms-plugin-auth-cmd { font-size: 0.7rem; }
+
+.hms-plugin-card-actions {
+  display: flex;
+  gap: var(--hms-space-2);
+  flex-wrap: wrap;
 }
 
 .hms-skills-panel {

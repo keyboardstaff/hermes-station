@@ -102,15 +102,3 @@ export const useFilesSelection = create<FilesSelectionState>((set) => ({
   setSelected: (sel) => set({ selected: sel }),
   setExpanded: (expanded) => set({ expanded }),
 }));
-
-// ── /plugins ─────────────────────────────────────────────────────────
-
-interface PluginsSelectionState {
-  selectedName: string | null;
-  setSelected: (name: string | null) => void;
-}
-
-export const usePluginsSelection = create<PluginsSelectionState>((set) => ({
-  selectedName: null,
-  setSelected: (name) => set({ selectedName: name }),
-}));
