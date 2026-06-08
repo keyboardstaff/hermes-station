@@ -355,7 +355,11 @@ export function useRunsStream() {
   }, []);
 
   const sendMessage = useCallback(
-    async (input: string, attachments?: ComposerAttachment[], opts?: { profileOverride?: string }) => {
+    async (
+      input: string,
+      attachments?: ComposerAttachment[],
+      opts?: { profileOverride?: string; truncateBeforeUserOrdinal?: number },
+    ) => {
       const currentSessionId = useChatStore.getState().activeSessionId;
 
       // Optimistic user bubble with a collision-free temp id; rebound to
@@ -392,7 +396,7 @@ export function useRunsStream() {
         runInput = input;
       }
 
-      // The run follows the CURRENT profile (Phase B — no activate/restart):
+      // The run follows the CURRENT profile (no activate/restart):
       //  override (agents-room @mention) → the existing session's own profile
       //  (continuing a chat stays in its home) → the view-scope's current profile
       //  (a new chat runs in whatever profile you're in). The backend re-scopes
@@ -423,6 +427,10 @@ export function useRunsStream() {
         ...(runProfile ? { profile: runProfile } : {}),
         ...(!currentSessionId && branchHistory && branchHistory.length > 0
           ? { conversation_history: branchHistory } : {}),
+        // In-session regenerate / edit: the backend truncates the transcript
+        // before this user ordinal, then re-runs (only meaningful with a session).
+        ...(currentSessionId && opts?.truncateBeforeUserOrdinal != null
+          ? { truncate_before_user_ordinal: opts.truncateBeforeUserOrdinal } : {}),
       };
 
       let runId: string;

@@ -36,6 +36,9 @@ export interface RunInput {
    *  message). The run starts a fresh session, but the agent sees these as its
    *  context. Shape matches upstream `get_messages_as_conversation`. */
   conversation_history?: Array<{ role: string; content: string }>;
+  /** In-session regenerate / edit: truncate the persisted transcript before the
+   *  Nth (0-based) user turn, then re-run from there. Requires `session_id`. */
+  truncate_before_user_ordinal?: number;
   metadata?: Record<string, unknown>;
 }
 

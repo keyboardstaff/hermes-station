@@ -42,6 +42,10 @@ interface ChatState {
   /** Transient: text to auto-send once into the next empty session — drives
    *  one-click "regenerate". Consumed by ChatPanel. */
   pendingAutoSend: string | null;
+  /** Transient: in-session regenerate / edit intent. The transcript is already
+   *  truncated locally; ChatPanel fires the run with `truncate_before_user_ordinal`
+   *  so the backend truncates state.db to match, then re-runs. Consumed once. */
+  pendingRegenerate: { text: string; truncateBeforeUserOrdinal: number } | null;
   /** Transient: text to load into the Composer (edit / branch prefill).
    *  Reactive — works even when /chat is already mounted. */
   composerDraft: string | null;
@@ -91,6 +95,10 @@ interface ChatState {
   setProvisionalTitle: (sessionId: string, title: string) => void;
   setPendingBranchHistory: (h: BranchTurn[] | null) => void;
   setPendingAutoSend: (t: string | null) => void;
+  setPendingRegenerate: (v: { text: string; truncateBeforeUserOrdinal: number } | null) => void;
+  /** Drop the message at `index` and everything after it (in-session regenerate
+   *  / edit truncates the local transcript before re-running). */
+  truncateMessagesBefore: (index: number) => void;
   setComposerDraft: (t: string | null) => void;
 }
 
@@ -134,6 +142,7 @@ export const useChatStore = create<ChatState>()(
   provisionalTitles: {},
   pendingBranchHistory: null,
   pendingAutoSend: null,
+  pendingRegenerate: null,
   composerDraft: null,
 
   setActiveSession: (id) =>
@@ -420,6 +429,11 @@ export const useChatStore = create<ChatState>()(
     }),
   setPendingBranchHistory: (h) => set({ pendingBranchHistory: h }),
   setPendingAutoSend: (t) => set({ pendingAutoSend: t }),
+  setPendingRegenerate: (v) => set({ pendingRegenerate: v }),
+  truncateMessagesBefore: (index) =>
+    set((s) => (index < 0 || index >= s.messages.length
+      ? {}
+      : { messages: s.messages.slice(0, index) })),
   setComposerDraft: (t) => set({ composerDraft: t }),
     }),
     {

@@ -39,3 +39,14 @@ export function precedingUserIndex(messages: ChatMessage[], idx: number): number
   }
   return -1;
 }
+
+/** 0-based position of the user message at `userIndex` among all user turns —
+ *  the `truncate_before_user_ordinal` the backend expects to drop that turn (and
+ *  everything after) before re-running. Mirrors the server's `user_indices`. */
+export function userOrdinal(messages: ChatMessage[], userIndex: number): number {
+  let n = 0;
+  for (let i = 0; i < userIndex && i < messages.length; i++) {
+    if (messages[i].role === "user") n++;
+  }
+  return n;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { messagePlainText, buildBranchHistory, precedingUserIndex } from "@/lib/branch";
+import { messagePlainText, buildBranchHistory, precedingUserIndex, userOrdinal } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
 
 const user = (id: string, content: string): ChatMessage => ({ id, role: "user", content, createdAt: 0 });
@@ -60,5 +60,21 @@ describe("precedingUserIndex", () => {
 
   it("returns -1 when no user precedes", () => {
     expect(precedingUserIndex([asst("a", [{ type: "text", content: "x" }])], 0)).toBe(-1);
+  });
+});
+
+describe("userOrdinal", () => {
+  const msgs: ChatMessage[] = [
+    user("u0", "a"),
+    asst("a0", [{ type: "text", content: "b" }]),
+    user("u1", "c"),
+    asst("a1", [{ type: "text", content: "d" }]),
+    user("u2", "e"),
+  ];
+
+  it("counts user turns before the target (matches the server's user_indices)", () => {
+    expect(userOrdinal(msgs, 0)).toBe(0); // first user turn → truncate to empty
+    expect(userOrdinal(msgs, 2)).toBe(1); // second user turn
+    expect(userOrdinal(msgs, 4)).toBe(2); // third user turn
   });
 });

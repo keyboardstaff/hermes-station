@@ -15,7 +15,7 @@ import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
-import { buildBranchHistory, precedingUserIndex, messagePlainText, type BranchTurn } from "@/lib/branch";
+import { buildBranchHistory, precedingUserIndex, messagePlainText, userOrdinal, type BranchTurn } from "@/lib/branch";
 import { messageText } from "@/lib/chat-runtime";
 import type { ChatMessage } from "@/lib/hermes-types";
 import type { ReactNode } from "react";
@@ -321,6 +321,8 @@ export function MessageActions({ msg }: { msg: ChatMessage }) {
   const messages = useChatStore((s) => s.messages);
   const setPendingBranchHistory = useChatStore((s) => s.setPendingBranchHistory);
   const setPendingAutoSend = useChatStore((s) => s.setPendingAutoSend);
+  const setPendingRegenerate = useChatStore((s) => s.setPendingRegenerate);
+  const truncateMessagesBefore = useChatStore((s) => s.truncateMessagesBefore);
   const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const tts = useTextToSpeech();
   const idx = messages.findIndex((m) => m.id === msg.id);
@@ -354,11 +356,15 @@ export function MessageActions({ msg }: { msg: ChatMessage }) {
   // Edit a user prompt: re-ask an edited version with the context before it.
   const handleEdit = () => startBranch(buildBranchHistory(messages, idx), messagePlainText(msg), false);
 
-  // Regenerate an answer: re-ask the prompt that produced it (auto-send).
+  // Regenerate an answer IN PLACE: truncate the transcript before the prompt
+  // that produced it and re-run from there (backend truncates state.db to
+  // match via `truncate_before_user_ordinal`). Stays in the same session.
   const handleRetry = () => {
     const u = precedingUserIndex(messages, idx);
     if (u < 0) return;
-    startBranch(buildBranchHistory(messages, u), messagePlainText(messages[u]), true);
+    const text = messagePlainText(messages[u]);
+    truncateMessagesBefore(u);
+    setPendingRegenerate({ text, truncateBeforeUserOrdinal: userOrdinal(messages, u) });
   };
 
   const actionBtnStyle: React.CSSProperties = { width: 22, height: 22, borderRadius: 4 };

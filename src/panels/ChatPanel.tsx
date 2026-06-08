@@ -85,6 +85,7 @@ export default function ChatPanel() {
   const { resolveApproval } = useApprovalBridge();
   const activeRunId = useChatStore((s) => s.activeRunId);
   const pendingAutoSend = useChatStore((s) => s.pendingAutoSend);
+  const pendingRegenerate = useChatStore((s) => s.pendingRegenerate);
   const queryClient = useQueryClient();
   const loadedSessionRef = useRef<string | null>(null);
   const loadingSessionRef = useRef<string | null>(null);
@@ -234,6 +235,17 @@ export default function ChatPanel() {
       void sendMessage(text);
     }
   }, [pendingAutoSend, activeSessionId, sendMessage]);
+
+  // In-session regenerate / edit: the transcript is already truncated locally;
+  // fire the re-run with the truncate ordinal so the backend truncates state.db
+  // to match. Stays in the same session (unlike the new-session branch above).
+  useEffect(() => {
+    if (pendingRegenerate != null && activeSessionId != null) {
+      const { text, truncateBeforeUserOrdinal } = pendingRegenerate;
+      useChatStore.getState().setPendingRegenerate(null);
+      void sendMessage(text, undefined, { truncateBeforeUserOrdinal });
+    }
+  }, [pendingRegenerate, activeSessionId, sendMessage]);
 
   if (!caps) {
     return <ChatUnavailable reason="Checking capabilities…" />;
