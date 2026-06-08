@@ -384,6 +384,31 @@ class _Models:
     load_config: Callable | None = field(
         default_factory=lambda: _try_import("hermes_cli.config", "load_config_readonly")
     )
+    # Mutable config IO for the assign WRITE — ``load_config`` deepcopies (callers
+    # mutate then ``save_config``); both resolve ``get_config_path()`` per call so
+    # a ``profile_home_override`` writes the *selected* profile's ``config.yaml``.
+    load_config_mut: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "load_config")
+    )
+    save_config: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.config", "save_config")
+    )
+    # In-place main-slot assignment (provider/default + base_url reconciliation),
+    # the same helper the dashboard route uses — replicated so the write stays
+    # home-scoped instead of crossing the un-scopable dashboard loopback.
+    apply_main: Callable | None = field(
+        default_factory=lambda: _try_import(
+            "hermes_cli.web_server", "_apply_main_model_assignment"
+        )
+    )
+    # Best-effort Nous tool-gateway auto-routing on a nous main assignment
+    # (additive; never overwrites a user's own keys/backends). Mirrors the
+    # dashboard handler so a nous switch behaves identically in-process.
+    nous_apply_defaults: Callable | None = field(
+        default_factory=lambda: _try_import(
+            "hermes_cli.nous_subscription", "apply_nous_managed_defaults"
+        )
+    )
 
 
 @dataclass

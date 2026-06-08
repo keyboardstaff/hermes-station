@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from typing import Any
 
-from aiohttp import ClientSession, ClientTimeout, web
+from aiohttp import web
 
 from server.lib import config_reader
 from server.lib.profile_run import profile_home_override
@@ -47,43 +47,6 @@ def _mask(value: str) -> str:
     if m:
         return f"{m.group(1)}{'*' * min(len(m.group(2)), 16)}{m.group(3)}"
     return value[:4] + "*" * 8 + value[-4:]
-
-
-async def _dashboard_request(
-    method: str,
-    path: str,
-    * ,
-    json_body: dict | None = None,
-    timeout_s: float = 5.0,
-) -> tuple[int, Any] | None:
-    """Returns (status, body) or None when upstream is unreachable."""
-    base = config_reader.dashboard_url().rstrip("/")
-    url = f"{base}{path}"
-
-    from server.routes.dashboard_proxy import _resolve_token
-
-    try:
-        token = await _resolve_token(base)
-        headers: dict[str, str] = {}
-        if token:
-            headers["X-Hermes-Session-Token"] = token
-        if json_body is not None:
-            headers["Content-Type"] = "application/json"
-        async with ClientSession(timeout=ClientTimeout(total=timeout_s)) as cs:
-            async with cs.request(
-                method,
-                url,
-                headers=headers,
-                json=json_body,
-            ) as resp:
-                try:
-                    body = await resp.json()
-                except Exception:
-                    body = {"raw": await resp.text()}
-                return resp.status, body
-    except Exception:
-        logger.debug("[hms.models] dashboard %s %s failed", method, path, exc_info=True)
-        return None
 
 
 def _build_env_vars() -> dict[str, dict] | None:
@@ -360,6 +323,50 @@ async def get_auxiliary(request: web.Request) -> web.Response:
     return web.json_response({"tasks": tasks, "main": main})
 
 
+def _apply_nous_main_defaults(cfg: dict, provider: str) -> list[str]:
+    """Mirror the CLI's nous tool-gateway auto-routing on a nous main switch.
+
+    Additive only (``apply_nous_managed_defaults`` skips every tool the user
+    already has a key/backend for); best-effort — a portal hiccup or
+    non-subscriber must never block saving the assignment.
+    """
+    if provider.strip().lower() != "nous":
+        return []
+    apply_defaults = shim.models.nous_apply_defaults
+    get_platform_tools = shim.toolsets.get_platform_tools
+    if apply_defaults is None or get_platform_tools is None:
+        return []
+    try:
+        enabled = get_platform_tools(cfg, "cli", include_default_mcp_servers=False)
+        changed = apply_defaults(cfg, enabled_toolsets=enabled, force_fresh=True)
+        return sorted(changed or [])
+    except Exception:
+        logger.debug("[hms.models] nous managed defaults skipped", exc_info=True)
+        return []
+
+
+def _stale_auxiliary(cfg: dict, new_provider: str) -> list[dict]:
+    """Aux slots still pinned to a provider other than the new main one.
+
+    A UI nudge (we never auto-clear pins — a different aux provider is a valid
+    config) so the user can reset them instead of paying 402s on a now-unpaid
+    background provider.
+    """
+    new_p = new_provider.strip().lower()
+    out: list[dict] = []
+    aux = cfg.get("auxiliary")
+    if not isinstance(aux, dict):
+        return out
+    for slot in AUX_TASK_SLOTS:
+        sc = aux.get(slot)
+        if not isinstance(sc, dict):
+            continue
+        sp = str(sc.get("provider", "") or "").strip()
+        if sp and sp.lower() not in {"auto", ""} and sp.lower() != new_p:
+            out.append({"task": slot, "provider": sp, "model": str(sc.get("model", "") or "")})
+    return out
+
+
 @router.post("/api/models/assign")
 async def assign_model(request: web.Request) -> web.Response:
     """task='' with scope=auxiliary applies to all 9 slots.
@@ -375,25 +382,80 @@ async def assign_model(request: web.Request) -> web.Response:
     if scope not in ("main", "auxiliary"):
         return web.json_response({"error": "scope_invalid"}, status=400)
 
-    result = await _dashboard_request(
-        "POST", "/api/model/set",
-        json_body={
-            "scope": scope,
-            "provider": body.get("provider", ""),
-            "model": body.get("model", ""),
-            "task": body.get("task", ""),
-        },
-        timeout_s=10.0,
-    )
-    if result is None:
-        return web.json_response({"error": "dashboard_unavailable"}, status=503)
-    status, resp_body = result
-    if status != 200:
-        return web.json_response(
-            {"error": "upstream_error", "status": status, "detail": resp_body},
-            status=status if 400 <= status < 600 else 502,
-        )
-    return web.json_response(resp_body)
+    provider = (body.get("provider") or "").strip()
+    model = (body.get("model") or "").strip()
+    task = (body.get("task") or "").strip().lower()
+    base_url = (body.get("base_url") or "").strip()
+
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+
+    # Upstream-parity validation up front, so bad input is a clean 400 (not a
+    # 500 from inside the worker thread).
+    if scope == "main" and (not provider or not model):
+        return web.json_response({"error": "provider_model_required"}, status=400)
+    if scope == "auxiliary" and task != "__reset__":
+        if not provider:
+            return web.json_response({"error": "provider_required"}, status=400)
+        if task and task not in AUX_TASK_SLOTS:
+            return web.json_response({"error": "unknown_task", "task": task}, status=400)
+
+    load_cfg = shim.models.load_config_mut
+    save_cfg = shim.models.save_config
+    apply_main = shim.models.apply_main
+    if load_cfg is None or save_cfg is None or apply_main is None:
+        return web.json_response({"error": "env_unavailable"}, status=503)
+
+    def _apply() -> dict:
+        raw_cfg: Any = load_cfg() or {}
+        cfg: dict[str, Any] = raw_cfg if isinstance(raw_cfg, dict) else {}
+        if scope == "main":
+            cfg["model"] = apply_main(cfg.get("model", {}), provider, model, base_url)
+            gateway_tools = _apply_nous_main_defaults(cfg, provider)
+            save_cfg(cfg)
+            model_cfg: Any = cfg.get("model", {})
+            return {
+                "ok": True, "scope": "main", "provider": provider, "model": model,
+                "base_url": model_cfg.get("base_url", "") if isinstance(model_cfg, dict) else "",
+                "gateway_tools": gateway_tools,
+                "stale_aux": _stale_auxiliary(cfg, provider),
+            }
+        # scope == "auxiliary"
+        aux_raw: Any = cfg.get("auxiliary")
+        aux: dict[str, Any] = aux_raw if isinstance(aux_raw, dict) else {}
+        if task == "__reset__":
+            for slot in AUX_TASK_SLOTS:
+                sc_raw: Any = aux.get(slot)
+                sc: dict[str, Any] = sc_raw if isinstance(sc_raw, dict) else {}
+                sc["provider"], sc["model"] = "auto", ""
+                aux[slot] = sc
+            cfg["auxiliary"] = aux
+            save_cfg(cfg)
+            return {"ok": True, "scope": "auxiliary", "reset": True}
+        targets = [task] if task else list(AUX_TASK_SLOTS)
+        for slot in targets:
+            tsc_raw: Any = aux.get(slot)
+            tsc: dict[str, Any] = tsc_raw if isinstance(tsc_raw, dict) else {}
+            tsc["provider"], tsc["model"] = provider, model
+            aux[slot] = tsc
+        cfg["auxiliary"] = aux
+        save_cfg(cfg)
+        return {"ok": True, "scope": "auxiliary", "tasks": targets,
+                "provider": provider, "model": model}
+
+    try:
+        with profile_home_override(profile):
+            result = await asyncio.to_thread(_apply)
+        # Reload the LIVE config only for the active/default home — a named
+        # profile's write lands on its own on-disk config.yaml (applied when it
+        # runs); reloading under its override would pollute the live process.
+        if profile is None:
+            await asyncio.to_thread(config_reader.reload)
+    except Exception:
+        logger.exception("[hms.models] assign failed (scope=%s)", scope)
+        return web.json_response({"error": "write_failed"}, status=500)
+    return web.json_response(result)
 
 
 @router.post("/api/models/test/{provider}")

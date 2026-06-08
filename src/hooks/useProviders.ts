@@ -122,9 +122,10 @@ export function useAuxiliary() {
 
 export function useAssignModel() {
   const qc = useQueryClient();
+  const profile = useModelScopeProfile();
   return useMutation({
     mutationFn: (body: AssignBody) =>
-      api.json<{ ok: boolean }>("/api/models/assign", "POST", body),
+      api.json<{ ok: boolean }>(`/api/models/assign${profileQuery(profile)}`, "POST", body),
     onSuccess: () => {
       // Invalidate both lists so the UI reflects the new assignment.
       qc.invalidateQueries({ queryKey: ["models"] });

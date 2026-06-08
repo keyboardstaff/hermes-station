@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import aiohttp
 import pytest
@@ -362,13 +362,29 @@ async def test_get_auxiliary_invalid_profile(app_server) -> None:
             assert data["error"] == "invalid_profile"
 
 
+def _patch_assign(saved: dict, *, load=None):
+    """Patch the in-process assign write surface; ``saved`` captures the cfg."""
+    models = models_mod.shim.models
+
+    def fake_save(cfg):
+        saved["cfg"] = cfg
+
+    def fake_apply(model_cfg, provider, model, base_url=""):
+        return {"provider": provider, "default": model, "base_url": base_url}
+
+    return (
+        patch.object(models, "load_config_mut", load or (lambda: {})),
+        patch.object(models, "save_config", fake_save),
+        patch.object(models, "apply_main", fake_apply),
+    )
+
+
 @pytest.mark.asyncio
 async def test_assign_main(app_server) -> None:
-    """POST /api/models/assign for the main slot."""
-    upstream_resp = (200, {"ok": True, "scope": "main", "provider": "openai", "model": "gpt-4o"})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ) as mock_req:
+    """POST /api/models/assign writes the main slot to config.yaml in-process."""
+    saved: dict = {}
+    p1, p2, p3 = _patch_assign(saved, load=lambda: {"model": {"provider": "old"}})
+    with p1, p2, p3:
         async with aiohttp.ClientSession() as cs:
             async with cs.post(
                 f"{app_server}/api/models/assign",
@@ -379,20 +395,30 @@ async def test_assign_main(app_server) -> None:
                 data = await r.json()
 
     assert data["ok"] is True
-    mock_req.assert_called_once()
-    args, kwargs = mock_req.call_args
-    assert args[:2] == ("POST", "/api/model/set")
-    assert kwargs["json_body"]["scope"] == "main"
-    assert kwargs["json_body"]["provider"] == "openai"
-    assert kwargs["json_body"]["model"] == "gpt-4o"
+    assert data["scope"] == "main"
+    assert data["provider"] == "openai"
+    assert data["model"] == "gpt-4o"
+    assert saved["cfg"]["model"] == {"provider": "openai", "default": "gpt-4o", "base_url": ""}
+
+
+@pytest.mark.asyncio
+async def test_assign_main_requires_model(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(
+            f"{app_server}/api/models/assign",
+            json={"scope": "main", "provider": "openai"},
+            headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+        ) as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "provider_model_required"
 
 
 @pytest.mark.asyncio
 async def test_assign_auxiliary(app_server) -> None:
-    upstream_resp = (200, {"ok": True, "scope": "auxiliary", "tasks": ["vision"]})
-    with patch.object(
-        models_mod, "_dashboard_request", new=AsyncMock(return_value=upstream_resp)
-    ) as mock_req:
+    saved: dict = {}
+    p1, p2, p3 = _patch_assign(saved, load=lambda: {"auxiliary": {}})
+    with p1, p2, p3:
         async with aiohttp.ClientSession() as cs:
             async with cs.post(
                 f"{app_server}/api/models/assign",
@@ -405,9 +431,35 @@ async def test_assign_auxiliary(app_server) -> None:
                 headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
             ) as r:
                 assert r.status == 200
+                data = await r.json()
 
-    args, kwargs = mock_req.call_args
-    assert kwargs["json_body"]["task"] == "vision"
+    assert data["tasks"] == ["vision"]
+    assert saved["cfg"]["auxiliary"]["vision"] == {"provider": "openai", "model": "gpt-4o-mini"}
+
+
+@pytest.mark.asyncio
+async def test_assign_auxiliary_unknown_task(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.post(
+            f"{app_server}/api/models/assign",
+            json={"scope": "auxiliary", "provider": "openai", "model": "m", "task": "nope"},
+            headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+        ) as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "unknown_task"
+
+
+@pytest.mark.asyncio
+async def test_assign_env_unavailable(app_server) -> None:
+    with patch.object(models_mod.shim.models, "save_config", None):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/models/assign",
+                json={"scope": "main", "provider": "openai", "model": "gpt-4o"},
+                headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+            ) as r:
+                assert r.status == 503
 
 
 @pytest.mark.asyncio
