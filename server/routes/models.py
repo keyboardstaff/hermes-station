@@ -458,6 +458,89 @@ async def assign_model(request: web.Request) -> web.Response:
     return web.json_response(result)
 
 
+def _clean_fallback_chain(raw: Any) -> list[dict]:
+    """Normalize a posted chain to ordered ``{provider, model, base_url?}`` entries."""
+    out: list[dict] = []
+    if not isinstance(raw, list):
+        return out
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        provider = str(entry.get("provider") or "").strip()
+        model = str(entry.get("model") or "").strip()
+        if not provider or not model:
+            continue
+        clean: dict = {"provider": provider, "model": model}
+        base_url = str(entry.get("base_url") or "").strip()
+        if base_url:
+            clean["base_url"] = base_url
+        out.append(clean)
+    return out
+
+
+@router.get("/api/models/fallback")
+async def get_fallback(request: web.Request) -> web.Response:
+    """The effective fallback chain (main-model failure → try these in order)."""
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+    loader = shim.models.load_config
+    chain_fn = shim.models.fallback_chain
+    if loader is None or chain_fn is None:
+        return web.json_response({"chain": [], "error": "env_unavailable"})
+    try:
+        with profile_home_override(profile):
+            cfg = dict(loader() or {})
+        chain = chain_fn(cfg) or []
+    except Exception:
+        logger.exception("[hms.models] fallback read failed")
+        return web.json_response({"chain": [], "error": "config_error"})
+    return web.json_response({"chain": _clean_fallback_chain(chain)})
+
+
+@router.put("/api/models/fallback")
+async def set_fallback(request: web.Request) -> web.Response:
+    """Write the fallback chain to ``fallback_providers`` (the modern key).
+
+    Also drops any legacy ``fallback_model`` so the editor is authoritative —
+    otherwise ``get_fallback_chain`` would append the legacy entry back into the
+    effective chain.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "json_required"}, status=400)
+
+    profile, err = profile_arg(request)
+    if err is not None:
+        return err
+    if not isinstance(body.get("chain"), list):
+        return web.json_response({"error": "chain_required"}, status=400)
+    chain = _clean_fallback_chain(body.get("chain"))
+
+    load_cfg = shim.models.load_config_mut
+    save_cfg = shim.models.save_config
+    if load_cfg is None or save_cfg is None:
+        return web.json_response({"error": "env_unavailable"}, status=503)
+
+    def _apply() -> None:
+        raw_cfg: Any = load_cfg() or {}
+        cfg: dict[str, Any] = raw_cfg if isinstance(raw_cfg, dict) else {}
+        cfg["fallback_providers"] = chain
+        cfg.pop("fallback_model", None)
+        save_cfg(cfg)
+
+    try:
+        with profile_home_override(profile):
+            await asyncio.to_thread(_apply)
+        if profile is None:
+            await asyncio.to_thread(config_reader.reload)
+    except Exception:
+        logger.exception("[hms.models] fallback write failed")
+        return web.json_response({"error": "write_failed"}, status=500)
+    return web.json_response({"ok": True, "chain": chain})
+
+
 @router.post("/api/models/test/{provider}")
 async def test_provider(request: web.Request) -> web.Response:
     """Read-only health check — no completion call."""

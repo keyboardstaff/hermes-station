@@ -451,6 +451,64 @@ async def test_assign_auxiliary_unknown_task(app_server) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_fallback_chain(app_server) -> None:
+    """GET /api/models/fallback returns the merged effective chain."""
+    cfg = {"fallback_providers": [
+        {"provider": "openrouter", "model": "anthropic/claude-sonnet-4"},
+        {"provider": "openai", "model": "gpt-4o"},
+    ]}
+    with patch.object(models_mod.shim.models, "load_config", lambda: dict(cfg)):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"{app_server}/api/models/fallback") as r:
+                assert r.status == 200
+                data = await r.json()
+
+    assert [e["provider"] for e in data["chain"]] == ["openrouter", "openai"]
+    assert data["chain"][0]["model"] == "anthropic/claude-sonnet-4"
+
+
+@pytest.mark.asyncio
+async def test_set_fallback_writes_providers(app_server) -> None:
+    """PUT writes `fallback_providers` and drops the legacy `fallback_model`."""
+    saved: dict = {}
+
+    def fake_save(cfg):
+        saved["cfg"] = cfg
+
+    with patch.object(models_mod.shim.models, "load_config_mut",
+                      lambda: {"fallback_model": {"provider": "old", "model": "m"}}), \
+         patch.object(models_mod.shim.models, "save_config", fake_save):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.put(
+                f"{app_server}/api/models/fallback",
+                json={"chain": [
+                    {"provider": "openai", "model": "gpt-4o"},
+                    {"provider": "bad"},  # dropped (no model)
+                ]},
+                headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+            ) as r:
+                assert r.status == 200
+                data = await r.json()
+
+    assert data["chain"] == [{"provider": "openai", "model": "gpt-4o"}]
+    assert saved["cfg"]["fallback_providers"] == [{"provider": "openai", "model": "gpt-4o"}]
+    assert "fallback_model" not in saved["cfg"]
+
+
+@pytest.mark.asyncio
+async def test_set_fallback_requires_chain(app_server) -> None:
+    async with aiohttp.ClientSession() as cs:
+        async with cs.put(
+            f"{app_server}/api/models/fallback",
+            json={},
+            headers={"X-HMS-CSRF": "1", "Content-Type": "application/json"},
+        ) as r:
+            assert r.status == 400
+            data = await r.json()
+            assert data["error"] == "chain_required"
+
+
+@pytest.mark.asyncio
 async def test_assign_env_unavailable(app_server) -> None:
     with patch.object(models_mod.shim.models, "save_config", None):
         async with aiohttp.ClientSession() as cs:

@@ -409,6 +409,13 @@ class _Models:
             "hermes_cli.nous_subscription", "apply_nous_managed_defaults"
         )
     )
+    # Effective fallback chain = merge of ``fallback_providers`` (modern) +
+    # legacy ``fallback_model``, deduped + normalized to ``{provider, model,
+    # base_url?}``. The chain is what GatewayRunner tries when the main model
+    # fails; the editor writes ``fallback_providers``.
+    fallback_chain: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.fallback_config", "get_fallback_chain")
+    )
 
 
 @dataclass
@@ -445,6 +452,12 @@ class _Toolsets:
     )
     load_config: Callable | None = field(
         default_factory=lambda: _try_import("hermes_cli.config", "load_config")
+    )
+    # Strips the leading registry emoji from a toolset label ("🌐 Web" → "Web").
+    # Upstream marks this the canonical helper for HTTP/GUI surfaces (the CLI/TUI
+    # keeps the raw emoji label); Station is lucide-icon based, so we use it.
+    gui_label: Callable | None = field(
+        default_factory=lambda: _try_import("hermes_cli.tools_config", "gui_toolset_label")
     )
 
 

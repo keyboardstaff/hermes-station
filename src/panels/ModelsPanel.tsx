@@ -9,6 +9,8 @@ import {
   useAuxiliary,
   useRefreshProviders,
   useAssignModel,
+  useFallback,
+  useSetFallback,
   type AuxSlot,
   type KeyEntry,
 } from "@/hooks/useProviders";
@@ -16,8 +18,9 @@ import ModelPickerDialog from "@/components/models/ModelPickerDialog";
 import KeyRow from "@/components/models/KeyRow";
 import ParetoSlider from "@/components/models/ParetoSlider";
 import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { RefreshCw, ArrowRightLeft, Info, AlertTriangle } from "lucide-react";
+import { RefreshCw, ArrowRightLeft, Info, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 
 /**
  * +16 — Models panel.
@@ -320,21 +323,98 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
 }
 
 function FallbackTab({ m }: { m: ML | undefined }) {
-  // Upstream v0.14 does NOT support a fallback model chain. Be explicit
-  // about this rather than expose a broken edit UX.
+  // Fallback chain = `fallback_providers` (+ legacy `fallback_model`) — the
+  // models GatewayRunner tries, in order, when the primary model fails.
+  const { data: fb, isLoading } = useFallback();
+  const { data: providersData } = useProviders();
+  const setFallback = useSetFallback();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const chain = fb?.chain ?? [];
+
+  const commit = (next: { provider: string; model: string }[]) => setFallback.mutate(next);
+
+  const handleAdd = (provider: string, model: string) => {
+    setPickerOpen(false);
+    if (!provider || !model) return;
+    if (chain.some((e) => e.provider === provider && e.model === model)) return;
+    commit([...chain, { provider, model }]);
+  };
+  const removeAt = (i: number) => commit(chain.filter((_, idx) => idx !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= chain.length) return;
+    const next = chain.map((e) => ({ provider: e.provider, model: e.model }));
+    [next[i], next[j]] = [next[j], next[i]];
+    commit(next);
+  };
+
+  if (isLoading) return <LoadingBox />;
+
   return (
-    <div>
-      <div className="hms-settings-notice hms-settings-notice--warning hms-models-notice-row">
-        <AlertTriangle size={16} className="hms-models-notice-icon" />
-        <div className="hms-models-notice-text">
-          <div className="hms-models-notice-title">
-            {m?.fallbackUnsupportedTitle ?? "Fallback chain not supported"}
+    <div className="hms-models-aux">
+      <p className="hms-models-hint">
+        {m?.fallbackHint ?? "When the primary model fails, these are tried in order."}
+      </p>
+
+      {chain.length === 0 ? (
+        <EmptyState text={m?.fallbackEmpty ?? "No fallback models — add one to retry on failure."} />
+      ) : (
+        chain.map((e, i) => (
+          <div key={`${e.provider}/${e.model}/${i}`} className="hms-models-provider">
+            <span className="hms-models-fallback-index">{i + 1}</span>
+            <span className="hms-models-aux-value">{e.provider} / {e.model}</span>
+            <IconButton
+              size="sm"
+              title={m?.moveUp ?? "Move up"}
+              disabled={i === 0 || setFallback.isPending}
+              onClick={() => move(i, -1)}
+            >
+              <ArrowUp size={12} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              title={m?.moveDown ?? "Move down"}
+              disabled={i === chain.length - 1 || setFallback.isPending}
+              onClick={() => move(i, 1)}
+            >
+              <ArrowDown size={12} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              danger
+              title={m?.remove ?? "Remove"}
+              disabled={setFallback.isPending}
+              onClick={() => removeAt(i)}
+            >
+              <Trash2 size={12} />
+            </IconButton>
           </div>
-          <div className="hms-models-notice-body">
-            {m?.fallbackUnsupportedBody ?? "Upstream hermes-agent v0.14 has no fallback-chain configuration — the primary model is used exclusively. Per-provider request/timeout overrides can be set under model.providers in config.yaml."}
-          </div>
-        </div>
+        ))
+      )}
+
+      <div>
+        <Button size="sm" onClick={() => setPickerOpen(true)}>
+          <Plus size={12} />
+          {m?.addFallback ?? "Add fallback model"}
+        </Button>
       </div>
+
+      <ModelPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        providers={providersData?.providers ?? []}
+        currentModel={null}
+        title={m?.addFallback ?? "Add fallback model"}
+        onSelect={handleAdd}
+        labels={{
+          searchPlaceholder: m?.searchPlaceholder ?? "Search models...",
+          noResults:         m?.noResults ?? "No models match the search.",
+          auto:              m?.auto ?? "Auto",
+          autoHint:          m?.autoHint ?? "Use the active provider's default model.",
+          close:             m?.close ?? "Close",
+        }}
+      />
     </div>
   );
 }

@@ -184,6 +184,37 @@ export function useDeleteKey() {
   });
 }
 
+// ── Fallback chain ───────────────────────────────────────────────────
+
+/** One entry in the fallback chain — tried in order when the main model fails. */
+export interface FallbackEntry {
+  provider: string;
+  model: string;
+  base_url?: string;
+}
+
+export function useFallback() {
+  const profile = useModelScopeProfile();
+  return useQuery<{ chain: FallbackEntry[]; error?: string }>({
+    queryKey: ["models-fallback", profile ?? null],
+    queryFn: () => api.get(`/api/models/fallback${profileQuery(profile)}`),
+    staleTime: 15_000,
+    retry: 1,
+  });
+}
+
+export function useSetFallback() {
+  const qc = useQueryClient();
+  const profile = useModelScopeProfile();
+  return useMutation({
+    mutationFn: (chain: FallbackEntry[]) =>
+      api.json<{ ok: boolean; chain: FallbackEntry[] }>(
+        `/api/models/fallback${profileQuery(profile)}`, "PUT", { chain },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["models-fallback"] }),
+  });
+}
+
 // ── Provider connectivity test ───────────────────────────────────────
 
 export function useTestProvider() {

@@ -1989,6 +1989,15 @@ button.hms-artifacts-title {
   color: var(--hms-text-muted);
 }
 
+.hms-models-fallback-index {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-size: var(--hms-text-xs);
+  font-weight: 600;
+  color: var(--hms-text-muted);
+}
+
 .hms-models-notice-row {
   display: flex;
   align-items: flex-start;
@@ -2912,17 +2921,10 @@ button.hms-artifacts-title {
   font-weight: 600;
 }
 
-.hms-settings-nav-group {
-  padding: var(--hms-space-3) 12px 4px;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--hms-text-muted);
-}
-
-.hms-settings-nav-group:first-child {
-  padding-top: 4px;
+.hms-settings-nav-sep {
+  height: 1px;
+  background: var(--hms-border);
+  margin: var(--hms-space-2) 10px;
 }
 
 /* Right pane: an embedded capability panel fills it (own topbar + scroll); the
