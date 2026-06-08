@@ -3,6 +3,8 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Activity } from "lucide-react";
 import { useI18n } from "@/i18n";
+import SearchInput from "@/components/ui/SearchInput";
+import { useSidebarSearch } from "@/store/sidebar-search";
 import { useChatStore } from "@/store/chat";
 import { ROUTES, moduleNavTarget, type RouteModule } from "@/routes/registry";
 import Tooltip from "@/components/ui/Tooltip";
@@ -60,6 +62,8 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const search = useSidebarSearch((s) => s.query);
+  const setSearch = useSidebarSearch((s) => s.setQuery);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
 
   const [activeModule, setActiveModuleState] = useState<RouteModule>(readStoredModule);
@@ -157,25 +161,15 @@ export default function Sidebar({
           </button>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', minWidth: 0, overflow: "hidden" }}>
-                <HermesIcon size={22} />
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    letterSpacing: "0.04em",
-                    fontSize: 'var(--hms-text-body)',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                  }}
-                >
-                  <span style={{ fontWeight: 700 }}>Hermes</span>
-                  <span style={{ fontWeight: 400, color: "var(--hms-text-muted)", marginLeft: 4 }}>Station</span>
-                </span>
-              </div>
-              <ConnectionDot />
-            </div>
+            <SearchInput
+              size="sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.nav.searchSessions}
+              aria-label={t.nav.searchSessions}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <ConnectionDot />
             {!mobile && onToggleCollapsed && (
               <button
                 type="button"
@@ -371,32 +365,6 @@ export default function Sidebar({
 }
 
 // ── SidebarNavItem wrapper ────────────────────────────────────────
-
-// ── Hermes logo icon (transparent, theme-adaptive) ───────────────
-function HermesIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 32 32"
-      fill="none"
-      width={size}
-      height={size}
-      style={{ flexShrink: 0, color: "var(--hms-text)" }}
-      aria-hidden="true"
-    >
-      <text
-        x="16"
-        y="25"
-        fontSize="26"
-        textAnchor="middle"
-        fill="currentColor"
-        fontFamily="serif"
-      >
-        ☤
-      </text>
-    </svg>
-  );
-}
 
 function SidebarNavItem({ children }: { children: React.ReactNode }) {
   return <>{children}</>;

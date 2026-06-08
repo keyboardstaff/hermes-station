@@ -7,6 +7,7 @@ import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import { useAgentRoomStore } from "@/store/agentRoom";
 import { useProfileScope, filterSessionsByScope } from "@/store/profile-scope";
+import { useSidebarSearch } from "@/store/sidebar-search";
 import { useActiveProfile } from "@/hooks/useProfiles";
 import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
 import type { SessionSummary } from "@/lib/hermes-types";
@@ -228,6 +229,7 @@ export default function SessionRecents({
   // opts in (showScopeSelector); single-profile users never have >1 to scope to.
   const profileScope = useProfileScope((s) => s.scope);
   const { data: activeProfile } = useActiveProfile();
+  const searchQuery = useSidebarSearch((s) => s.query);
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
@@ -420,15 +422,21 @@ export default function SessionRecents({
     ? filterSessionsByScope(sessions, profileScope, activeProfile?.current)
     : sessions;
 
+  // Sidebar header search box → filter by title. While searching we drop the
+  // recents `limit` so matches beyond the visible top-N still surface.
+  const q = searchQuery.trim().toLowerCase();
+  const searchedSessions = q
+    ? scopedSessions.filter((s) => (s.title ?? "").toLowerCase().includes(q))
+    : scopedSessions;
+
   // Split into pinned and recents when pinnedIds is provided.
   const pinnedSessions = pinnedIds && pinnedIds.size > 0
-    ? scopedSessions.filter((s) => pinnedIds.has(s.session_id))
+    ? searchedSessions.filter((s) => pinnedIds.has(s.session_id))
     : [];
-  const displaySessions = pinnedIds
-    ? scopedSessions.filter((s) => !pinnedIds.has(s.session_id)).slice(0, limit)
-    : limit
-      ? scopedSessions.slice(0, limit)
-      : scopedSessions;
+  const recentsPool = pinnedIds
+    ? searchedSessions.filter((s) => !pinnedIds.has(s.session_id))
+    : searchedSessions;
+  const displaySessions = limit && !q ? recentsPool.slice(0, limit) : recentsPool;
 
   // Header actions (View all / chevron) fade in on container hover
   // when hoverRevealsActions=true. Always visible otherwise.

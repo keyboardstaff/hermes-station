@@ -80,6 +80,7 @@ export const en: Translations = {
     deleteSession: "Delete",
     clearLocal: "Clear local view",
     collapseSidebar: "Collapse sidebar",
+    searchSessions: "Search sessions…",
   },
 
   actions: {
@@ -517,6 +518,8 @@ export const en: Translations = {
     thinking: "Thinking",
     options: "Options",
     effort: "Effort",
+    introHeadline: "What are we moving today?",
+    introBody: "Send a task, a failing path, or a rough idea — I'll inspect first and keep the next step concrete.",
   },
 
   createProfile: {

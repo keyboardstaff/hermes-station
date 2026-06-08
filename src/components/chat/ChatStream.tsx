@@ -3,6 +3,8 @@ import { ChatThread, type ChatThreadLabels } from "./ChatThread";
 import { Loader2, ArrowDown } from "lucide-react";
 import type { ChatMessage } from "@/lib/hermes-types";
 import { useChatStore } from "@/store/chat";
+import { useI18n } from "@/i18n";
+import HermesMark from "@/components/ui/HermesMark";
 
 interface ChatStreamProps {
   messages: ChatMessage[];
@@ -143,18 +145,7 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
           Loading…
         </div>
       ) : showEmpty ? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--hms-text-muted)",
-            fontSize: 'var(--hms-text-body)',
-          }}
-        >
-          Start a conversation…
-        </div>
+        <ChatIntro />
       ) : (
         <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
           <ChatThread
@@ -203,6 +194,19 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// /chat empty state — the Hermes mark + a short intro (the logo's home now
+// that the sidebar header is a search box).
+function ChatIntro() {
+  const { t } = useI18n();
+  return (
+    <div className="hms-chat-intro">
+      <HermesMark size={44} />
+      <div className="hms-chat-intro-headline">{t.composer.introHeadline}</div>
+      <div className="hms-chat-intro-body">{t.composer.introBody}</div>
     </div>
   );
 }

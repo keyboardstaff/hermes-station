@@ -6,7 +6,7 @@ export default function HermesMark({ size = 20 }: { size?: number }) {
       fill="none"
       width={size}
       height={size}
-      style={{ flexShrink: 0, color: "var(--hms-text)" }}
+      className="hms-mark"
       aria-hidden="true"
     >
       <text

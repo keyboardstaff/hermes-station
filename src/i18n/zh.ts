@@ -80,6 +80,7 @@ export const zh: Translations = {
     deleteSession: "删除",
     clearLocal: "清除本地视图",
     collapseSidebar: "收起侧边栏",
+    searchSessions: "搜索会话…",
   },
 
   actions: {
@@ -516,6 +517,8 @@ export const zh: Translations = {
     thinking: "思考",
     options: "选项",
     effort: "思考强度",
+    introHeadline: "今天要推进什么？",
+    introBody: "发来任务、出错的路径，或一个粗略想法 —— 我会先勘察，再把下一步落到具体。",
   },
 
   createProfile: {

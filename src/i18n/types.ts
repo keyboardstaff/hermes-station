@@ -62,6 +62,7 @@ export interface Translations {
     shortcuts: string;
     expandSidebar: string;
     collapseSidebar: string;
+    searchSessions: string;
     // Mobile drawer/header strings — optional; components ship English fallbacks.
     openDrawer: string;
     closeDrawer: string;
@@ -540,6 +541,8 @@ export interface Translations {
     thinking: string;
     options: string;
     effort: string;
+    introHeadline: string;
+    introBody: string;
   };
 
   createProfile: {
