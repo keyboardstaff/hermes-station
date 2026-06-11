@@ -324,6 +324,11 @@ export interface Translations {
     system: string;
     toolCalls: string;
     toolCallsHint: string;
+    chatWidth: string;
+    chatWidthHint: string;
+    chatWidthNarrow: string;
+    chatWidthDefault: string;
+    chatWidthWide: string;
     product: string;
     productHint: string;
     technical: string;

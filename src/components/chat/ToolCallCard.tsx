@@ -157,7 +157,7 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
           >
             {title}
           </span>
-          {tc.preview && !open && (
+          {tc.preview && (
             <span className={`hms-tool-preview${running ? " hms-tool-shimmer" : ""}`}>
               {tc.preview}
             </span>

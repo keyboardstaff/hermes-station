@@ -134,6 +134,46 @@ export const useToolViewStore = create<ToolViewStore>((set) => ({
   },
 }));
 
+// ── Chat width ────────────────────────────────────────────────────
+
+export type ChatWidth = "narrow" | "default" | "wide";
+
+export const CHAT_WIDTHS: readonly ChatWidth[] = ["narrow", "default", "wide"] as const;
+export const DEFAULT_CHAT_WIDTH: ChatWidth = "default";
+
+const CHAT_WIDTH_KEY = "hms_chat_width";
+
+function readStoredChatWidth(): ChatWidth {
+  try {
+    const v = localStorage.getItem(CHAT_WIDTH_KEY) as ChatWidth | null;
+    if (v && CHAT_WIDTHS.includes(v)) return v;
+  } catch { /* localStorage disabled */ }
+  return DEFAULT_CHAT_WIDTH;
+}
+
+function applyChatWidthToDOM(v: ChatWidth): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-chat-width", v);
+}
+
+interface ChatWidthStore {
+  chatWidth: ChatWidth;
+  setChatWidth: (v: ChatWidth) => void;
+}
+
+export const useChatWidthStore = create<ChatWidthStore>((set) => {
+  const initial = readStoredChatWidth();
+  applyChatWidthToDOM(initial);
+  return {
+    chatWidth: initial,
+    setChatWidth: (chatWidth) => {
+      try { localStorage.setItem(CHAT_WIDTH_KEY, chatWidth); } catch { /* ignore */ }
+      applyChatWidthToDOM(chatWidth);
+      set({ chatWidth });
+    },
+  };
+});
+
 // ── Font size ─────────────────────────────────────────────────────
 
 export type FontSize = "small" | "default" | "large" | "extra-large";

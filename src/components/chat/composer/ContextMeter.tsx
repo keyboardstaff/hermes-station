@@ -35,6 +35,10 @@ export function ContextMeter({
   onToggleTokens: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  // Fixed-position anchor: the popover must escape the composer toolbar's
+  // overflow:hidden, so it positions against the viewport, not the parent.
+  const [anchor, setAnchor] = useState<{ right: number; bottom: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -54,7 +58,17 @@ export function ContextMeter({
     <div ref={ref} style={{ position: "relative", marginRight: 4 }}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={() => {
+          const rect = btnRef.current?.getBoundingClientRect();
+          if (rect) {
+            setAnchor({
+              right: Math.max(8, window.innerWidth - rect.right),
+              bottom: window.innerHeight - rect.top + 8,
+            });
+          }
+          setOpen((o) => !o);
+        }}
         title={contextLength ? `${used.toLocaleString()} / ${contextLength.toLocaleString()} tokens` : `${used.toLocaleString()} tokens`}
         style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "none", background: "transparent", cursor: "pointer", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)', padding: 0 }}
       >
@@ -76,7 +90,10 @@ export function ContextMeter({
         <div
           className="hms-popup-panel"
           style={{
-            position: "absolute", bottom: "calc(100% + 8px)", right: 0, width: 220,
+            position: "fixed",
+            bottom: anchor?.bottom ?? 80,
+            right: anchor?.right ?? 16,
+            width: 220,
             background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
             borderRadius: 10, boxShadow: "var(--hms-shadow-popover)", zIndex: 9999, padding: "10px 12px",
             display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)', fontSize: 'var(--hms-text-caption)',

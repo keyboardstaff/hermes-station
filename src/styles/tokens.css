@@ -164,3 +164,7 @@
   --hms-safe-bottom: env(safe-area-inset-bottom, 0px);
   --hms-keyboard-h:  0px; /* useVisualViewport writes this at runtime */
 }
+
+/* Chat width presets (Settings → Appearance → Chat width). */
+:root[data-chat-width="narrow"] { --hms-content-max-w: 760px; }
+:root[data-chat-width="wide"] { --hms-content-max-w: 1200px; }

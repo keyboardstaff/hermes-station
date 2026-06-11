@@ -1,3 +1,4 @@
+import Backdrop from "./Backdrop";
 import { Suspense, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Drawer from "./Drawer";
@@ -50,6 +51,7 @@ export default function MobileShell({
       </header>
 
       <main className="hms-mobile-main">
+        <Backdrop />
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />

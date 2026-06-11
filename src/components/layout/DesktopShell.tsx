@@ -1,3 +1,4 @@
+import Backdrop from "./Backdrop";
 import { Suspense, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
@@ -20,6 +21,7 @@ export default function DesktopShell() {
       />
 
       <main className="hms-main">
+        <Backdrop />
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />

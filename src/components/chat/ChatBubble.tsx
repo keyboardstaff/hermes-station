@@ -65,7 +65,7 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
         )}
       </div>
 
-      {/* Visibility driven by CSS hover on .hms-msg-row. */}
+      {/* Visibility driven by CSS hover on .hms-chat-bubble-row. */}
       {!msg.streaming && <MessageActions msg={msg} />}
     </div>
   );

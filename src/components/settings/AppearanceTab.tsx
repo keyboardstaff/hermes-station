@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { useThemeStore, useToolViewStore, type ToolViewMode } from "@/store/app";
+import { useThemeStore, useToolViewStore, useChatWidthStore, type ToolViewMode, type ChatWidth } from "@/store/app";
 import SkinSelector from "@/components/settings/SkinSelector";
 import FontSizeSelector from "@/components/settings/FontSizeSelector";
 import { Section } from "@/components/settings/shared";
@@ -15,11 +15,18 @@ export function AppearanceTab() {
   const { t } = useI18n();
   const { theme, setTheme } = useThemeStore();
   const { toolView, setToolView } = useToolViewStore();
+  const { chatWidth, setChatWidth } = useChatWidthStore();
   const sectionMarker = <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hms-accent)", display: "inline-block" }} />;
 
   const toolOptions: { id: ToolViewMode; label: string; hint: string }[] = [
     { id: "technical", label: t.theme.technical, hint: t.theme.technicalHint },
     { id: "product", label: t.theme.product, hint: t.theme.productHint },
+  ];
+
+  const widthOptions: { id: ChatWidth; label: string }[] = [
+    { id: "narrow", label: t.theme.chatWidthNarrow },
+    { id: "default", label: t.theme.chatWidthDefault },
+    { id: "wide", label: t.theme.chatWidthWide },
   ];
 
   return (
@@ -104,6 +111,52 @@ export function AppearanceTab() {
                   {active && <Check size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />}
                 </span>
                 <span style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>{opt.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* Chat width — the conversation column's max width (3 presets). */}
+      <Section icon={sectionMarker} title={t.theme.chatWidth}>
+        <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", marginBottom: 8 }}>
+          {t.theme.chatWidthHint}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 'var(--hms-space-2)' }}>
+          {widthOptions.map((opt) => {
+            const active = chatWidth === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setChatWidth(opt.id)}
+                aria-pressed={active}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 'var(--hms-space-2)',
+                  padding: "10px 8px",
+                  borderRadius: 8,
+                  border: `1px solid ${active ? "var(--hms-accent)" : "var(--hms-border)"}`,
+                  boxShadow: active ? "0 0 0 1px var(--hms-accent)" : "none",
+                  background: "var(--hms-surface)",
+                  color: "var(--hms-text)",
+                  cursor: "pointer",
+                  fontSize: 'var(--hms-text-caption)',
+                  transition: "border-color 150ms, box-shadow 150ms",
+                }}
+              >
+                {/* Tiny column-width preview */}
+                <span
+                  aria-hidden
+                  style={{
+                    width: opt.id === "narrow" ? 24 : opt.id === "default" ? 38 : 52,
+                    height: 14,
+                    borderRadius: 3,
+                    background: "var(--hms-border)",
+                  }}
+                />
+                <span>{opt.label}</span>
               </button>
             );
           })}

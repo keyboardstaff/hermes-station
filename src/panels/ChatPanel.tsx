@@ -278,12 +278,6 @@ export default function ChatPanel() {
           onDragLeave={onPanelDragLeave}
           onDrop={onPanelDrop}
         >
-          {/* Desktop's statue backdrop — a faint blended brand texture behind
-              the conversation (pointer-transparent; content sits on .hms-chat-fore). */}
-          <div className="hms-chat-backdrop" aria-hidden>
-            <img src="/ds-assets/filler-bg0.jpg" alt="" fetchPriority="low" />
-          </div>
-
           {panelDragOver && (
             <div style={{
               position: "absolute", inset: 0, zIndex: 100,
@@ -297,7 +291,6 @@ export default function ChatPanel() {
             </div>
           )}
 
-          <div className="hms-chat-fore">
           <AssistantRuntimeProvider runtime={runtime}>
             <ChatStream
               messages={messages}
@@ -325,7 +318,6 @@ export default function ChatPanel() {
           )}
 
           <Composer ref={composerRef} onSend={sendMessage} onStop={stopRun} sessionId={activeSessionId} />
-          </div>
         </div>
 
         {!isMobile && <WorkspaceContextPanel variant="inline" open={workspacesOpen} onClose={toggleWorkspaces} />}
