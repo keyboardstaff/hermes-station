@@ -250,7 +250,7 @@ export function UserMessageContent({ msg }: { msg: ChatMessage }) {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   return (
     <div>
-      {msg.content && <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>}
+      {msg.content && <div className="hms-user-text" style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>}
       {msg.attachments && msg.attachments.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 'var(--hms-space-2)', marginTop: msg.content ? 8 : 0 }}>
           {msg.attachments.map((att, i) => {

@@ -505,7 +505,6 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
           {/* Context ring — session tokens vs model context window */}
           {(() => {
             const used = sessionUsage?.total_tokens ?? (value.trim() ? estimateTokenCount(value) : 0);
-            if (used === 0 && !contextLength) return null;
             return (
               <ContextMeter
                 used={used}

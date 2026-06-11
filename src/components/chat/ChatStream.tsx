@@ -29,7 +29,9 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
   }, []);
 
   const handleScroll = useCallback(() => {
-    setUserScrolledUp(!isNearBottom());
+    const near = isNearBottom();
+    setUserScrolledUp(!near);
+    if (near) scrollStageRef.current = 0;
   }, [isNearBottom]);
 
   // Reset when a new history load begins (session switch).
@@ -53,7 +55,31 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
     });
   }, [messages, userScrolledUp, pendingScrollMessageId]);
 
+  // Two-stage scroll: the first click jumps to the LAST turn's user message
+  // (top of the latest exchange); a second click goes to the very bottom.
+  // The stage resets whenever the view returns near the bottom.
+  const scrollStageRef = useRef(0);
   const scrollToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (scrollStageRef.current === 0 && container) {
+      const users = container.querySelectorAll<HTMLElement>(
+        '.hms-chat-bubble-row[data-role="user"]',
+      );
+      const lastUser = users.length > 0 ? users[users.length - 1] : null;
+      if (lastUser) {
+        const cTop = container.getBoundingClientRect().top;
+        const uTop = lastUser.getBoundingClientRect().top;
+        // Only worth a first stage when the latest turn starts below the
+        // current viewport area; otherwise fall through to the bottom.
+        if (uTop - cTop > container.clientHeight * 0.6) {
+          setUserScrolledUp(true); // hold — don't let auto-scroll fight the anchor
+          lastUser.scrollIntoView({ behavior: "smooth", block: "start" });
+          scrollStageRef.current = 1;
+          return;
+        }
+      }
+    }
+    scrollStageRef.current = 0;
     setUserScrolledUp(false);
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };

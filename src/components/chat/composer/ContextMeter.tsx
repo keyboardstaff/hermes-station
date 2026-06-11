@@ -102,10 +102,18 @@ export function ContextMeter({
           <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
             <span>Context</span><span>{pctLabel}</span>
           </div>
-          <MeterRow label="Limit" value={contextLength ? contextLength.toLocaleString() : "unknown"} />
-          {usage && <MeterRow label="Input" value={usage.input_tokens.toLocaleString()} />}
-          {usage && <MeterRow label="Output" value={usage.output_tokens.toLocaleString()} />}
-          <MeterRow label="Total" value={used.toLocaleString()} strong />
+          <MeterRow label="Limit" value={contextLength ? contextLength.toLocaleString() : "—"} />
+          {usage ? (
+            <>
+              <MeterRow label="Input" value={usage.input_tokens.toLocaleString()} />
+              <MeterRow label="Output" value={usage.output_tokens.toLocaleString()} />
+              <MeterRow label="Total" value={used.toLocaleString()} strong />
+            </>
+          ) : (
+            // No completed turn yet — the only number we have is the draft's
+            // rough token estimate; label it as such instead of a bogus Total.
+            <MeterRow label="Draft (est.)" value={used.toLocaleString()} strong />
+          )}
           <label style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', cursor: "pointer", marginTop: 2, color: "var(--hms-text-muted)" }}>
             <input type="checkbox" checked={showTokens} onChange={(e) => onToggleTokens(e.target.checked)} />
             Show token count
