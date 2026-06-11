@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore } from "@/store/chat";
 import { useWSStore } from "@/store/ws";
 import type { ComposerAttachment, ContentPart, RunInput, ToolCall } from "@/lib/hermes-types";
-import type { RunEventMessage } from "@/lib/ws-types";
+import type { PlatformNoticeMessage, RunEventMessage } from "@/lib/ws-types";
 import { api } from "@/lib/api";
 import { toolResultsById, profileQuery } from "@/lib/load-session";
 import { resolveRunProfile } from "@/lib/run-profile";
@@ -55,6 +55,30 @@ export function useRunsStream() {
   const attachGenRef = useRef(0);
 
   useEffect(() => { connect(); }, [connect]);
+
+  // Session-scoped platform notices (gateway pushes via StationAdapter.send —
+  // progress heartbeats, self-improvement, cron deliveries, shutdown warnings).
+  // Subscribed per active session, independent of any run subscription.
+  const noticeSessionId = useChatStore((s) => s.activeSessionId);
+  useEffect(() => {
+    if (!noticeSessionId) return;
+    const channel = `session:${noticeSessionId}`;
+    subscribe(channel);
+    const off = on<PlatformNoticeMessage>("platform.notice", (msg) => {
+      if (msg.session_id !== noticeSessionId || !msg.content) return;
+      appendMessage({
+        id: `notice-${msg.timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+        role: "assistant",
+        kind: "platform_notice",
+        content: msg.content,
+        createdAt: (msg.timestamp || Date.now() / 1000) * 1000,
+      });
+    });
+    return () => {
+      off();
+      unsubscribe(channel);
+    };
+  }, [noticeSessionId, subscribe, unsubscribe, on, appendMessage]);
 
   const detach = useCallback(() => {
     attachGenRef.current++;

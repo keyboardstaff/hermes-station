@@ -75,10 +75,32 @@ class StationAdapter(BasePlatformAdapter):
         reply_to: str | None = None,
         metadata: dict | None = None,
     ) -> Any:
-        return SendResult(
-            success=False,
-            error="Station delivers via REST/WebSocket; send() is unused",
-        )
+        """Gateway-pushed platform messages (progress heartbeats, self-improvement
+        notices, cron auto-deliver, shutdown warnings) → a ``platform.notice``
+        frame on the session-scoped WS channel. The interactive answer never
+        flows through here (Station runs stream via the AIAgent callbacks), so
+        this is purely the auxiliary notification surface telegram-style
+        platforms render inline. Async on the gateway loop — the same loop the
+        aiohttp app runs on — so a plain broadcast is safe."""
+        import time as _time
+
+        from server.ws import get_ws_manager
+
+        try:
+            await get_ws_manager().broadcast(
+                f"session:{chat_id}",
+                {
+                    "type": "platform.notice",
+                    "session_id": chat_id,
+                    "content": content,
+                    "metadata": metadata or {},
+                    "timestamp": _time.time(),
+                },
+            )
+            return SendResult(success=True)
+        except Exception as exc:  # noqa: BLE001 — gateway treats failure as undeliverable
+            logger.warning("[hms.station] platform notice broadcast failed: %s", exc)
+            return SendResult(success=False, error=str(exc))
 
     async def get_chat_info(self, chat_id: str) -> dict[str, Any]:
         return {

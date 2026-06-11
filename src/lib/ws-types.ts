@@ -80,7 +80,8 @@ export type ServerMessage =
   | CapabilitiesMessage
   | LogLineMessage
   | DiscoveryChangedMessage
-  | AckMessage;
+  | AckMessage
+  | PlatformNoticeMessage;
 
 export type ClientMessage =
   | { type: "ws.subscribe"; channel: string; last_seq?: number }
@@ -93,3 +94,14 @@ export type ClientMessage =
       run_id?: string;
       choice: "once" | "session" | "always" | "deny";
     };
+
+/** Gateway-pushed platform message (StationAdapter.send → session channel):
+ *  progress heartbeats, self-improvement notices, cron auto-deliver, shutdown
+ *  warnings — the auxiliary surface telegram-style platforms render inline. */
+export interface PlatformNoticeMessage {
+  type: "platform.notice";
+  session_id: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  timestamp: number;
+}

@@ -91,8 +91,9 @@ export interface ChatMessage {
   segments?: MessageSegment[];
   /** @deprecated Use segments. */
   toolCalls?: ToolCall[];
-  /** Synthesized non-user message (e.g. approval follow-up rendered as system notice). */
-  kind?: "approval_notice";
+  /** Synthesized non-user message (approval follow-up / gateway platform
+   *  notice) rendered as a slim system notice instead of a bubble. */
+  kind?: "approval_notice" | "platform_notice";
   approvalCommand?: string;
   approvalChoice?: string;
   /** Agents room: the profile-agent this turn was routed to (@mention). */

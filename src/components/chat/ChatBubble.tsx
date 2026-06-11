@@ -1,6 +1,6 @@
 import ToolCallCard from "./ToolCallCard";
 import {
-  MarkdownText, ReasoningBlock, ApprovalNotice, StreamingActivity,
+  MarkdownText, ReasoningBlock, ApprovalNotice, PlatformNotice, StreamingActivity,
   UserMessageContent, MessageActions,
 } from "./render";
 import { useToolViewStore } from "@/store/app";
@@ -23,10 +23,13 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
   if (msg.kind === "approval_notice") {
     return <ApprovalNotice choice={msg.approvalChoice ?? "once"} command={msg.approvalCommand ?? ""} />;
   }
+  if (msg.kind === "platform_notice") {
+    return <PlatformNotice content={msg.content} />;
+  }
 
   return (
     <div className="hms-chat-bubble-row" data-role={isUser ? "user" : "assistant"} data-msg-id={msg.id}>
-      <div className="hms-chat-bubble-role">{isUser ? "You" : "Assistant"}</div>
+      {!isUser && <div className="hms-chat-bubble-role">Assistant</div>}
 
       <div className="hms-chat-bubble" data-role={isUser ? "user" : "assistant"}>
         {isUser ? (

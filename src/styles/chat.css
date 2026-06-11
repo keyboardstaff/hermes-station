@@ -220,6 +220,17 @@
   color: var(--hms-success-text);
 }
 
+.hms-chat-approval-notice[data-kind="notice"] {
+  background: color-mix(in srgb, var(--hms-text) 5%, transparent);
+  color: var(--hms-text-muted);
+}
+
+.hms-chat-platform-notice-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .hms-chat-approval-notice[data-kind="deny"] {
   background: color-mix(in srgb, var(--hms-error) 10%, transparent);
   color: var(--hms-error-dark);

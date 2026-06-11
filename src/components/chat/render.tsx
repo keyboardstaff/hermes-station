@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX,
-  GitFork, ImageOff, Volume2, Square, RotateCcw, Clock,
+  GitFork, ImageOff, Volume2, Square, RotateCcw, Clock, Bell,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
@@ -45,6 +45,18 @@ export function ApprovalNotice({ choice, command }: { choice: string; command: s
       {isDeny ? <ShieldX size={11} /> : <ShieldCheck size={11} />}
       <span className="hms-chat-approval-label">{label}</span>
       {command && <code className="hms-chat-approval-command">{command}</code>}
+    </div>
+  );
+}
+
+/** Gateway platform notice (progress heartbeat / self-improvement / cron
+ *  delivery / shutdown warning) — a slim neutral system notice, the Station
+ *  rendering of what telegram-style platforms show inline. */
+export function PlatformNotice({ content }: { content: string }) {
+  return (
+    <div className="hms-chat-approval-notice" data-kind="notice">
+      <Bell size={11} />
+      <span className="hms-chat-platform-notice-text">{content}</span>
     </div>
   );
 }

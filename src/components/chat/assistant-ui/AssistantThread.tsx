@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useI18n } from "@/i18n";
 import ToolCallCard from "../ToolCallCard";
 import {
-  MarkdownText, ReasoningBlock, ApprovalNotice, StreamingActivity,
+  MarkdownText, ReasoningBlock, ApprovalNotice, PlatformNotice, StreamingActivity,
   UserMessageContent, MessageActions,
 } from "../render";
 import { useToolViewStore } from "@/store/app";
@@ -108,11 +108,14 @@ function BranchPicker() {
 function HmsBubble() {
   const hms = useHms();
   if (!hms) return null;
+  if (hms.kind === "platform_notice") {
+    return <PlatformNotice content={hms.content} />;
+  }
   const isUser = hms.role === "user";
   return (
     <MessagePrimitive.Root asChild>
       <div className="hms-chat-bubble-row" data-role={isUser ? "user" : "assistant"} data-msg-id={hms.id}>
-        <div className="hms-chat-bubble-role">{isUser ? "You" : "Assistant"}</div>
+        {!isUser && <div className="hms-chat-bubble-role">Assistant</div>}
 
         <div className="hms-chat-bubble" data-role={isUser ? "user" : "assistant"}>
           {hms.agent ? (
