@@ -25,21 +25,30 @@ $HERMES_HOME/hermes-agent/plugins/platforms/station/
 ```
 
 For all paths, the package's CLI binary lives at
-`$HERMES_HOME/hermes-agent/venv/bin/hms` once `python -m pip install -e .`
-(or `pip install hermes-station`) has run inside the agent venv.
+`$HERMES_HOME/hermes-agent/venv/bin/hms` once the package has been installed
+inside the agent venv (see the uv note below — the venv may ship without pip).
 
-## Path 1 — git clone + `hms install` (recommended for development)
+## Path 1 — git clone + `./scripts/install.sh` (recommended)
 
 ```bash
 git clone <repo-url> hermes-station
 cd hermes-station
 
-pnpm install
-~/.hermes/hermes-agent/venv/bin/python -m pip install -e .
-
-hms install
+./scripts/install.sh     # pnpm install + build, venv install (uv-aware), hms install
 hermes gateway install   # if you haven't enrolled the service yet
 hms restart              # if the gateway was already running
+```
+
+Manual equivalent:
+
+```bash
+pnpm install && pnpm build
+# hermes-agent venvs created by uv ship WITHOUT pip — install with uv:
+uv pip install -e . --python ~/.hermes/hermes-agent/venv/bin/python
+# (pip-based venvs: ~/.hermes/hermes-agent/venv/bin/python -m pip install -e .
+#  pip missing and no uv? bootstrap once: venv/bin/python -m ensurepip --upgrade)
+
+hms install
 ```
 
 `-e` (editable) means the venv imports straight from your checkout, so
@@ -56,7 +65,8 @@ the next `hms install`.
 
 ```bash
 hatch build                                                # → dist/*.whl
-~/.hermes/hermes-agent/venv/bin/pip install dist/hermes_station-0.1.0-py3-none-any.whl
+uv pip install dist/hermes_station-0.1.0-py3-none-any.whl \
+    --python ~/.hermes/hermes-agent/venv/bin/python        # uv-created venvs have no pip
 hms install                                                # writes the symlinks
 hermes gateway restart                                     # picks up the plugin
 ```

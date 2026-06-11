@@ -101,29 +101,48 @@ localization.
 - Node 20+ with `pnpm` 9+
 - macOS or Linux
 
-**Install as a gateway plugin**
+**Install as a gateway plugin (one command)**
 
 ```bash
-# 1. Frontend deps
-pnpm install
+./scripts/install.sh
+```
+
+That builds the SPA into `dist/`, installs the plugin package into the
+hermes-agent venv (uv-aware — see below), registers the plugin and enables
+`platforms.station` in `~/.hermes/config.yaml`. Idempotent: re-run it after
+`git pull` to update. Add `--dev` for the dev toolchain (pyright / ruff /
+pytest / watchdog), `--skip-frontend` if `dist/` is already built.
+
+Then activate it once:
+
+```bash
+hermes gateway install        # autostart service (skip if already managed)
+hermes gateway start          # cold start
+# or: hms restart             # SIGUSR1 reload of an already-running gateway
+```
+
+<details>
+<summary>Manual steps (what the script does)</summary>
+
+```bash
+# 1. Frontend deps + production bundle.
+pnpm install && pnpm build
 
 # 2. Install the plugin package into the hermes-agent venv so the
-#    `hms` CLI is available.
-~/.hermes/hermes-agent/venv/bin/python -m pip install -e .
+#    `hms` CLI is available. NOTE: a venv created by uv ships no pip —
+#    use uv against it (or bootstrap pip via ensurepip first):
+uv pip install -e . --python ~/.hermes/hermes-agent/venv/bin/python
+# pip-based venvs instead:
+#   ~/.hermes/hermes-agent/venv/bin/python -m pip install -e .
 
 # 3. (Optional) put `hms` on PATH:
 #    ln -s ~/.hermes/hermes-agent/venv/bin/hms /usr/local/bin/hms
 
 # 4. Register the plugin + enable it in config.yaml (idempotent).
 hms install
-
-# 5. Enable autostart for the gateway service (skip if already managed).
-hermes gateway install
-
-# 6. Start (or restart) the gateway so it picks up the plugin.
-hermes gateway start          # cold start
-# or: hms restart             # SIGUSR1 reload of an already-running gateway
 ```
+
+</details>
 
 `hms install` is idempotent — re-running refreshes the symlinks and ensures
 `platforms.station` exists in `~/.hermes/config.yaml`. See
