@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { messagePlainText, buildBranchHistory, precedingUserIndex, userOrdinal, editTarget } from "@/lib/branch";
+import { messagePlainText, nextHistRowId, precedingUserIndex, userOrdinal, editTarget } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
 
 const user = (id: string, content: string): ChatMessage => ({ id, role: "user", content, createdAt: 0 });
@@ -22,31 +22,26 @@ describe("messagePlainText", () => {
   });
 });
 
-describe("buildBranchHistory", () => {
-  const msgs: ChatMessage[] = [
-    user("u0", "q1"),
-    asst("a0", [{ type: "text", content: "ans1" }, { type: "tool", tc: { id: "t", toolName: "bash", status: "done" } }]),
-    user("u1", "q2"),
-    asst("a1", [{ type: "text", content: "ans2" }]),
-  ];
+describe("nextHistRowId", () => {
+  const hist = (id: string, content: string): ChatMessage => ({ id, role: "user", content, createdAt: 0 });
 
-  it("keeps user/assistant turns before the cut, tool cards stripped", () => {
-    expect(buildBranchHistory(msgs, 2)).toEqual([
-      { role: "user", content: "q1" },
-      { role: "assistant", content: "ans1" }, // tool dropped
-    ]);
+  it("returns the first persisted row id after the branch point", () => {
+    const msgs: ChatMessage[] = [
+      hist("hist-3", "q1"),
+      { id: "hist-run-7", role: "assistant", content: "ans1", createdAt: 0 },
+      hist("hist-12", "q2"),
+    ];
+    expect(nextHistRowId(msgs, 0)).toBe(7); // cut before a0's first row
+    expect(nextHistRowId(msgs, 1)).toBe(12); // cut before u1's row
   });
 
-  it("excludes the message at the cut index (it becomes the new input)", () => {
-    // Editing u1 (idx 2): history is everything before it.
-    const h = buildBranchHistory(msgs, 2);
-    expect(h.map((x) => x.content)).not.toContain("q2");
-  });
-
-  it("drops empty messages and returns [] for a non-positive cut", () => {
-    expect(buildBranchHistory(msgs, 0)).toEqual([]);
-    const withEmpty = [user("u", ""), asst("a", [{ type: "text", content: "hi" }])];
-    expect(buildBranchHistory(withEmpty, 2)).toEqual([{ role: "assistant", content: "hi" }]);
+  it("returns null at the tail or when later messages aren't persisted yet", () => {
+    const msgs: ChatMessage[] = [
+      hist("hist-3", "q1"),
+      { id: "turn-run_abc-assistant", role: "assistant", content: "live", createdAt: 0 },
+    ];
+    expect(nextHistRowId(msgs, 0)).toBe(null); // live turn has no row yet
+    expect(nextHistRowId(msgs, 1)).toBe(null); // tail
   });
 });
 

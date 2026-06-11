@@ -426,12 +426,6 @@ export function useRunsStream() {
         : undefined;
       const runProfile = resolveRunProfile(opts?.profileOverride, sessionProfile, currentProfile);
 
-      // Branch context (edit / regenerate / branch from a message): seed this
-      // fresh run with prior turns as the agent's history. Consume-once, and
-      // only on a NEW session (a continued session already has its own history).
-      const branchHistory = useChatStore.getState().pendingBranchHistory;
-      if (branchHistory) useChatStore.getState().setPendingBranchHistory(null);
-
       const body: RunInput = {
         input: runInput,
         ...(currentSessionId ? { session_id: currentSessionId } : {}),
@@ -439,8 +433,6 @@ export function useRunsStream() {
         ...(selectedProvider ? { provider: selectedProvider } : {}),
         ...(reasoningEffort !== null && reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
         ...(runProfile ? { profile: runProfile } : {}),
-        ...(!currentSessionId && branchHistory && branchHistory.length > 0
-          ? { conversation_history: branchHistory } : {}),
         // In-session regenerate / edit: the backend truncates the transcript
         // before this user ordinal, then re-runs (only meaningful with a session).
         ...(currentSessionId && opts?.truncateBeforeUserOrdinal != null

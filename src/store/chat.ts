@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ChatMessage, MessageSegment, PendingApproval, ToolCall } from "@/lib/hermes-types";
-import type { BranchTurn } from "@/lib/branch";
 
 interface ChatState {
   activeSessionId: string | null;
@@ -36,12 +35,6 @@ interface ChatState {
    *  session is persisted with no title yet, so it never flashes "Untitled".
    *  In-memory only (a refresh re-derives in-flight titles from /api/runs/active). */
   provisionalTitles: Record<string, string>;
-  /** Transient (not persisted): prior turns seeding the NEXT run as a branch's
-   *  agent context. Set by edit / regenerate / branch; consumed by sendMessage. */
-  pendingBranchHistory: BranchTurn[] | null;
-  /** Transient: text to auto-send once into the next empty session — drives
-   *  one-click "regenerate". Consumed by ChatPanel. */
-  pendingAutoSend: string | null;
   /** Transient: in-session regenerate / edit intent. The superseded turn is
    *  already marked as a hidden branch locally; ChatPanel fires the run with
    *  `truncate_before_user_ordinal` so the backend truncates state.db to match,
@@ -98,8 +91,6 @@ interface ChatState {
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
   setProvisionalTitle: (sessionId: string, title: string) => void;
-  setPendingBranchHistory: (h: BranchTurn[] | null) => void;
-  setPendingAutoSend: (t: string | null) => void;
   setPendingRegenerate: (v: { text: string; truncateBeforeUserOrdinal: number } | null) => void;
   setPendingBranchGroup: (g: string | null) => void;
   /** In-session regenerate: keep the user message at `userIndex`, mark its
@@ -156,8 +147,6 @@ export const useChatStore = create<ChatState>()(
   lastUsage: null,
   pendingApproval: null,
   provisionalTitles: {},
-  pendingBranchHistory: null,
-  pendingAutoSend: null,
   pendingRegenerate: null,
   pendingBranchGroup: null,
   composerDraft: null,
@@ -181,10 +170,7 @@ export const useChatStore = create<ChatState>()(
         // isHistoryPending = true only when switching TO a real session;
         // new session (null) has nothing to load.
         isHistoryPending: id !== null,
-        // Drop any stale branch intent on a switch (a branch action sets these
-        // AFTER calling setActiveSession(null), so its own intent survives).
-        pendingBranchHistory: null,
-        pendingAutoSend: null,
+        // Drop any stale in-session regenerate / branch intent on a switch.
         pendingRegenerate: null,
         pendingBranchGroup: null,
       };
@@ -449,8 +435,6 @@ export const useChatStore = create<ChatState>()(
       if (keys.length > 60) for (const k of keys.slice(0, keys.length - 60)) delete next[k];
       return { provisionalTitles: next };
     }),
-  setPendingBranchHistory: (h) => set({ pendingBranchHistory: h }),
-  setPendingAutoSend: (t) => set({ pendingAutoSend: t }),
   setPendingRegenerate: (v) => set({ pendingRegenerate: v }),
   setPendingBranchGroup: (g) => set({ pendingBranchGroup: g }),
   supersedeTurn: (userIndex) =>

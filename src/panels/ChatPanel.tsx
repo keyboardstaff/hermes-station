@@ -87,7 +87,6 @@ export default function ChatPanel() {
   // WS approval.requested → pendingApproval; resolveApproval wakes the same run via WS.
   const { resolveApproval } = useApprovalBridge();
   const activeRunId = useChatStore((s) => s.activeRunId);
-  const pendingAutoSend = useChatStore((s) => s.pendingAutoSend);
   const pendingRegenerate = useChatStore((s) => s.pendingRegenerate);
   const queryClient = useQueryClient();
   const loadedSessionRef = useRef<string | null>(null);
@@ -228,16 +227,6 @@ export default function ChatPanel() {
         setHistoryPending(false);
       });
   }, [activeSessionId, appendMessage, reconcileSession, setHistoryPending, queryClient]);
-
-  // One-click "regenerate": a branch action set pendingAutoSend + a null active
-  // session (so conversation_history seeds it); fire the send once it's in place.
-  useEffect(() => {
-    if (pendingAutoSend != null && activeSessionId === null) {
-      const text = pendingAutoSend;
-      useChatStore.getState().setPendingAutoSend(null);
-      void sendMessage(text);
-    }
-  }, [pendingAutoSend, activeSessionId, sendMessage]);
 
   // In-session regenerate: the superseded turn is already a hidden branch
   // locally; fire the re-run with the truncate ordinal so the backend truncates

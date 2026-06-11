@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX,
-  GitFork, ImageOff, Volume2, Square, Pencil, RotateCcw, Clock,
+  GitFork, ImageOff, Volume2, Square, RotateCcw, Clock,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -15,9 +15,10 @@ import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
-import { buildBranchHistory, precedingUserIndex, messagePlainText, userOrdinal, type BranchTurn } from "@/lib/branch";
+import { precedingUserIndex, messagePlainText, userOrdinal, nextHistRowId } from "@/lib/branch";
 import { messageText } from "@/lib/chat-runtime";
-import type { ChatMessage } from "@/lib/hermes-types";
+import { profileQuery } from "@/lib/load-session";
+import type { ChatMessage, SessionSummary } from "@/lib/hermes-types";
 import type { ReactNode } from "react";
 
 // ---------------------------------------------------------------------------
@@ -318,14 +319,12 @@ export function MessageActions({ msg, editSlot }: { msg: ChatMessage; editSlot?:
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const isUser = msg.role === "user";
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
   const messages = useChatStore((s) => s.messages);
-  const setPendingBranchHistory = useChatStore((s) => s.setPendingBranchHistory);
-  const setPendingAutoSend = useChatStore((s) => s.setPendingAutoSend);
   const setPendingRegenerate = useChatStore((s) => s.setPendingRegenerate);
   const supersedeTurn = useChatStore((s) => s.supersedeTurn);
-  const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const tts = useTextToSpeech();
   const idx = messages.findIndex((m) => m.id === msg.id);
   const canBranch = idx >= 0;
@@ -337,26 +336,33 @@ export function MessageActions({ msg, editSlot }: { msg: ChatMessage; editSlot?:
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // All message ops branch into a NEW session seeded with prior turns as the
-  // agent's context (state.db can't be truncated per-message). `draft` prefills
-  // the Composer; `autoSend` fires it once (one-click regenerate).
-  const startBranch = (history: BranchTurn[], draft: string, autoSend: boolean) => {
-    setActiveSession(null); // also clears any prior pending branch intent
-    setPendingBranchHistory(history.length > 0 ? history : null);
-    if (autoSend) setPendingAutoSend(draft);
-    else if (draft) setComposerDraft(draft);
-    navigate("/chat");
+  // Branch from here: clone the transcript up to & including this message into
+  // a NEW session (server-side, like the gateway's session.branch) and open it
+  // — the copied history is visible immediately, then the chat continues there.
+  const handleBranch = async () => {
+    const sid = activeSessionId;
+    if (!sid) return;
+    // A non-default-profile session lives in its own state.db — clone there.
+    const profile = queryClient
+      .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
+      ?.sessions.find((sx) => sx.session_id === sid)?.profile;
+    const cut = nextHistRowId(messages, idx);
+    try {
+      const res = await fetch(
+        `/api/sessions/${encodeURIComponent(sid)}/branch${profileQuery(profile)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
+          body: JSON.stringify(cut != null ? { upto_row_exclusive: cut } : {}),
+        },
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as { session_id: string };
+      setForked(true);
+      await queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
+      setActiveSession(data.session_id);
+    } catch { /* button just stays a fork icon */ }
   };
-
-  // Branch from here: continue with everything up to & including this message.
-  const handleBranch = () => {
-    startBranch(buildBranchHistory(messages, idx + 1), "", false);
-    setForked(true);
-    setTimeout(() => setForked(false), 1500);
-  };
-
-  // Edit a user prompt: re-ask an edited version with the context before it.
-  const handleEdit = () => startBranch(buildBranchHistory(messages, idx), messagePlainText(msg), false);
 
   // Regenerate an answer IN PLACE: keep the old answer as a hidden branch
   // alternate (BranchPicker 1/2), truncate state.db before the producing user
@@ -373,13 +379,7 @@ export function MessageActions({ msg, editSlot }: { msg: ChatMessage; editSlot?:
 
   return (
     <div className="hms-msg-actions hms-chat-bubble-actions">
-      {canBranch && isUser && (
-        editSlot ?? (
-          <button onClick={handleEdit} title="Edit & resend" className="hms-chat-bubble-action" style={actionBtnStyle}>
-            <Pencil size={12} />
-          </button>
-        )
-      )}
+      {canBranch && isUser && editSlot}
       {canBranch && !isUser && (
         <button onClick={handleRetry} title="Regenerate" className="hms-chat-bubble-action" style={actionBtnStyle}>
           <RotateCcw size={12} />

@@ -32,9 +32,9 @@ export interface RunInput {
   /** Profile to run under. Re-scopes the in-process run to
    *  that profile's HERMES_HOME without a gateway restart. Omitted = default. */
   profile?: string;
-  /** Prior turns to seed a *branched* run (edit / regenerate / branch-from-a-
-   *  message). The run starts a fresh session, but the agent sees these as its
-   *  context. Shape matches upstream `get_messages_as_conversation`. */
+  /** Prior turns seeding a fresh run's context (agents room: each member's
+   *  turn sees the room's earlier replies). Shape matches upstream
+   *  `get_messages_as_conversation`. */
   conversation_history?: Array<{ role: string; content: string }>;
   /** In-session regenerate / edit: truncate the persisted transcript before the
    *  Nth (0-based) user turn, then re-run from there. Requires `session_id`. */

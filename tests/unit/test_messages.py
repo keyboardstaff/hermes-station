@@ -346,3 +346,106 @@ async def test_clear_profile_param_routes_mutation(app_server):
                 assert r.status == 200, await r.text()
     profile_db.clear_messages.assert_called_once_with("abc123")
     default_db.clear_messages.assert_not_called()
+
+
+# branch-from-here: clone the transcript prefix into a new session
+
+
+def _branch_db(rows):
+    fake_db = MagicMock()
+    fake_db.get_messages.return_value = rows
+    fake_db.get_session_title.return_value = "My chat"
+    fake_db.get_next_title_in_lineage.return_value = "My chat (branch)"
+    return patch("server.routes.chat.db", return_value=fake_db), fake_db
+
+
+@pytest.mark.asyncio
+async def test_branch_clones_full_transcript(app_server):
+    rows = [
+        {"id": 1, "role": "user", "content": "q1"},
+        {"id": 2, "role": "assistant", "content": "a1", "reasoning": "r1"},
+    ]
+    patcher, fake_db = _branch_db(rows)
+    with patcher:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/src1/branch",
+                json={},
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 200
+                data = await r.json()
+
+    new_id = data["session_id"]
+    assert new_id.startswith("run_") and new_id != "src1"
+    assert data["title"] == "My chat (branch)"
+    assert data["messages"] == 2
+    # Session row carries the gateway-compatible branch markers.
+    fake_db.create_session.assert_called_once_with(
+        new_id,
+        source="station",
+        model_config={"_branched_from": "src1"},
+        parent_session_id="src1",
+    )
+    # Both rows re-appended under the new session, content + reasoning intact.
+    appended = fake_db.append_message.call_args_list
+    assert [c.kwargs["role"] for c in appended] == ["user", "assistant"]
+    assert all(c.kwargs["session_id"] == new_id for c in appended)
+    assert appended[1].kwargs["reasoning"] == "r1"
+    fake_db.set_session_title.assert_called_once_with(new_id, "My chat (branch)")
+
+
+@pytest.mark.asyncio
+async def test_branch_cuts_before_row(app_server):
+    rows = [
+        {"id": 1, "role": "user", "content": "q1"},
+        {"id": 2, "role": "assistant", "content": "a1"},
+        {"id": 9, "role": "user", "content": "q2"},
+        {"id": 10, "role": "assistant", "content": "a2"},
+    ]
+    patcher, fake_db = _branch_db(rows)
+    with patcher:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/src1/branch",
+                json={"upto_row_exclusive": 9},
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 200
+                data = await r.json()
+
+    assert data["messages"] == 2  # only the first turn survives the cut
+    contents = [c.kwargs["content"] for c in fake_db.append_message.call_args_list]
+    assert contents == ["q1", "a1"]
+
+
+@pytest.mark.asyncio
+async def test_branch_empty_transcript_400(app_server):
+    patcher, fake_db = _branch_db([])
+    with patcher:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/src1/branch",
+                json={},
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 400
+                assert (await r.json())["error"] == "nothing_to_branch"
+
+    fake_db.create_session.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_branch_invalid_cut_rejected(app_server):
+    patcher, fake_db = _branch_db([{"id": 1, "role": "user", "content": "q"}])
+    with patcher:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.post(
+                f"{app_server}/api/sessions/src1/branch",
+                json={"upto_row_exclusive": -1},
+                headers={"X-HMS-CSRF": "1"},
+            ) as r:
+                assert r.status == 400
+                assert (await r.json())["error"] == "invalid_upto_row"
+
+    fake_db.get_messages.assert_not_called()

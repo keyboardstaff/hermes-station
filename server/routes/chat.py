@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -276,6 +277,90 @@ async def clear_session_messages(request: web.Request) -> web.Response:
         logger.exception("clear_messages failed")
         return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
     return web.json_response({"ok": True})
+
+
+def _maybe_json(value: Any) -> Any:
+    """Decode a JSON-string column for re-append. ``get_messages`` leaves
+    reasoning_details / codex_* as raw JSON strings, but ``append_message``
+    json.dumps its inputs — passing the string through would double-encode."""
+    if isinstance(value, str) and value:
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    return value
+
+
+@router.post("/api/sessions/{session_id}/branch")
+async def branch_session(request: web.Request) -> web.Response:
+    """Branch-from-here: clone the session's transcript prefix into a NEW
+    session, in-process mirror of the gateway's ``session.branch`` (create the
+    row with a ``_branched_from`` marker + ``parent_session_id``, copy the
+    message rows, lineage title). ``upto_row_exclusive`` cuts before that DB
+    row id; omitted = clone everything. The branch opens with its copied
+    history visible — unlike the old client-side seeding, which produced a
+    visually blank session. Mutation ⇒ CSRF-gated by middleware."""
+    sid = request.match_info["session_id"]
+    if not SESSION_ID_RE.match(sid):
+        return web.json_response({"error": "invalid_session_id"}, status=400)
+    sdb, err = _session_db(request)
+    if err is not None:
+        return err
+
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001 — empty body is fine
+        body = {}
+    upto = body.get("upto_row_exclusive")
+    if upto is not None and (not isinstance(upto, int) or isinstance(upto, bool) or upto <= 0):
+        return web.json_response({"error": "invalid_upto_row"}, status=400)
+
+    def _do() -> tuple[str, str, int]:
+        rows = sdb.get_messages(sid)
+        if upto is not None:
+            rows = [r for r in rows if isinstance(r.get("id"), int) and r["id"] < upto]
+        if not rows:
+            raise ValueError("nothing to branch")
+        new_id = f"run_{uuid.uuid4().hex}"
+        base_title = sdb.get_session_title(sid) or "branch"
+        get_next = getattr(sdb, "get_next_title_in_lineage", None)
+        title = str(get_next(base_title)) if callable(get_next) else f"{base_title} (branch)"
+        sdb.create_session(
+            new_id,
+            source="station",
+            # Same stable marker the gateway's session.branch writes, so
+            # upstream lineage views recognize the branch.
+            model_config={"_branched_from": sid},
+            parent_session_id=sid,
+        )
+        for m in rows:
+            sdb.append_message(
+                session_id=new_id,
+                role=m.get("role", "user"),
+                content=m.get("content"),
+                tool_name=m.get("tool_name"),
+                tool_calls=m.get("tool_calls"),
+                tool_call_id=m.get("tool_call_id"),
+                finish_reason=m.get("finish_reason"),
+                reasoning=m.get("reasoning"),
+                reasoning_content=m.get("reasoning_content"),
+                reasoning_details=_maybe_json(m.get("reasoning_details")),
+                codex_reasoning_items=_maybe_json(m.get("codex_reasoning_items")),
+                codex_message_items=_maybe_json(m.get("codex_message_items")),
+                platform_message_id=m.get("platform_message_id"),
+                observed=bool(m.get("observed")),
+            )
+        sdb.set_session_title(new_id, title)
+        return new_id, title, len(rows)
+
+    try:
+        new_id, title, copied = await run_db(_do)
+    except ValueError:
+        return web.json_response({"error": "nothing_to_branch"}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("branch_session failed")
+        return web.json_response({"error": "db_error", "detail": str(exc)}, status=500)
+    return web.json_response({"session_id": new_id, "title": title, "messages": copied})
 
 
 @router.get("/api/sessions/{session_id}/interrupted")

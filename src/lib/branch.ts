@@ -1,17 +1,12 @@
-// Pure helpers for message-level operations (edit / regenerate / branch). Each
-// starts a NEW session seeded with the prior transcript as the agent's context
-// (`conversation_history`) — state.db can't be truncated per-message, so we
-// branch forward rather than rewrite history in place. Kept side-effect-free so
-// the truncation + text extraction are unit-tested without the chat runtime.
+// Pure helpers for message-level operations (edit / regenerate / branch),
+// kept side-effect-free so ordinal math + text extraction are unit-tested
+// without the chat runtime. Regenerate / edit rewrite the session in place
+// (backend `truncate_before_user_ordinal`); branch clones the transcript
+// prefix into a new session (`POST /api/sessions/{id}/branch`).
 
 import type { ChatMessage } from "@/lib/hermes-types";
 
-export interface BranchTurn {
-  role: string;
-  content: string;
-}
-
-/** Plain text of a message for branch context: text segments only (assistant
+/** Plain text of a message for resend / copy: text segments only (assistant
  *  tool / approval segments are dropped), else the legacy `content` string. */
 export function messagePlainText(m: ChatMessage): string {
   const t = m.segments
@@ -20,15 +15,16 @@ export function messagePlainText(m: ChatMessage): string {
   return (t ?? "").trim();
 }
 
-/** Build agent conversation history from the transcript up to (excluding)
- *  `uptoExclusive` — user/assistant turns only, tool cards stripped, empties
- *  dropped. Matches upstream's `get_messages_as_conversation` shape. */
-export function buildBranchHistory(messages: ChatMessage[], uptoExclusive: number): BranchTurn[] {
-  return messages
-    .slice(0, Math.max(0, uptoExclusive))
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({ role: m.role, content: messagePlainText(m) }))
-    .filter((h) => h.content.length > 0);
+/** DB row id of the first message after `idx` that maps to a persisted row
+ *  (`hist-<rowId>` user rows / `hist-run-<firstRowId>` assistant runs) — the
+ *  exclusive cut a branch-from-here sends the backend. Null when nothing
+ *  persisted follows (branching at the tail): clone the whole transcript. */
+export function nextHistRowId(messages: ChatMessage[], idx: number): number | null {
+  for (let i = idx + 1; i < messages.length; i++) {
+    const m = /^hist-(?:run-)?(\d+)/.exec(messages[i].id);
+    if (m) return Number(m[1]);
+  }
+  return null;
 }
 
 /** Index of the user message that produced the assistant message at `idx` (the
