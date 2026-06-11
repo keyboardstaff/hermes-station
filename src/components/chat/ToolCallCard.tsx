@@ -1,19 +1,38 @@
 import { useEffect, useState } from "react";
 import {
-  ChevronDown, ChevronRight, Loader2, XCircle, Copy, Check,
-  AlertTriangle, Clock, MinusCircle, Wrench,
+  ChevronDown, ChevronRight, XCircle, Copy, Check,
+  AlertTriangle, Clock, MinusCircle,
 } from "lucide-react";
 import type { ToolCall } from "@/lib/hermes-types";
+import { toolMeta } from "@/lib/tool-meta";
+import { useEnterAnimation } from "@/hooks/useEnterAnimation";
 import { useToolViewStore } from "@/store/app";
 
-/** Leading glyph, desktop-style: success is silent (a quiet tool glyph instead
- *  of a green check) — only running / failure states announce themselves. */
-function StatusGlyph({ status }: { status: ToolCall["status"] }) {
-  switch (status) {
+// Braille spinner frames — mirrors desktop's BrailleSpinner (which mirrors the
+// Ink TUI) so the running state reads the same across surfaces.
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+function BrailleSpinner() {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), 80);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span role="status" aria-label="Running" className="hms-tool-spinner">
+      {SPINNER_FRAMES[frame]}
+    </span>
+  );
+}
+
+/** Leading glyph, desktop-style: running → spinner; failure states announce
+ *  themselves; success is silent — the tool's own icon in a quiet tone. */
+function StatusGlyph({ tc }: { tc: ToolCall }) {
+  switch (tc.status) {
     case "running":
       return (
         <span className="hms-tool-glyph">
-          <Loader2 size={13} className="hms-tool-spin" />
+          <BrailleSpinner />
         </span>
       );
     case "error":
@@ -40,12 +59,14 @@ function StatusGlyph({ status }: { status: ToolCall["status"] }) {
           <MinusCircle size={13} />
         </span>
       );
-    default:
+    default: {
+      const Icon = toolMeta(tc.toolName).icon;
       return (
         <span className="hms-tool-glyph">
-          <Wrench size={13} />
+          <Icon size={13} />
         </span>
       );
+    }
   }
 }
 
@@ -79,7 +100,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-/** Unwrap the Hermes standard `{result, error}` envelope for display. */
+/** Unwrap the Hermes standard `{result, error}` envelope for readable output. */
 function unwrapResult(raw: string): string {
   try {
     const parsed = JSON.parse(raw);
@@ -94,22 +115,35 @@ function unwrapResult(raw: string): string {
 }
 
 /**
- * One tool action, styled after upstream desktop's tool rows: collapsed it is
- * a flat disclosure row (no card chrome — glyph, name, inline preview, a caret
- * revealed on hover, live timer / copy on the right); expanded it becomes a
- * bordered block with labeled INPUT / OUTPUT sections. Product mode hides raw
- * payloads entirely (no expansion), mirroring desktop's Tool Call Display.
+ * One tool action, mirroring upstream desktop's tool rows. Collapsed: a flat
+ * disclosure row — friendly verb title ("Ran command", shimmering "Running
+ * command" while pending), the tool's icon (success is silent — no green
+ * check), inline args preview, a caret revealed on hover, live timer / copy on
+ * the right; rows mounting mid-stream play desktop's 180ms enter animation.
+ *
+ * Tool Call Display (Settings → Appearance), same split as upstream:
+ *   - Product: expands to the readable output (envelope-unwrapped result).
+ *   - Technical: expands to the raw input/output trace under the raw tool name.
  */
 export default function ToolCallCard({ tc }: { tc: ToolCall }) {
   const technical = useToolViewStore((s) => s.toolView === "technical");
   const [expanded, setExpanded] = useState(false);
   const running = tc.status === "running";
-  const canExpand = technical && Boolean(tc.preview || tc.result);
+  // Animate only rows that mount while running — history paints statically.
+  const enterRef = useEnterAnimation(running, `tool-enter:${tc.id}`);
+  const meta = toolMeta(tc.toolName);
+  const title = running ? meta.pending : meta.done;
+
+  const canExpand = technical ? Boolean(tc.preview || tc.result) : Boolean(tc.result);
   const open = canExpand && expanded;
   const copyText = tc.result ?? tc.preview ?? "";
 
+  // Technical: one raw trace block (args + result), like desktop's technical
+  // view; Product: just the readable output.
+  const rawTrace = [tc.preview, tc.result].filter(Boolean).join("\n");
+
   return (
-    <div className="hms-tool" data-open={open ? "true" : undefined}>
+    <div className="hms-tool" data-open={open ? "true" : undefined} ref={enterRef}>
       <div className="hms-tool-header">
         <button
           type="button"
@@ -118,8 +152,14 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
           disabled={!canExpand}
           aria-expanded={canExpand ? open : undefined}
         >
-          <StatusGlyph status={tc.status} />
-          <span className="hms-tool-title" data-status={tc.status}>{tc.toolName}</span>
+          <StatusGlyph tc={tc} />
+          <span
+            className="hms-tool-title"
+            data-status={tc.status}
+            data-shimmer={running ? "true" : undefined}
+          >
+            {title}
+          </span>
           {tc.preview && !open && <span className="hms-tool-preview">{tc.preview}</span>}
           {canExpand && (
             <span className="hms-tool-caret">
@@ -143,23 +183,24 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
 
       {open && (
         <div className="hms-tool-body">
-          {tc.preview && (
+          {technical ? (
             <div>
               <div className="hms-tool-section-label">
-                <span>Input</span>
-                <CopyButton text={tc.preview} />
+                <span>{tc.toolName}</span>
+                <CopyButton text={rawTrace} />
               </div>
-              <pre className="hms-tool-pre">{tc.preview}</pre>
+              <pre className="hms-tool-pre">{rawTrace}</pre>
             </div>
-          )}
-          {tc.result && (
-            <div>
-              <div className="hms-tool-section-label">
-                <span>Output</span>
-                <CopyButton text={tc.result} />
+          ) : (
+            tc.result && (
+              <div>
+                <div className="hms-tool-section-label">
+                  <span>Output</span>
+                  <CopyButton text={tc.result} />
+                </div>
+                <pre className="hms-tool-pre">{unwrapResult(tc.result)}</pre>
               </div>
-              <pre className="hms-tool-pre">{unwrapResult(tc.result)}</pre>
-            </div>
+            )
           )}
         </div>
       )}

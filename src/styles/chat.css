@@ -426,8 +426,13 @@
   color: var(--hms-warning);
 }
 
-.hms-tool-spin {
-  animation: spin 1s linear infinite;
+.hms-tool-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', Consolas, monospace;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .hms-tool-title {
@@ -435,6 +440,34 @@
   font-weight: 500;
   white-space: nowrap;
   color: color-mix(in srgb, var(--hms-text) 78%, transparent);
+}
+
+/* Pending title shimmer — a soft highlight sweeping the text while the tool
+   runs (desktop's tw-shimmer equivalent). */
+.hms-tool-title[data-shimmer="true"] {
+  background: linear-gradient(
+    90deg,
+    var(--hms-text-muted) 35%,
+    var(--hms-text) 50%,
+    var(--hms-text-muted) 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hms-tool-shimmer 2s linear infinite;
+}
+
+@keyframes hms-tool-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hms-tool-title[data-shimmer="true"] {
+    animation: none;
+    background-position: 50% 0;
+  }
 }
 
 .hms-tool-row:not(:disabled):hover .hms-tool-title {
@@ -1040,23 +1073,10 @@
 }
 
 .hms-chat-intro-title {
-  font-size: var(--hms-text-2xl);
+  font-size: calc(2rem * var(--hms-font-scale));
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--hms-text);
-}
-
-.hms-chat-intro-headline {
-  font-size: var(--hms-text-lg);
-  font-weight: 600;
-  color: var(--hms-text);
-}
-
-.hms-chat-intro-body {
-  max-width: 420px;
-  font-size: var(--hms-text-sm);
-  color: var(--hms-text-muted);
-  line-height: 1.6;
 }
 
 /* Right pane: an embedded capability panel fills it (own topbar + scroll); the

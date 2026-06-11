@@ -298,7 +298,7 @@ export const en: Translations = {
     dark: "Dark",
     system: "System",
     toolCalls: "Tool Call Display",
-    toolCallsHint: "Product hides raw tool payloads; Technical shows full input/output.",
+    toolCallsHint: "Product shows readable activity and output; Technical shows raw input/output.",
     product: "Product",
     productHint: "Human-friendly tool activity with concise summaries.",
     technical: "Technical",
@@ -518,8 +518,6 @@ export const en: Translations = {
     thinking: "Thinking",
     options: "Options",
     effort: "Effort",
-    introHeadline: "What are we moving today?",
-    introBody: "Send a task, a failing path, or a rough idea — I'll inspect first and keep the next step concrete.",
     send: "Send",
   },
 

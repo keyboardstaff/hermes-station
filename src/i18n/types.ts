@@ -541,8 +541,6 @@ export interface Translations {
     thinking: string;
     options: string;
     effort: string;
-    introHeadline: string;
-    introBody: string;
     send: string;
   };
 

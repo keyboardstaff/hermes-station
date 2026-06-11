@@ -298,7 +298,7 @@ export const zh: Translations = {
     dark: "深色",
     system: "跟随系统",
     toolCalls: "工具调用显示",
-    toolCallsHint: "Product 隐藏原始载荷;Technical 显示完整输入/输出。",
+    toolCallsHint: "Product 显示可读的工具活动与输出;Technical 显示原始输入/输出。",
     product: "Product",
     productHint: "人性化的工具活动,仅显示精简摘要。",
     technical: "Technical",
@@ -517,8 +517,6 @@ export const zh: Translations = {
     thinking: "思考",
     options: "选项",
     effort: "思考强度",
-    introHeadline: "今天要推进什么？",
-    introBody: "发来任务、出错的路径，或一个粗略想法 —— 我会先勘察，再把下一步落到具体。",
     send: "发送",
   },
 
