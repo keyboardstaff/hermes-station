@@ -40,14 +40,14 @@ describe("toThreadMessage", () => {
     expect((out.metadata?.custom as { hms: ChatMessage }).hms).toBe(msg);
   });
 
-  it("converts assistant segments to ordered native parts (reasoning first)", () => {
+  it("converts assistant segments to ordered native parts (interleaved)", () => {
     const toolCall = tc({ id: "t9", toolName: "search", preview: "q", result: "r", status: "done" });
     const msg: ChatMessage = {
       id: "a1",
       role: "assistant",
       content: "",
-      reasoning: "thinking",
       segments: [
+        { type: "reasoning", content: "thinking" },
         { type: "text", content: "before" },
         { type: "tool", tc: toolCall },
         { type: "approval_notice", choice: "session", command: "rm -rf" },
@@ -66,7 +66,7 @@ describe("toThreadMessage", () => {
       "tool-call",
       "text",
     ]);
-    // reasoning carries the trace
+    // reasoning carries the trace, in place
     expect(parts[0]).toMatchObject({ type: "reasoning", text: "thinking" });
     // the real tool round-trips the full ToolCall through args
     expect(parts[2]).toMatchObject({ type: "tool-call", toolName: "search" });

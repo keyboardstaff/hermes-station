@@ -2,6 +2,7 @@
  *  user rows → standalone; assistant+tool rows group into a single assistant
  *  message with segments[] interleaved in DB order. */
 import type { ChatMessage, MessageSegment, ToolCall } from "@/lib/hermes-types";
+import { previewFromArgs } from "@/lib/tool-meta";
 
 /** Mirror of the server's heuristic (runs.py _on_tool_complete): infer error
  *  from the result head since DB tool rows carry no explicit status flag. */
@@ -17,7 +18,7 @@ export interface MessageRow {
   content: string | unknown[] | null;
   /** Already-parsed by server/routes/chat.py; string form tolerated for legacy rows. */
   tool_calls:
-    | Array<{ id?: string; function?: { name?: string }; name?: string }>
+    | Array<{ id?: string; function?: { name?: string; arguments?: string }; name?: string }>
     | string
     | null;
   tool_name: string | null;
@@ -114,7 +115,6 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
   let runSegments: MessageSegment[] = [];
   let runFirstId: number | null = null;
   let runTimestamp = 0;
-  let runReasoning: string[] = [];
 
   const flushRun = () => {
     if (runSegments.length === 0 || runFirstId === null) return;
@@ -122,18 +122,15 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
       .filter((s): s is { type: "text"; content: string } => s.type === "text")
       .map((s) => s.content)
       .join("\n");
-    const reasoning = runReasoning.join("\n\n");
     out.push({
       id: `hist-run-${runFirstId}`,
       role: "assistant",
       content: textContent,
       segments: runSegments,
-      ...(reasoning ? { reasoning } : {}),
       createdAt: runTimestamp,
     });
     runSegments = [];
     runFirstId = null;
-    runReasoning = [];
   };
 
   for (const m of rows) {
@@ -156,8 +153,10 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
     }
 
     if (m.role === "assistant") {
+      // Interleaved in row order (desktop-style): the row's thinking precedes
+      // the text/tool calls it produced.
       const reasoning = rowReasoning(m);
-      if (reasoning) runReasoning.push(reasoning);
+      if (reasoning) runSegments.push({ type: "reasoning", content: reasoning });
       if (typeof m.content === "string" && m.content) {
         runSegments.push({ type: "text", content: m.content });
       }
@@ -168,6 +167,9 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
             tc: {
               id: tc.id ?? `hist-tc-${m.id}-${i}`,
               toolName: tc.function?.name ?? tc.name ?? "unknown",
+              ...(tc.function?.arguments
+                ? { preview: previewFromArgs(tc.function.arguments) }
+                : {}),
               // Provisional; corrected to error/done once the tool result row lands.
               status: "done",
             },
@@ -251,4 +253,26 @@ export function enrichMessagesWithAttachments(
       ],
     };
   });
+}
+
+/** Re-inject persisted approval notices (frontend-synthetic — the DB knows
+ *  nothing about them) into a rebuilt transcript: each notice lands at the end
+ *  of the assistant turn that follows its user-turn ordinal. */
+export function injectApprovalNotices(
+  messages: ChatMessage[],
+  notices: ReadonlyArray<{ ord: number; choice: string; command: string }>,
+): ChatMessage[] {
+  if (notices.length === 0) return messages;
+  const out = messages.map((m) => ({ ...m, segments: m.segments ? [...m.segments] : m.segments }));
+  for (const n of notices) {
+    let userSeen = -1;
+    for (let i = 0; i < out.length; i++) {
+      if (out[i].role === "user") userSeen++;
+      if (userSeen === n.ord && out[i].role === "assistant" && out[i].segments) {
+        out[i].segments!.push({ type: "approval_notice", choice: n.choice, command: n.command });
+        break;
+      }
+    }
+  }
+  return out;
 }

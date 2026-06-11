@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/useBreakpoint";
 import { useDangerousCommandApproval } from "@/hooks/useDangerousCommandApproval";
 import { AlertTriangle } from "lucide-react";
 import { loadSessionMessages } from "@/lib/load-session";
+import { injectApprovalNotices } from "@/lib/session-messages";
 import type { SessionSummary } from "@/lib/hermes-types";
 import Card from "@/components/ui/Card";
 import HermesMark from "@/components/ui/HermesMark";
@@ -175,7 +176,9 @@ export default function ChatPanel() {
         // Single source of truth: replace the transcript with the DB rebuild.
         // reconcileSession preserves the in-flight turn's live bubbles when a run
         // is still active, so a mid-run refresh/switch-back doesn't wipe streaming.
-        reconcileSession(chatMessages);
+        // Approval notices are frontend-synthetic — re-inject the persisted ones.
+        const notices = useChatStore.getState().approvalNotices[fetchingSessionId] ?? [];
+        reconcileSession(injectApprovalNotices(chatMessages, notices));
         // Crash recovery: a run that died mid-turn (the gateway crashed before it
         // could persist) leaves its partial answer in a sidecar — surface it as a
         // trailing assistant bubble so the work isn't silently lost. The server
@@ -275,6 +278,12 @@ export default function ChatPanel() {
           onDragLeave={onPanelDragLeave}
           onDrop={onPanelDrop}
         >
+          {/* Desktop's statue backdrop — a faint blended brand texture behind
+              the conversation (pointer-transparent; content sits on .hms-chat-fore). */}
+          <div className="hms-chat-backdrop" aria-hidden>
+            <img src="/ds-assets/filler-bg0.jpg" alt="" fetchPriority="low" />
+          </div>
+
           {panelDragOver && (
             <div style={{
               position: "absolute", inset: 0, zIndex: 100,
@@ -288,6 +297,7 @@ export default function ChatPanel() {
             </div>
           )}
 
+          <div className="hms-chat-fore">
           <AssistantRuntimeProvider runtime={runtime}>
             <ChatStream
               messages={messages}
@@ -315,6 +325,7 @@ export default function ChatPanel() {
           )}
 
           <Composer ref={composerRef} onSend={sendMessage} onStop={stopRun} sessionId={activeSessionId} />
+          </div>
         </div>
 
         {!isMobile && <WorkspaceContextPanel variant="inline" open={workspacesOpen} onClose={toggleWorkspaces} />}

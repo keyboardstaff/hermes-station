@@ -75,6 +75,10 @@ export interface PendingApproval {
 export type MessageSegment =
   | { type: "text"; content: string }
   | { type: "tool"; tc: ToolCall }
+  /** Thinking trace, interleaved in stream order (desktop-style) — streamed
+   *  live via reasoning.available and restored from the DB rows' reasoning
+   *  fields on history rebuild. */
+  | { type: "reasoning"; content: string }
   | { type: "approval_notice"; choice: string; command: string };
 
 export interface ChatMessage {
@@ -87,9 +91,6 @@ export interface ChatMessage {
   segments?: MessageSegment[];
   /** @deprecated Use segments. */
   toolCalls?: ToolCall[];
-  /** Thinking trace: streamed live via reasoning.available, and restored from
-   *  the DB rows' reasoning fields on history rebuild (survives refresh). */
-  reasoning?: string;
   /** Synthesized non-user message (e.g. approval follow-up rendered as system notice). */
   kind?: "approval_notice";
   approvalCommand?: string;

@@ -42,9 +42,10 @@ function toolPart(tc: ToolCall): ContentPart {
 /**
  * Bridge a Station `ChatMessage` into an assistant-ui `ThreadMessageLike`.
  *
- * Assistant turns become ordered native content parts (reasoning → text /
- * tool-call / approval-notice, in segment order) so the transcript renders
- * through `MessagePrimitive.Parts`. User turns keep a single text part plus the
+ * Assistant turns become ordered native content parts (text / reasoning /
+ * tool-call / approval-notice, interleaved in segment order — thinking sits
+ * where it happened, desktop-style) so the transcript renders through
+ * `MessagePrimitive.Parts`. User turns keep a single text part plus the
  * original message on `metadata.custom.hms` (the user bubble renders
  * attachments / agent-routing from it). Every message carries `hms` so the
  * message component can reach the agent label, streaming flag and action bar.
@@ -63,11 +64,12 @@ export function toThreadMessage(msg: ChatMessage): ThreadMessageLike {
   }
 
   const parts: ContentPart[] = [];
-  if (msg.reasoning) parts.push({ type: "reasoning", text: msg.reasoning });
   if (msg.segments && msg.segments.length > 0) {
     for (const seg of msg.segments) {
       if (seg.type === "text") {
         if (seg.content) parts.push({ type: "text", text: seg.content });
+      } else if (seg.type === "reasoning") {
+        if (seg.content) parts.push({ type: "reasoning", text: seg.content });
       } else if (seg.type === "tool") {
         parts.push(toolPart(seg.tc));
       } else {

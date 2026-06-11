@@ -57,6 +57,49 @@ const PREFIX_META: { prefix: string; verb: string; icon: LucideIcon }[] = [
   { prefix: "web_", verb: "Web", icon: Globe },
 ];
 
+// Primary-argument keys, most-specific first — the TS mirror of the server's
+// `tool_preview` (server/runs.py) so history rebuilds show the same one-line
+// preview the live tool.started frame carried.
+const PREVIEW_KEYS = [
+  "command", "code", "query", "search_term", "path", "file_path",
+  "filename", "url", "urls", "text", "prompt", "name",
+] as const;
+
+/** One-line human preview of a tool call's arguments (raw JSON string or
+ *  parsed object). Mirrors the server's extraction: primary key first, string
+ *  lists joined with ", ", then any string value, then the raw dump. */
+export function previewFromArgs(args: unknown, limit = 300): string {
+  let parsed: unknown = args;
+  if (typeof args === "string") {
+    const raw = args.trim();
+    if (!raw) return "";
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return raw.slice(0, limit);
+    }
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return typeof parsed === "string" ? parsed.slice(0, limit) : "";
+  }
+  const rec = parsed as Record<string, unknown>;
+  for (const key of PREVIEW_KEYS) {
+    const v = rec[key];
+    if (typeof v === "string" && v) return v.slice(0, limit);
+    if (Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string")) {
+      return (v as string[]).join(", ").slice(0, limit);
+    }
+  }
+  for (const v of Object.values(rec)) {
+    if (typeof v === "string" && v) return v.slice(0, limit);
+  }
+  try {
+    return JSON.stringify(rec).slice(0, limit);
+  } catch {
+    return "";
+  }
+}
+
 export function toolMeta(name: string): ToolMeta {
   const known = TOOL_META[name];
   if (known) return known;

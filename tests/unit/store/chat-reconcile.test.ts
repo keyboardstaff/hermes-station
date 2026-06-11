@@ -19,7 +19,6 @@ function reset() {
     activeSessionId: null,
     pendingApproval: null,
     isHistoryPending: false,
-    lastUsage: null,
   });
 }
 
@@ -175,7 +174,10 @@ describe("appendReasoning", () => {
     const msgs = useChatStore.getState().messages;
     expect(msgs).toHaveLength(1);
     expect(msgs[0].id).toBe("turn-r1-assistant");
-    expect(msgs[0].reasoning).toBe("step 1. step 2.");
+    // Consecutive reasoning deltas merge into one trailing segment.
+    expect(msgs[0].segments?.filter((x) => x.type === "reasoning")).toEqual([
+      { type: "reasoning", content: "step 1. step 2." },
+    ]);
   });
 });
 

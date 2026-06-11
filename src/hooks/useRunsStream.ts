@@ -206,16 +206,17 @@ export function useRunsStream() {
             if (msg.event === "run.completed" && msg.output) {
               setFinalContent(msg.output);
             }
-            // Cumulative session usage → Composer context ring.
-            if (msg.event === "run.completed" && msg.usage) {
-              useChatStore.getState().setLastUsage(msg.usage);
-            }
             useChatStore.getState().settleStreamingMessage();
             setActiveRunId(null);
             // Cleared AFTER setFinalContent above (which still needs the turn id).
             setActiveTurn(null);
             // session_id rides the terminal frame — avoids racing a store read.
             const sid = msg.session_id ?? useChatStore.getState().activeSessionId;
+            // Cumulative session usage → Composer context ring (persisted per
+            // session so the ring survives refresh / switches).
+            if (msg.event === "run.completed" && msg.usage && sid) {
+              useChatStore.getState().setUsageForSession(sid, msg.usage);
+            }
             if (sid) clearRunningForSession(sid);
             // Refetch now (persisted row), then a few more times as the run's
             // auto-title lands asynchronously — timing varies, especially for
@@ -265,6 +266,7 @@ export function useRunsStream() {
         let data: {
           seq?: number;
           user_input?: string;
+          started_at?: number | null;
           partial?: {
             text?: string;
             reasoning?: string;
@@ -281,6 +283,9 @@ export function useRunsStream() {
         // run's channel into the global subscription set.
         if (attachGenRef.current !== myGen) return;
         if (data) {
+          if (typeof data.started_at === "number" && data.started_at > 0) {
+            useChatStore.getState().setRunStartedAt(runId, data.started_at * 1000);
+          }
           // Restore the user bubble first — upstream persists it to state.db
           // only on completion, so a DB rebuild on a mid-run refresh lacks it
           // (the accumulator holds only the assistant side of the turn).
@@ -514,6 +519,7 @@ export function useRunsStream() {
       }
 
       if (!reuseUserBubble) renameMessageId(tempUserId, `turn-${runId}-user`);
+      useChatStore.getState().setRunStartedAt(runId, Date.now());
       // Track the run under its session so a switch-away/back can re-attach it.
       setRunningForSession(currentSessionId ?? runId, runId);
       setActiveRunId(runId);

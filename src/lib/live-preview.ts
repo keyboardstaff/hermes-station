@@ -60,8 +60,10 @@ export function buildLiveTurn(runId: string, startedAt: number, acc: LiveAccumul
       id: `live-${runId}-assistant`,
       role: "assistant",
       content: "",
-      segments: [...acc.segments],
-      reasoning: acc.reasoning || undefined,
+      segments: [
+        ...(acc.reasoning ? [{ type: "reasoning", content: acc.reasoning } as const] : []),
+        ...acc.segments,
+      ],
       createdAt: startedAt + 1,
       streaming: true,
     });

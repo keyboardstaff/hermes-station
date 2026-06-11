@@ -264,6 +264,38 @@ def _terminal_frame(handle: RunHandle, event: str, **fields: Any) -> dict:
     })
 
 
+# Primary-argument keys, most-specific first — mirrors upstream desktop's
+# subtitle extraction so a tool row reads "Query: …" material, not a dict repr.
+_PREVIEW_KEYS = (
+    "command", "code", "query", "search_term", "path", "file_path",
+    "filename", "url", "urls", "text", "prompt", "name",
+)
+
+
+def tool_preview(args: Any, limit: int = 300) -> str:
+    """One-line human preview of a tool call's arguments.
+
+    Picks the primary argument (command / query / path / url …); a list of
+    strings joins with ", " (e.g. web_extract's ``urls``). Falls back to the
+    first string value, then the raw repr. Shared by the live tool.started
+    frame; the SPA mirrors this for history rebuilds (tool-meta.ts).
+    """
+    if isinstance(args, str):
+        return args[:limit]
+    if not isinstance(args, dict):
+        return ""
+    for key in _PREVIEW_KEYS:
+        v = args.get(key)
+        if isinstance(v, str) and v:
+            return v[:limit]
+        if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+            return ", ".join(v)[:limit]
+    for v in args.values():
+        if isinstance(v, str) and v:
+            return v[:limit]
+    return str(args)[:limit]
+
+
 def _user_display_text(input_data: str | list[dict[str, Any]]) -> str:
     """The user's typed prompt, for restoring the user bubble on re-attach — the
     first text part of a multimodal input, or the raw string."""
@@ -783,17 +815,7 @@ def _build_agent(
     def _on_tool_start(tool_call_id: str, tool: str, args: Any = None) -> None:
         if _cancelled():
             return
-        preview: str = ""
-        if isinstance(args, dict):
-            for key in ("command", "url", "path", "query"):
-                v = args.get(key)
-                if isinstance(v, str) and v:
-                    preview = v[:300]
-                    break
-            if not preview:
-                preview = str(args)[:300]
-        elif isinstance(args, str):
-            preview = args[:300]
+        preview = tool_preview(args)
         ws.broadcast_threadsafe(channel, handle.stamp({
             "type": "run.event",
             "run_id": run_id,

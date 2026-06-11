@@ -25,9 +25,17 @@ interface ChatState {
   pendingScrollMessageId: number | null;
   /** Agents room: runId → the profile-agent that turn was routed to (attribution). */
   agentByRun: Record<string, string>;
-  /** Cumulative session token usage from the last run.completed — feeds the
-   *  Composer context ring. Reset on session switch / clear. */
-  lastUsage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
+  /** sessionId → cumulative token usage from that session's last completed
+   *  run — feeds the Composer context ring. Persisted (bounded) so the ring
+   *  survives refresh and session switches. */
+  usageBySession: Record<string, { input_tokens: number; output_tokens: number; total_tokens: number }>;
+  /** Transient: runId → epoch-ms the run started (server clock on re-attach),
+   *  so the turn timer survives a refresh instead of restarting at 0. */
+  runStartedAt: Record<string, number>;
+  /** sessionId → approval decisions taken in that session (`ord` = the visible
+   *  user-turn ordinal the decision belongs to). Persisted (bounded) and
+   *  re-injected on history rebuild so notices survive refresh. */
+  approvalNotices: Record<string, Array<{ ord: number; choice: string; command: string }>>;
   /** sessionId-scoped so tab switches hide/surface the drawer; cleared on resolve. */
   pendingApproval: PendingApproval | null;
   /** sessionId → the user's first prompt, a title FALLBACK shown until the run's
@@ -87,7 +95,8 @@ interface ChatState {
   setShowTokens: (v: boolean) => void;
   setPendingScrollMessageId: (id: number | null) => void;
   setAgentForRun: (runId: string, agent: string) => void;
-  setLastUsage: (u: ChatState["lastUsage"]) => void;
+  setUsageForSession: (sessionId: string, u: ChatState["usageBySession"][string]) => void;
+  setRunStartedAt: (runId: string, ms: number) => void;
   setHistoryPending: (v: boolean) => void;
   setPendingApproval: (p: PendingApproval | null) => void;
   setProvisionalTitle: (sessionId: string, title: string) => void;
@@ -129,6 +138,15 @@ function findStreamIdx(msgs: ChatMessage[], turnId: string | null): number {
   return -1;
 }
 
+/** Bound a persisted map to its most-recently-inserted `max` keys. */
+function trimMap<T>(map: Record<string, T>, max: number): Record<string, T> {
+  const keys = Object.keys(map);
+  if (keys.length <= max) return map;
+  const next = { ...map };
+  for (const k of keys.slice(0, keys.length - max)) delete next[k];
+  return next;
+}
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
@@ -144,7 +162,9 @@ export const useChatStore = create<ChatState>()(
   showTokens: true,
   pendingScrollMessageId: null,
   agentByRun: {},
-  lastUsage: null,
+  usageBySession: {},
+  runStartedAt: {},
+  approvalNotices: {},
   pendingApproval: null,
   provisionalTitles: {},
   pendingRegenerate: null,
@@ -164,7 +184,6 @@ export const useChatStore = create<ChatState>()(
       return {
         activeSessionId: id,
         messages: [],
-        lastUsage: null,
         activeRunId: runId,
         activeTurnId: runId,
         // isHistoryPending = true only when switching TO a real session;
@@ -229,8 +248,7 @@ export const useChatStore = create<ChatState>()(
           id: assistantTurnId(s.activeTurnId) ?? `stream-${Date.now()}`,
           role: "assistant",
           content: "",
-          segments: [],
-          reasoning: text,
+          segments: [{ type: "reasoning", content: text }],
           ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
@@ -238,8 +256,16 @@ export const useChatStore = create<ChatState>()(
         });
         return { messages: msgs };
       }
+      // Interleave in stream order (desktop-style): extend a trailing
+      // reasoning segment, else start a new one where the stream is now.
       const target = msgs[streamIdx];
-      msgs[streamIdx] = { ...target, reasoning: (target.reasoning ?? "") + text };
+      const segs = target.segments ?? [];
+      const lastSeg = segs[segs.length - 1];
+      const newSegs: MessageSegment[] =
+        lastSeg && lastSeg.type === "reasoning"
+          ? [...segs.slice(0, -1), { type: "reasoning", content: lastSeg.content + text }]
+          : [...segs, { type: "reasoning", content: text }];
+      msgs[streamIdx] = { ...target, segments: newSegs };
       return { messages: msgs };
     }),
 
@@ -399,7 +425,20 @@ export const useChatStore = create<ChatState>()(
       const target = msgs[targetIdx];
       const noticeSeg: MessageSegment = { type: "approval_notice", choice, command };
       msgs[targetIdx] = { ...target, segments: [...(target.segments ?? []), noticeSeg] };
-      return { messages: msgs };
+      // Persist the decision (keyed by the turn's visible user ordinal) so a
+      // history rebuild can re-inject the notice — it is frontend-synthetic
+      // and the DB knows nothing about it.
+      const sid = s.activeSessionId;
+      if (!sid) return { messages: msgs };
+      const ord = Math.max(
+        0,
+        msgs.filter((m) => m.role === "user" && !m.hidden).length - 1,
+      );
+      const forSession = [...(s.approvalNotices[sid] ?? []), { ord, choice, command }];
+      return {
+        messages: msgs,
+        approvalNotices: trimMap({ ...s.approvalNotices, [sid]: forSession }, 40),
+      };
     }),
 
   setActiveRunId: (id) => set({ activeRunId: id }),
@@ -417,14 +456,17 @@ export const useChatStore = create<ChatState>()(
     set((s) => ({
       messages: s.messages.map((m) => (m.id === oldId ? { ...m, id: newId } : m)),
     })),
-  clearMessages: () => set({ messages: [], lastUsage: null }),
+  clearMessages: () => set({ messages: [] }),
   setSelectedModel: (m) => set({ selectedModel: m }),
   setSelectedProvider: (p) => set({ selectedProvider: p }),
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
   setShowTokens: (v) => set({ showTokens: v }),
   setPendingScrollMessageId: (id) => set({ pendingScrollMessageId: id }),
   setAgentForRun: (runId, agent) => set((s) => ({ agentByRun: { ...s.agentByRun, [runId]: agent } })),
-  setLastUsage: (u) => set({ lastUsage: u }),
+  setUsageForSession: (sessionId, u) =>
+    set((s) => ({ usageBySession: trimMap({ ...s.usageBySession, [sessionId]: u }, 60) })),
+  setRunStartedAt: (runId, ms) =>
+    set((s) => ({ runStartedAt: trimMap({ ...s.runStartedAt, [runId]: ms }, 60) })),
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),
   setProvisionalTitle: (sessionId, title) =>
@@ -512,6 +554,9 @@ export const useChatStore = create<ChatState>()(
         // Persisted so a refresh during the title-not-ready window still has the
         // first-prompt fallback (otherwise the row briefly reads "Untitled").
         provisionalTitles: state.provisionalTitles,
+        // The context ring + approval notices survive refresh.
+        usageBySession: state.usageBySession,
+        approvalNotices: state.approvalNotices,
       }),
     }
   )

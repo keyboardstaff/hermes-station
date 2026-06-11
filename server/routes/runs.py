@@ -315,6 +315,9 @@ async def get_run_transcript(request: web.Request) -> web.Response:
         "status": handle.status,
         "seq": snap["seq"],
         "user_input": handle.user_input,
+        # Lets a re-attach restore the turn timer from the real start instead
+        # of restarting at 0 on refresh.
+        "started_at": handle.started_at,
         "partial": {
             "text": snap["text"],
             "reasoning": snap["reasoning"],

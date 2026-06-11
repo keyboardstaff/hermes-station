@@ -188,8 +188,9 @@ describe("reasoning suppression", () => {
 
     const msgs = useChatStore.getState().messages;
     const last = msgs[msgs.length - 1];
-    // appendReasoning stores on message.reasoning, not segments
-    expect(last.reasoning).toBe("step by step thinking");
+    // appendReasoning interleaves a reasoning segment in stream order.
+    const lastSeg = last.segments?.[last.segments.length - 1];
+    expect(lastSeg).toEqual({ type: "reasoning", content: "step by step thinking" });
   });
 });
 

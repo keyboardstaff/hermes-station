@@ -34,11 +34,12 @@ function TextPart({ text }: { text: string }) {
 /** Reasoning folds into Tool Call Display: only shown in Technical mode. */
 function ReasoningPart({ text }: { text: string }) {
   const technical = useToolViewStore((s) => s.toolView === "technical");
+  const messageId = useAuiState((s) => s.message.id);
   const streaming = useAuiState(
     (s) => (s.message.metadata?.custom as { hms?: ChatMessage } | undefined)?.hms?.streaming,
   );
   if (!technical || !text) return null;
-  return <ReasoningBlock text={text} streaming={streaming} />;
+  return <ReasoningBlock text={text} streaming={streaming} timerKey={messageId} />;
 }
 
 function ToolPart({ args }: ToolCallMessagePartProps) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX,
   GitFork, ImageOff, Volume2, Square, RotateCcw, Clock,
@@ -15,6 +15,7 @@ import ImageLightbox from "@/components/ui/ImageLightbox";
 import { useI18n } from "@/i18n";
 import { useChatStore } from "@/store/chat";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useElapsedSeconds, formatElapsed } from "@/hooks/useElapsedSeconds";
 import { precedingUserIndex, messagePlainText, userOrdinal, nextHistRowId } from "@/lib/branch";
 import { messageText } from "@/lib/chat-runtime";
 import { profileQuery } from "@/lib/load-session";
@@ -49,36 +50,61 @@ export function ApprovalNotice({ choice, command }: { choice: string; command: s
 }
 
 /** Desktop-style "agent is working" indicator: a clock + live m:ss elapsed,
- *  shown while a turn streams and gone the instant it completes. */
+ *  shown while a turn streams. The start comes from the run's real
+ *  `started_at` (store) so a refresh resumes instead of restarting at 0. */
 export function StreamingActivity() {
-  const [start] = useState(() => Date.now());
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  const sec = Math.max(0, Math.floor((now - start) / 1000));
-  const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+  const startedAt = useChatStore((s) =>
+    s.activeRunId ? s.runStartedAt[s.activeRunId] : undefined,
+  );
+  const activeRunId = useChatStore((s) => s.activeRunId);
+  const sec = useElapsedSeconds(true, activeRunId ? `turn:${activeRunId}` : undefined, startedAt);
   return (
     <span aria-label="Working" className="hms-chat-streaming-activity">
       <Clock size={12} />
-      {label}
+      {formatElapsed(sec)}
     </span>
   );
 }
 
-export function ReasoningBlock({ text, streaming }: { text: string; streaming?: boolean }) {
-  // Auto-open during streaming so user can watch; collapse after run.completed.
-  const [open, setOpen] = useState(false);
-  const isOpen = streaming || open;
+/** Thinking disclosure, visually coordinated with the tool rows (same flat
+ *  disclosure anatomy): shimmering "Thinking" + live elapsed while streaming,
+ *  collapsible body on the soft inset surface. Auto-open while streaming. */
+export function ReasoningBlock({ text, streaming, timerKey }: {
+  text: string;
+  streaming?: boolean;
+  timerKey?: string;
+}) {
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? Boolean(streaming);
+  const elapsed = useElapsedSeconds(Boolean(streaming), timerKey ? `think:${timerKey}` : undefined);
   return (
-    <div className="hms-chat-reasoning">
-      <button onClick={() => setOpen((v) => !v)} className="hms-chat-reasoning-toggle">
-        <Brain size={12} />
-        <span className="hms-chat-reasoning-label">Thinking{streaming ? "…" : ""}</span>
-        {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-      </button>
-      {isOpen && <div className="hms-chat-reasoning-body">{text}</div>}
+    <div className="hms-tool" data-open={open ? "true" : undefined}>
+      <div className="hms-tool-header">
+        <button
+          type="button"
+          className="hms-tool-row"
+          onClick={() => setUserOpen(!open)}
+          aria-expanded={open}
+        >
+          <span className="hms-tool-glyph">
+            <Brain size={13} />
+          </span>
+          <span className={`hms-tool-title${streaming ? " hms-tool-shimmer" : ""}`}>
+            Thinking
+          </span>
+          {streaming && <span className="hms-tool-meta">{formatElapsed(elapsed)}</span>}
+          <span className="hms-tool-caret">
+            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </span>
+        </button>
+      </div>
+      <div className="hms-tool-detail" data-open={open ? "true" : undefined}>
+        <div className="hms-tool-detail-clip">
+          <div className="hms-tool-body">
+            <div className="hms-thinking-body">{text}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

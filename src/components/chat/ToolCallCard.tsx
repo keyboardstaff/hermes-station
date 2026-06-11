@@ -6,6 +6,7 @@ import {
 import type { ToolCall } from "@/lib/hermes-types";
 import { toolMeta } from "@/lib/tool-meta";
 import { useEnterAnimation } from "@/hooks/useEnterAnimation";
+import { useElapsedSeconds, formatElapsed } from "@/hooks/useElapsedSeconds";
 import { useToolViewStore } from "@/store/app";
 
 // Braille spinner frames — mirrors desktop's BrailleSpinner (which mirrors the
@@ -70,15 +71,11 @@ function StatusGlyph({ tc }: { tc: ToolCall }) {
   }
 }
 
-/** Live elapsed seconds while the tool runs (desktop's activity timer). */
-function Elapsed() {
-  const [start] = useState(() => Date.now());
-  const [now, setNow] = useState(start);
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  return <span className="hms-tool-meta">{Math.max(0, Math.round((now - start) / 1000))}s</span>;
+/** Live elapsed seconds while the tool runs — keyed by the tool-call id so the
+ *  timer survives unmount/remount (scroll, branch switch), like desktop. */
+function Elapsed({ id }: { id: string }) {
+  const sec = useElapsedSeconds(true, `tool:${id}`);
+  return <span className="hms-tool-meta">{formatElapsed(sec)}</span>;
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -173,7 +170,7 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
         </button>
         <span className="hms-tool-trailing">
           {running ? (
-            <Elapsed />
+            <Elapsed id={tc.id} />
           ) : (
             tc.duration !== undefined && (
               <span className="hms-tool-meta">{tc.duration.toFixed(1)}s</span>

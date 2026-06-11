@@ -46,13 +46,14 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
                 @{msg.agent}
               </span>
             ) : null}
-            {technical && msg.reasoning && (
-              <ReasoningBlock text={msg.reasoning} streaming={msg.streaming} />
-            )}
             {msg.segments && msg.segments.length > 0
               ? msg.segments.map((seg, i) =>
                   seg.type === "text"
                     ? (seg.content ? <MarkdownText key={i} content={seg.content} /> : null)
+                    : seg.type === "reasoning"
+                    ? (technical
+                        ? <ReasoningBlock key={i} text={seg.content} streaming={msg.streaming} timerKey={`${msg.id}:${i}`} />
+                        : null)
                     : seg.type === "approval_notice"
                     ? <ApprovalNotice key={i} choice={seg.choice} command={seg.command} />
                     : <ToolCallCard key={seg.tc.id} tc={seg.tc} />

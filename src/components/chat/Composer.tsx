@@ -59,8 +59,12 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     selectedModel, setSelectedModel,
     selectedProvider, setSelectedProvider,
     reasoningEffort: reasoning, setReasoningEffort: setReasoning,
-    lastUsage, showTokens, setShowTokens,
+    showTokens, setShowTokens,
   } = useChatStore();
+  // Per-session cumulative usage (persisted) → the ring survives refresh.
+  const sessionUsage = useChatStore((s) =>
+    sessionId ? s.usageBySession[sessionId] ?? null : null,
+  );
   const isRunning = running ?? !!activeRunId;
 
   // Attachment state + every ingest path (picker / paste / drag / imperative).
@@ -81,7 +85,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     addFiles(files: File[]) { ingestFiles(files); },
   }), [ingestFiles]);
 
-  // The profile pill is the view-scope picker (Phase B — the "current profile"):
+  // The profile pill is the view-scope picker (the "current profile"):
   // picking a profile scopes reads + runs to it (no sticky write, no restart),
   // unified with the sidebar scope selector. The sticky active is now only the
   // gateway's *background* home (managed in the Profile panel).
@@ -500,13 +504,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
 
           {/* Context ring — session tokens vs model context window */}
           {(() => {
-            const used = lastUsage?.total_tokens ?? (value.trim() ? estimateTokenCount(value) : 0);
+            const used = sessionUsage?.total_tokens ?? (value.trim() ? estimateTokenCount(value) : 0);
             if (used === 0 && !contextLength) return null;
             return (
               <ContextMeter
                 used={used}
                 contextLength={contextLength}
-                usage={lastUsage}
+                usage={sessionUsage}
                 showTokens={showTokens}
                 onToggleTokens={setShowTokens}
               />

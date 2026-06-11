@@ -251,16 +251,23 @@ export const useAgentRoomStore = create<AgentRoomStore>((set) => {
             id: assistantTurnId(r.activeTurnId) ?? `room-stream-${Date.now()}`,
             role: "assistant",
             content: "",
-            segments: [],
-            reasoning: text,
+            segments: [{ type: "reasoning", content: text }],
             ...(r.turnAgent ? { agent: r.turnAgent } : {}),
             createdAt: Date.now(),
             streaming: true,
           });
           return { messages: msgs };
         }
+        // Interleave in stream order: extend a trailing reasoning segment,
+        // else start a new one where the stream is now.
         const target = msgs[idx];
-        msgs[idx] = { ...target, reasoning: (target.reasoning ?? "") + text };
+        const segs = target.segments ?? [];
+        const lastSeg = segs[segs.length - 1];
+        const newSegs: MessageSegment[] =
+          lastSeg && lastSeg.type === "reasoning"
+            ? [...segs.slice(0, -1), { type: "reasoning", content: lastSeg.content + text }]
+            : [...segs, { type: "reasoning", content: text }];
+        msgs[idx] = { ...target, segments: newSegs };
         return { messages: msgs };
       }, false),
 

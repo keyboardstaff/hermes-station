@@ -252,38 +252,53 @@
   vertical-align: text-bottom;
 }
 
-.hms-chat-reasoning {
-  margin-bottom: 6px;
-  border-radius: var(--hms-radius-lg);
-  background: color-mix(in srgb, var(--hms-border) 80%, transparent);
-  font-size: var(--hms-text-caption);
-}
-
-.hms-chat-reasoning-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--hms-space-2);
-  padding: 5px 10px;
-  background: transparent;
-  border: none;
-  color: var(--hms-text-muted);
-  cursor: pointer;
-  text-align: left;
-}
-
-.hms-chat-reasoning-label {
-  flex: 1;
-}
-
-.hms-chat-reasoning-body {
+/* Thinking disclosure body — shares the tool-row anatomy (.hms-tool-*); the
+   trace itself reads as quiet prose on the soft inset surface. */
+.hms-thinking-body {
   padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hms-surface) 80%, transparent);
   color: var(--hms-text-muted);
   white-space: pre-wrap;
   line-height: 1.55;
   max-height: 220px;
   overflow-y: auto;
-  font-size: var(--hms-text-caption);
+  font-size: var(--hms-text-xs);
+}
+
+/* Desktop's statue backdrop — a faint blended brand texture behind the
+   conversation. Pointer-transparent; the content column sits on
+   .hms-chat-fore (z-index 1) above it. */
+.hms-chat-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: difference;
+}
+
+.hms-chat-backdrop img {
+  width: auto;
+  min-width: 100%;
+  height: 160dvh;
+  object-fit: cover;
+  object-position: top left;
+  filter: invert(1);
+}
+
+:root[data-theme="light"] .hms-chat-backdrop img {
+  filter: invert(0);
+}
+
+.hms-chat-fore {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .hms-chat-bubble-row {
@@ -312,6 +327,8 @@
   font-size: var(--hms-text-body);
   line-height: 1.6;
   color: var(--hms-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .hms-chat-bubble[data-role="user"] {

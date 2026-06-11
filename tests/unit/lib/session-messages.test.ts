@@ -5,7 +5,7 @@
 // critical. Tests assert what it does TODAY so refactors surface as failures.
 
 import { describe, it, expect } from "vitest";
-import { historyToChatMessages } from "@/lib/session-messages";
+import { historyToChatMessages, injectApprovalNotices } from "@/lib/session-messages";
 import { toolResultsById } from "@/lib/load-session";
 import type { MessageRow } from "@/lib/session-messages";
 
@@ -48,22 +48,37 @@ describe("historyToChatMessages", () => {
     expect(out[0].content).toBe("let me check\ndone");
   });
 
-  it("restores the thinking trace from assistant rows (survives refresh)", () => {
+  it("restores thinking as interleaved segments (survives refresh)", () => {
     const out = historyToChatMessages([
       row({ id: 1, role: "user", content: "why?" }),
       row({ id: 2, role: "assistant", content: "part 1", reasoning: "first thought" }),
       row({ id: 3, role: "assistant", content: "part 2", reasoning_content: "second thought" }),
     ]);
     expect(out).toHaveLength(2);
-    // Per-row traces join across the run; `reasoning` wins over reasoning_content per row.
-    expect(out[1].reasoning).toBe("first thought\n\nsecond thought");
+    // Each row's trace precedes the text it produced, desktop-style.
+    expect(out[1].segments?.map((s) => s.type)).toEqual([
+      "reasoning", "text", "reasoning", "text",
+    ]);
+    const first = out[1].segments?.[0];
+    expect(first?.type === "reasoning" && first.content).toBe("first thought");
   });
 
-  it("omits reasoning when no assistant row carries a trace", () => {
+  it("emits no reasoning segments when no assistant row carries a trace", () => {
     const out = historyToChatMessages([
       row({ id: 1, role: "assistant", content: "plain" }),
     ]);
-    expect(out[0].reasoning).toBeUndefined();
+    expect(out[0].segments?.some((s) => s.type === "reasoning")).toBe(false);
+  });
+
+  it("restores tool previews from the stored call arguments", () => {
+    const out = historyToChatMessages([
+      row({ id: 1, role: "assistant", content: "",
+        tool_calls: [{ id: "c1", function: { name: "web_extract", arguments: '{"urls": ["https://a.com", "https://b.com"]}' } }] as never }),
+    ]);
+    const seg = out[0].segments?.find((s) => s.type === "tool") as
+      | { type: "tool"; tc: { preview?: string } }
+      | undefined;
+    expect(seg?.tc.preview).toBe("https://a.com, https://b.com");
   });
 
   it("back-patches a tool segment with its result row + infers done", () => {
@@ -121,5 +136,26 @@ describe("toolResultsById", () => {
       row({ id: 2, role: "tool", tool_call_id: "c1", content: "" }),
     ]);
     expect(map).toEqual({});
+  });
+});
+
+describe("injectApprovalNotices", () => {
+  it("appends the notice to the assistant turn after its user ordinal", () => {
+    const msgs = historyToChatMessages([
+      row({ id: 1, role: "user", content: "do it" }),
+      row({ id: 2, role: "assistant", content: "done" }),
+      row({ id: 3, role: "user", content: "again" }),
+      row({ id: 4, role: "assistant", content: "ok" }),
+    ]);
+    const out = injectApprovalNotices(msgs, [{ ord: 1, choice: "once", command: "rm x" }]);
+    const segs = out[3].segments ?? [];
+    expect(segs[segs.length - 1]).toEqual({ type: "approval_notice", choice: "once", command: "rm x" });
+    // The first turn is untouched.
+    expect(out[1].segments?.some((s) => s.type === "approval_notice")).toBe(false);
+  });
+
+  it("returns the input unchanged when there are no notices", () => {
+    const msgs = historyToChatMessages([row({ id: 1, role: "user", content: "q" })]);
+    expect(injectApprovalNotices(msgs, [])).toBe(msgs);
   });
 });

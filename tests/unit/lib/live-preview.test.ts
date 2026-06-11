@@ -91,7 +91,7 @@ describe("buildLiveTurn", () => {
     const out = buildLiveTurn("r1", 1000, acc);
     expect(out).toHaveLength(1);
     expect(out[0].id).toBe("live-r1-assistant");
-    expect(out[0].reasoning).toBe("thinking…");
+    expect(out[0].segments?.[0]).toEqual({ type: "reasoning", content: "thinking…" });
   });
 
   it("snapshots segments (later mutation of the accumulator doesn't leak in)", () => {
