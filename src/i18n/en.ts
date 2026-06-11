@@ -520,6 +520,7 @@ export const en: Translations = {
     effort: "Effort",
     introHeadline: "What are we moving today?",
     introBody: "Send a task, a failing path, or a rough idea — I'll inspect first and keep the next step concrete.",
+    send: "Send",
   },
 
   createProfile: {

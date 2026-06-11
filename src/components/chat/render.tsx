@@ -311,8 +311,10 @@ export function UserMessageContent({ msg }: { msg: ChatMessage }) {
 
 /** Hover action bar (edit / regenerate / branch / copy / speak) for a message.
  *  Branch ops need the message's live position; it resolves -1 in the read-only
- *  /sessions preview (the message isn't in the active chat), which hides them. */
-export function MessageActions({ msg }: { msg: ChatMessage }) {
+ *  /sessions preview (the message isn't in the active chat), which hides them.
+ *  `editSlot` (live thread only) swaps the new-session edit for the native
+ *  inline edit composer trigger. */
+export function MessageActions({ msg, editSlot }: { msg: ChatMessage; editSlot?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const isUser = msg.role === "user";
@@ -372,9 +374,11 @@ export function MessageActions({ msg }: { msg: ChatMessage }) {
   return (
     <div className="hms-msg-actions hms-chat-bubble-actions">
       {canBranch && isUser && (
-        <button onClick={handleEdit} title="Edit & resend" className="hms-chat-bubble-action" style={actionBtnStyle}>
-          <Pencil size={12} />
-        </button>
+        editSlot ?? (
+          <button onClick={handleEdit} title="Edit & resend" className="hms-chat-bubble-action" style={actionBtnStyle}>
+            <Pencil size={12} />
+          </button>
+        )
       )}
       {canBranch && !isUser && (
         <button onClick={handleRetry} title="Regenerate" className="hms-chat-bubble-action" style={actionBtnStyle}>

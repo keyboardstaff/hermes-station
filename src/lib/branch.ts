@@ -52,3 +52,16 @@ export function userOrdinal(messages: ChatMessage[], userIndex: number): number 
   }
   return n;
 }
+
+/** Resolve an in-session edit target: the user message `sourceId` points at,
+ *  plus the truncate ordinal the backend needs to drop that turn before
+ *  re-running. Null when the id is unknown or not a user message. */
+export function editTarget(
+  messages: ChatMessage[],
+  sourceId: string | null | undefined,
+): { index: number; ordinal: number } | null {
+  if (!sourceId) return null;
+  const index = messages.findIndex((m) => m.id === sourceId);
+  if (index < 0 || messages[index].role !== "user") return null;
+  return { index, ordinal: userOrdinal(messages, index) };
+}

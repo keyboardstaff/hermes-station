@@ -79,7 +79,10 @@ export default function ChatPanel() {
   const { sendMessage, stopRun } = useRunsStream();
   // assistant-ui runtime bridging the chat store ↔ <Thread>. sendMessage /
   // stopRun stay the single drivers; the composer is still Station's own.
-  const runtime = useChatRuntime({ onSend: (text) => void sendMessage(text), onCancel: stopRun });
+  const runtime = useChatRuntime({
+    onSend: (text, opts) => void sendMessage(text, undefined, opts),
+    onCancel: stopRun,
+  });
   const { pending: pendingApproval, clear: clearPendingApproval } = useDangerousCommandApproval();
   // WS approval.requested → pendingApproval; resolveApproval wakes the same run via WS.
   const { resolveApproval } = useApprovalBridge();
@@ -236,14 +239,17 @@ export default function ChatPanel() {
     }
   }, [pendingAutoSend, activeSessionId, sendMessage]);
 
-  // In-session regenerate / edit: the transcript is already truncated locally;
-  // fire the re-run with the truncate ordinal so the backend truncates state.db
-  // to match. Stays in the same session (unlike the new-session branch above).
+  // In-session regenerate: the superseded turn is already a hidden branch
+  // locally; fire the re-run with the truncate ordinal so the backend truncates
+  // state.db to match. Stays in the same session, reusing the kept user bubble.
   useEffect(() => {
     if (pendingRegenerate != null && activeSessionId != null) {
       const { text, truncateBeforeUserOrdinal } = pendingRegenerate;
       useChatStore.getState().setPendingRegenerate(null);
-      void sendMessage(text, undefined, { truncateBeforeUserOrdinal });
+      void sendMessage(text, undefined, {
+        truncateBeforeUserOrdinal,
+        reuseExistingUserBubble: true,
+      });
     }
   }, [pendingRegenerate, activeSessionId, sendMessage]);
 

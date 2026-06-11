@@ -358,14 +358,19 @@ export function useRunsStream() {
     async (
       input: string,
       attachments?: ComposerAttachment[],
-      opts?: { profileOverride?: string; truncateBeforeUserOrdinal?: number },
+      opts?: {
+        profileOverride?: string;
+        truncateBeforeUserOrdinal?: number;
+        /** In-session regenerate: supersedeTurn kept the producing user bubble
+         *  in the transcript — don't append a duplicate optimistic one. An
+         *  in-session edit does NOT set this (its old turn was dropped, the
+         *  edited prompt needs a fresh bubble). */
+        reuseExistingUserBubble?: boolean;
+      },
     ) => {
       const currentSessionId = useChatStore.getState().activeSessionId;
-      // In-session regenerate: supersedeTurn already kept the producing user
-      // bubble in the transcript, so don't append a duplicate; the re-run's
-      // assistant bubble joins the armed branch group instead.
-      const isRegenerate =
-        currentSessionId != null && opts?.truncateBeforeUserOrdinal != null;
+      const reuseUserBubble =
+        currentSessionId != null && opts?.reuseExistingUserBubble === true;
 
       // Optimistic user bubble with a collision-free temp id; rebound to
       // turn-<runId>-user once POST returns so refresh/reconcile can map it.
@@ -373,7 +378,7 @@ export function useRunsStream() {
         typeof crypto !== "undefined" && crypto.randomUUID
           ? `user-pending-${crypto.randomUUID()}`
           : `user-pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      if (!isRegenerate) {
+      if (!reuseUserBubble) {
         // A fresh linear turn — a stale branch group must not tag its bubble.
         useChatStore.getState().setPendingBranchGroup(null);
         appendMessage({
@@ -510,7 +515,7 @@ export function useRunsStream() {
         });
       }
 
-      if (!isRegenerate) renameMessageId(tempUserId, `turn-${runId}-user`);
+      if (!reuseUserBubble) renameMessageId(tempUserId, `turn-${runId}-user`);
       // Track the run under its session so a switch-away/back can re-attach it.
       setRunningForSession(currentSessionId ?? runId, runId);
       setActiveRunId(runId);

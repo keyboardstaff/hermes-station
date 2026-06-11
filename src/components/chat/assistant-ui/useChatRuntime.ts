@@ -8,7 +8,13 @@ import {
 } from "@assistant-ui/react";
 import { useChatStore } from "@/store/chat";
 import { branchableItems } from "@/lib/chat-runtime";
+import { editTarget } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
+
+export interface ChatSendOptions {
+  truncateBeforeUserOrdinal?: number;
+  reuseExistingUserBubble?: boolean;
+}
 
 /** Pulls the plain text out of an assistant-ui composer submission. */
 function appendText(message: AppendMessage): string {
@@ -31,11 +37,14 @@ function appendText(message: AppendMessage): string {
  * match (in-memory only, mirroring upstream desktop).
  *
  * `isRunning` gates branch switching during a run (the runtime ignores
- * switches while streaming). The composer remains Station's own, so `onNew`
- * is a thin bridge that stays dormant until the composer is migrated.
+ * switches while streaming). `onEdit` backs the native inline edit composer:
+ * an edited user prompt drops its old turn locally (linear replace, no branch
+ * — matching upstream desktop) and re-runs with the matching backend truncate.
+ * The main composer remains Station's own, so `onNew` is a thin bridge that
+ * stays dormant until the composer is migrated.
  */
 export function useChatRuntime(opts: {
-  onSend: (text: string) => void;
+  onSend: (text: string, sendOpts?: ChatSendOptions) => void;
   onCancel: () => void;
 }) {
   const messages = useChatStore((s) => s.messages);
@@ -58,6 +67,17 @@ export function useChatRuntime(opts: {
     onNew: async (message: AppendMessage) => {
       const text = appendText(message);
       if (text) opts.onSend(text);
+    },
+    onEdit: async (edited: AppendMessage) => {
+      const state = useChatStore.getState();
+      if (state.activeRunId) return; // no edits while a run streams
+      const text = appendText(edited);
+      // sourceId = the message being edited; parentId (the message before it)
+      // is the fallback for older AppendMessage shapes, mirroring desktop.
+      const target = editTarget(state.messages, edited.sourceId ?? edited.parentId);
+      if (!text || !target) return;
+      state.truncateMessagesBefore(target.index);
+      opts.onSend(text, { truncateBeforeUserOrdinal: target.ordinal });
     },
     onCancel: async () => {
       opts.onCancel();

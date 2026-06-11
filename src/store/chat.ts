@@ -111,6 +111,10 @@ interface ChatState {
    *  members on the new active path, hide their siblings. Non-branch messages
    *  are untouched. */
   applyBranchVisibility: (visibleIds: readonly string[]) => void;
+  /** In-session edit: drop the message at `index` and everything after it —
+   *  the edited prompt replaces the turn linearly (no branch, like upstream
+   *  desktop's edit), and the backend truncate removes it from state.db. */
+  truncateMessagesBefore: (index: number) => void;
   setComposerDraft: (t: string | null) => void;
 }
 
@@ -491,6 +495,10 @@ export const useChatStore = create<ChatState>()(
       });
       return changed ? { messages: msgs } : {};
     }),
+  truncateMessagesBefore: (index) =>
+    set((s) => (index < 0 || index >= s.messages.length
+      ? {}
+      : { messages: s.messages.slice(0, index) })),
   setComposerDraft: (t) => set({ composerDraft: t }),
     }),
     {

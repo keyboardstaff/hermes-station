@@ -519,6 +519,7 @@ export const zh: Translations = {
     effort: "思考强度",
     introHeadline: "今天要推进什么？",
     introBody: "发来任务、出错的路径，或一个粗略想法 —— 我会先勘察，再把下一步落到具体。",
+    send: "发送",
   },
 
   createProfile: {

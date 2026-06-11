@@ -357,6 +357,68 @@
   justify-content: center;
 }
 
+.hms-chat-bubble-action--edit {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+/* Inline edit composer — swaps in for a user bubble while editing (assistant-ui
+   UserEditComposer). Send confirms the in-session edit; Cancel restores. */
+.hms-edit-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  width: min(640px, 80%);
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.hms-edit-composer-input {
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  color: var(--hms-text);
+  font-size: var(--hms-text-body);
+  font-family: inherit;
+  line-height: 1.6;
+  min-height: 48px;
+}
+
+.hms-edit-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hms-space-2);
+}
+
+.hms-edit-composer-btn {
+  border: 1px solid var(--hms-border);
+  background: transparent;
+  color: var(--hms-text-muted);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+}
+
+.hms-edit-composer-btn:hover {
+  color: var(--hms-text);
+  background: var(--hms-border);
+}
+
+.hms-edit-composer-btn[data-variant="primary"] {
+  background: var(--hms-accent);
+  border-color: var(--hms-accent);
+  color: var(--hms-on-accent, #fff);
+}
+
+.hms-edit-composer-btn[data-variant="primary"]:hover {
+  filter: brightness(1.08);
+}
+
 /* Branch navigation (1/2) under a regenerated answer — assistant-ui
    BranchPickerPrimitive; removed automatically while there's one branch. */
 .hms-branch-picker {

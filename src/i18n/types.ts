@@ -543,6 +543,7 @@ export interface Translations {
     effort: string;
     introHeadline: string;
     introBody: string;
+    send: string;
   };
 
   createProfile: {

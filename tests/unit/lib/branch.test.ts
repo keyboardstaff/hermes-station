@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { messagePlainText, buildBranchHistory, precedingUserIndex, userOrdinal } from "@/lib/branch";
+import { messagePlainText, buildBranchHistory, precedingUserIndex, userOrdinal, editTarget } from "@/lib/branch";
 import type { ChatMessage } from "@/lib/hermes-types";
 
 const user = (id: string, content: string): ChatMessage => ({ id, role: "user", content, createdAt: 0 });
@@ -76,5 +76,34 @@ describe("userOrdinal", () => {
     expect(userOrdinal(msgs, 0)).toBe(0); // first user turn → truncate to empty
     expect(userOrdinal(msgs, 2)).toBe(1); // second user turn
     expect(userOrdinal(msgs, 4)).toBe(2); // third user turn
+  });
+
+  it("skips hidden messages — state.db holds only the active path", () => {
+    const withHidden: ChatMessage[] = [
+      { ...user("u0", "a"), hidden: true },
+      user("u1", "b"),
+      user("u2", "c"),
+    ];
+    expect(userOrdinal(withHidden, 2)).toBe(1); // u0 hidden → u2 is the 2nd visible
+  });
+});
+
+describe("editTarget", () => {
+  const msgs: ChatMessage[] = [
+    user("u0", "a"),
+    asst("a0", [{ type: "text", content: "b" }]),
+    user("u1", "c"),
+    asst("a1", [{ type: "text", content: "d" }]),
+  ];
+
+  it("resolves a user message id to its index + truncate ordinal", () => {
+    expect(editTarget(msgs, "u1")).toEqual({ index: 2, ordinal: 1 });
+    expect(editTarget(msgs, "u0")).toEqual({ index: 0, ordinal: 0 });
+  });
+
+  it("rejects unknown ids, assistant messages and null", () => {
+    expect(editTarget(msgs, "nope")).toBeNull();
+    expect(editTarget(msgs, "a0")).toBeNull();
+    expect(editTarget(msgs, null)).toBeNull();
   });
 });

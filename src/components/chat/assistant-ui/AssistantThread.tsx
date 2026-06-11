@@ -2,10 +2,13 @@ import {
   ThreadPrimitive,
   MessagePrimitive,
   BranchPickerPrimitive,
+  ComposerPrimitive,
+  ActionBarPrimitive,
   useAuiState,
   type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { useI18n } from "@/i18n";
 import ToolCallCard from "../ToolCallCard";
 import {
   MarkdownText, ReasoningBlock, ApprovalNotice, StreamingActivity,
@@ -56,6 +59,26 @@ const PART_COMPONENTS = {
     Fallback: ToolPart,
   },
 } as const;
+
+/** Native inline edit composer — replaces a user bubble while editing. Send
+ *  routes through the runtime's onEdit (in-session truncate + re-run); Cancel
+ *  restores the bubble. The textarea initializes with the message text. */
+function UserEditComposer() {
+  const { t } = useI18n();
+  return (
+    <ComposerPrimitive.Root className="hms-edit-composer">
+      <ComposerPrimitive.Input className="hms-edit-composer-input" />
+      <div className="hms-edit-composer-actions">
+        <ComposerPrimitive.Cancel className="hms-edit-composer-btn">
+          {t.common.cancel}
+        </ComposerPrimitive.Cancel>
+        <ComposerPrimitive.Send className="hms-edit-composer-btn" data-variant="primary">
+          {t.composer.send}
+        </ComposerPrimitive.Send>
+      </div>
+    </ComposerPrimitive.Root>
+  );
+}
 
 /** 1/2 branch navigation under a regenerated answer. The runtime drives it
  *  (switching calls back through setMessages → applyBranchVisibility); it
@@ -112,13 +135,26 @@ function HmsBubble() {
         {!isUser && <BranchPicker />}
 
         {/* Visibility driven by CSS hover on .hms-chat-bubble-row. */}
-        {!hms.streaming && <MessageActions msg={hms} />}
+        {!hms.streaming && (
+          <MessageActions
+            msg={hms}
+            editSlot={
+              isUser ? (
+                <ActionBarPrimitive.Edit asChild>
+                  <button title="Edit & resend" className="hms-chat-bubble-action hms-chat-bubble-action--edit">
+                    <Pencil size={12} />
+                  </button>
+                </ActionBarPrimitive.Edit>
+              ) : undefined
+            }
+          />
+        )}
       </div>
     </MessagePrimitive.Root>
   );
 }
 
-const MESSAGE_COMPONENTS = { Message: HmsBubble } as const;
+const MESSAGE_COMPONENTS = { Message: HmsBubble, UserEditComposer } as const;
 
 interface AssistantThreadProps {
   scrollRef?: React.Ref<HTMLDivElement>;
