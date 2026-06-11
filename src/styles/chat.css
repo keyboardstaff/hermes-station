@@ -357,6 +357,49 @@
   justify-content: center;
 }
 
+/* Branch navigation (1/2) under a regenerated answer — assistant-ui
+   BranchPickerPrimitive; removed automatically while there's one branch. */
+.hms-branch-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  padding-inline: 4px;
+}
+
+.hms-branch-picker-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--hms-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.hms-branch-picker-btn:hover {
+  background: var(--hms-border);
+  color: var(--hms-text);
+}
+
+.hms-branch-picker-btn:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.hms-branch-picker-btn:disabled:hover {
+  background: transparent;
+  color: var(--hms-text-muted);
+}
+
+.hms-branch-picker-pos {
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
 .hms-session-recents-rename {
   display: flex;
   align-items: center;

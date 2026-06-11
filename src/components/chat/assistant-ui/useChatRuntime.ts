@@ -1,6 +1,14 @@
-import { useExternalStoreRuntime, type AppendMessage } from "@assistant-ui/react";
+import { useMemo, useRef } from "react";
+import {
+  useExternalStoreRuntime,
+  ExportedMessageRepository,
+  type AppendMessage,
+  type ThreadMessage,
+  type ThreadMessageLike,
+} from "@assistant-ui/react";
 import { useChatStore } from "@/store/chat";
-import { toThreadMessage } from "@/lib/chat-runtime";
+import { branchableItems } from "@/lib/chat-runtime";
+import type { ChatMessage } from "@/lib/hermes-types";
 
 /** Pulls the plain text out of an assistant-ui composer submission. */
 function appendText(message: AppendMessage): string {
@@ -15,13 +23,15 @@ function appendText(message: AppendMessage): string {
  * Bridges Station's chat store to an assistant-ui external-store runtime.
  *
  * The store stays the single source of truth: `sendMessage` / `stopRun` (owned
- * by useRunsStream in ChatPanel) drive it, the store's `messages` flow into the
- * runtime via `convertMessage`, and the <Thread> re-renders from there.
+ * by useRunsStream in ChatPanel) drive it, and its `messages` flow into the
+ * runtime as a branchable message repository — regenerated answers sharing a
+ * `branchGroupId` become sibling branches (BranchPicker 1/2), everything else
+ * stays a linear chain. Switching branches calls back through `setMessages`
+ * with the new active path; `applyBranchVisibility` flips `hidden` flags to
+ * match (in-memory only, mirroring upstream desktop).
  *
- * `isRunning` is intentionally left off in this phase — the live "working"
- * indicator is rendered by ChatBubble from `msg.streaming`, and omitting it
- * keeps assistant-ui from injecting an optimistic empty assistant bubble that
- * Station's store already owns. The composer remains Station's own, so `onNew`
+ * `isRunning` gates branch switching during a run (the runtime ignores
+ * switches while streaming). The composer remains Station's own, so `onNew`
  * is a thin bridge that stays dormant until the composer is migrated.
  */
 export function useChatRuntime(opts: {
@@ -29,9 +39,22 @@ export function useChatRuntime(opts: {
   onCancel: () => void;
 }) {
   const messages = useChatStore((s) => s.messages);
+  const isRunning = useChatStore((s) => s.activeRunId != null);
+  const applyBranchVisibility = useChatStore((s) => s.applyBranchVisibility);
+
+  // Conversion cache keyed by message object identity — only messages the
+  // store actually replaced get reconverted on a streaming delta.
+  const cacheRef = useRef(new WeakMap<ChatMessage, ThreadMessageLike>());
+  const messageRepository = useMemo(() => {
+    const { items, headId } = branchableItems(messages, cacheRef.current);
+    return ExportedMessageRepository.fromBranchableArray(items, { headId });
+  }, [messages]);
+
   return useExternalStoreRuntime({
-    messages,
-    convertMessage: toThreadMessage,
+    messageRepository,
+    isRunning,
+    setMessages: (next: readonly ThreadMessage[]) =>
+      applyBranchVisibility(next.map((m) => m.id)),
     onNew: async (message: AppendMessage) => {
       const text = appendText(message);
       if (text) opts.onSend(text);

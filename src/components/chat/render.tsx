@@ -322,7 +322,7 @@ export function MessageActions({ msg }: { msg: ChatMessage }) {
   const setPendingBranchHistory = useChatStore((s) => s.setPendingBranchHistory);
   const setPendingAutoSend = useChatStore((s) => s.setPendingAutoSend);
   const setPendingRegenerate = useChatStore((s) => s.setPendingRegenerate);
-  const truncateMessagesBefore = useChatStore((s) => s.truncateMessagesBefore);
+  const supersedeTurn = useChatStore((s) => s.supersedeTurn);
   const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const tts = useTextToSpeech();
   const idx = messages.findIndex((m) => m.id === msg.id);
@@ -356,14 +356,14 @@ export function MessageActions({ msg }: { msg: ChatMessage }) {
   // Edit a user prompt: re-ask an edited version with the context before it.
   const handleEdit = () => startBranch(buildBranchHistory(messages, idx), messagePlainText(msg), false);
 
-  // Regenerate an answer IN PLACE: truncate the transcript before the prompt
-  // that produced it and re-run from there (backend truncates state.db to
-  // match via `truncate_before_user_ordinal`). Stays in the same session.
+  // Regenerate an answer IN PLACE: keep the old answer as a hidden branch
+  // alternate (BranchPicker 1/2), truncate state.db before the producing user
+  // turn via `truncate_before_user_ordinal`, and re-run in the same session.
   const handleRetry = () => {
     const u = precedingUserIndex(messages, idx);
     if (u < 0) return;
     const text = messagePlainText(messages[u]);
-    truncateMessagesBefore(u);
+    supersedeTurn(u);
     setPendingRegenerate({ text, truncateBeforeUserOrdinal: userOrdinal(messages, u) });
   };
 

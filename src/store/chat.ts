@@ -42,10 +42,15 @@ interface ChatState {
   /** Transient: text to auto-send once into the next empty session — drives
    *  one-click "regenerate". Consumed by ChatPanel. */
   pendingAutoSend: string | null;
-  /** Transient: in-session regenerate / edit intent. The transcript is already
-   *  truncated locally; ChatPanel fires the run with `truncate_before_user_ordinal`
-   *  so the backend truncates state.db to match, then re-runs. Consumed once. */
+  /** Transient: in-session regenerate / edit intent. The superseded turn is
+   *  already marked as a hidden branch locally; ChatPanel fires the run with
+   *  `truncate_before_user_ordinal` so the backend truncates state.db to match,
+   *  then re-runs. Consumed once. */
   pendingRegenerate: { text: string; truncateBeforeUserOrdinal: number } | null;
+  /** Transient: the branch group the NEXT streaming assistant bubble joins —
+   *  set by supersedeTurn so a regenerated answer becomes a sibling of the
+   *  answer it replaces (BranchPicker 1/2). Cleared by a normal send. */
+  pendingBranchGroup: string | null;
   /** Transient: text to load into the Composer (edit / branch prefill).
    *  Reactive — works even when /chat is already mounted. */
   composerDraft: string | null;
@@ -96,9 +101,16 @@ interface ChatState {
   setPendingBranchHistory: (h: BranchTurn[] | null) => void;
   setPendingAutoSend: (t: string | null) => void;
   setPendingRegenerate: (v: { text: string; truncateBeforeUserOrdinal: number } | null) => void;
-  /** Drop the message at `index` and everything after it (in-session regenerate
-   *  / edit truncates the local transcript before re-running). */
-  truncateMessagesBefore: (index: number) => void;
+  setPendingBranchGroup: (g: string | null) => void;
+  /** In-session regenerate: keep the user message at `userIndex`, mark its
+   *  turn's assistant answers as hidden branch alternates (shared
+   *  branchGroupId), drop every later turn, and arm pendingBranchGroup so the
+   *  re-run's answer joins the same group as a visible sibling. */
+  supersedeTurn: (userIndex: number) => void;
+  /** Branch switch (assistant-ui setMessages): show exactly the branch-group
+   *  members on the new active path, hide their siblings. Non-branch messages
+   *  are untouched. */
+  applyBranchVisibility: (visibleIds: readonly string[]) => void;
   setComposerDraft: (t: string | null) => void;
 }
 
@@ -143,6 +155,7 @@ export const useChatStore = create<ChatState>()(
   pendingBranchHistory: null,
   pendingAutoSend: null,
   pendingRegenerate: null,
+  pendingBranchGroup: null,
   composerDraft: null,
 
   setActiveSession: (id) =>
@@ -168,6 +181,8 @@ export const useChatStore = create<ChatState>()(
         // AFTER calling setActiveSession(null), so its own intent survives).
         pendingBranchHistory: null,
         pendingAutoSend: null,
+        pendingRegenerate: null,
+        pendingBranchGroup: null,
       };
     }),
   updateActiveSessionId: (id) => set({ activeSessionId: id }),
@@ -188,6 +203,7 @@ export const useChatStore = create<ChatState>()(
           content: "",
           segments: [{ type: "text", content: delta }],
           ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
+          ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -226,6 +242,7 @@ export const useChatStore = create<ChatState>()(
           segments: [],
           reasoning: text,
           ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
+          ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -250,6 +267,7 @@ export const useChatStore = create<ChatState>()(
           content: "",
           segments: [toolSeg],
           ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
+          ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
         });
@@ -430,10 +448,49 @@ export const useChatStore = create<ChatState>()(
   setPendingBranchHistory: (h) => set({ pendingBranchHistory: h }),
   setPendingAutoSend: (t) => set({ pendingAutoSend: t }),
   setPendingRegenerate: (v) => set({ pendingRegenerate: v }),
-  truncateMessagesBefore: (index) =>
-    set((s) => (index < 0 || index >= s.messages.length
-      ? {}
-      : { messages: s.messages.slice(0, index) })),
+  setPendingBranchGroup: (g) => set({ pendingBranchGroup: g }),
+  supersedeTurn: (userIndex) =>
+    set((s) => {
+      const user = s.messages[userIndex];
+      if (!user || user.role !== "user") return {};
+      // The turn = everything up to (not including) the next user message.
+      let end = s.messages.length;
+      for (let i = userIndex + 1; i < s.messages.length; i++) {
+        if (s.messages[i].role === "user") { end = i; break; }
+      }
+      const turn = s.messages.slice(userIndex + 1, end);
+      // Re-regenerating an already-branched answer reuses its group so all
+      // alternates stay siblings (1/2 → 1/3); first regenerate keys off the
+      // user message that produced the turn.
+      const group =
+        turn.find((m) => m.role === "assistant" && m.branchGroupId)?.branchGroupId
+        ?? `branch-${user.id}`;
+      return {
+        // Later turns are dropped — the backend truncate removes them from
+        // state.db, so keeping them locally would show a transcript the agent
+        // no longer has.
+        messages: [
+          ...s.messages.slice(0, userIndex + 1),
+          ...turn.map((m) =>
+            m.role === "assistant" ? { ...m, branchGroupId: group, hidden: true } : m
+          ),
+        ],
+        pendingBranchGroup: group,
+      };
+    }),
+  applyBranchVisibility: (visibleIds) =>
+    set((s) => {
+      const vis = new Set(visibleIds);
+      let changed = false;
+      const msgs = s.messages.map((m) => {
+        if (m.role !== "assistant" || !m.branchGroupId) return m;
+        const hidden = !vis.has(m.id);
+        if ((m.hidden ?? false) === hidden) return m;
+        changed = true;
+        return { ...m, hidden };
+      });
+      return changed ? { messages: msgs } : {};
+    }),
   setComposerDraft: (t) => set({ composerDraft: t }),
     }),
     {

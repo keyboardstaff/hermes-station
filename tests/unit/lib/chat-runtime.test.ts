@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toThreadMessage, messageText, APPROVAL_NOTICE_TOOL } from "@/lib/chat-runtime";
+import { toThreadMessage, messageText, branchableItems, APPROVAL_NOTICE_TOOL } from "@/lib/chat-runtime";
 import type { ChatMessage, ToolCall } from "@/lib/hermes-types";
 
 const tc = (over: Partial<ToolCall> = {}): ToolCall => ({
@@ -89,5 +89,52 @@ describe("toThreadMessage", () => {
     const msg: ChatMessage = { id: "a3", role: "assistant", content: "answer", createdAt: 0 };
     const out = toThreadMessage(msg);
     expect(out.content).toEqual([{ type: "text", text: "answer" }]);
+  });
+});
+
+describe("branchableItems", () => {
+  const user = (id: string): ChatMessage => ({ id, role: "user", content: id, createdAt: 0 });
+  const asst = (id: string, over: Partial<ChatMessage> = {}): ChatMessage => ({
+    id, role: "assistant", content: id, createdAt: 0, ...over,
+  });
+
+  it("keeps a plain transcript as a linear parent chain", () => {
+    const { items, headId } = branchableItems([user("u0"), asst("a0"), user("u1"), asst("a1")]);
+    expect(items.map((i) => i.parentId)).toEqual([null, "u0", "a0", "u1"]);
+    expect(headId).toBe("a1");
+  });
+
+  it("attaches branch-group members to the same parent (siblings)", () => {
+    const msgs = [
+      user("u0"),
+      asst("old", { branchGroupId: "g", hidden: true }),
+      asst("new", { branchGroupId: "g" }),
+    ];
+    const { items, headId } = branchableItems(msgs);
+    // Both answers are children of the user turn → BranchPicker siblings.
+    expect(items.map((i) => i.parentId)).toEqual([null, "u0", "u0"]);
+    // The hidden alternate never advances the visible path.
+    expect(headId).toBe("new");
+  });
+
+  it("chains later turns off the visible branch, not the hidden one", () => {
+    const msgs = [
+      user("u0"),
+      asst("old", { branchGroupId: "g", hidden: true }),
+      asst("new", { branchGroupId: "g" }),
+      user("u1"),
+      asst("a1"),
+    ];
+    const { items, headId } = branchableItems(msgs);
+    expect(items[3].parentId).toBe("new"); // u1 follows the visible answer
+    expect(headId).toBe("a1");
+  });
+
+  it("reuses cached conversions by object identity", () => {
+    const cache = new WeakMap<ChatMessage, ReturnType<typeof toThreadMessage>>();
+    const stable = user("u0");
+    const first = branchableItems([stable], cache).items[0].message;
+    const second = branchableItems([stable], cache).items[0].message;
+    expect(second).toBe(first);
   });
 });

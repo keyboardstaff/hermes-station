@@ -1,6 +1,11 @@
 import type { ThreadMessageLike } from "@assistant-ui/react";
 import type { ChatMessage, ToolCall } from "@/lib/hermes-types";
 
+export interface BranchableItem {
+  message: ThreadMessageLike;
+  parentId: string | null;
+}
+
 /** Sentinel tool name carrying a frontend-synthetic approval notice through the
  *  tool-call part channel (rendered by AssistantThread's `tools.by_name`). */
 export const APPROVAL_NOTICE_TOOL = "__hms_approval_notice__";
@@ -88,4 +93,49 @@ export function toThreadMessage(msg: ChatMessage): ThreadMessageLike {
     content: parts,
     metadata: { custom: { hms: msg } },
   };
+}
+
+/**
+ * Assemble the transcript into a branchable message tree for
+ * `ExportedMessageRepository.fromBranchableArray`.
+ *
+ * Linear messages chain off the previous *visible* message, so a transcript
+ * without branch groups stays a plain chain (zero behavior change). Assistant
+ * messages sharing a `branchGroupId` all attach to the parent recorded when the
+ * group was first seen — making them sibling branches of the same user turn
+ * (BranchPicker 1/2). Hidden alternates never advance the visible path, and
+ * `headId` is the last visible message so the active branch renders.
+ *
+ * `cache` (keyed by message object identity) skips reconverting unchanged
+ * messages on each streaming delta; the store's immutable updates guarantee a
+ * changed message is a new object.
+ */
+export function branchableItems(
+  messages: ChatMessage[],
+  cache?: WeakMap<ChatMessage, ThreadMessageLike>,
+): { items: BranchableItem[]; headId: string | null } {
+  const items: BranchableItem[] = [];
+  const branchParentByGroup = new Map<string, string | null>();
+  let visibleParentId: string | null = null;
+  let headId: string | null = null;
+
+  for (const msg of messages) {
+    let parentId = visibleParentId;
+    if (msg.role !== "user" && msg.branchGroupId) {
+      if (!branchParentByGroup.has(msg.branchGroupId)) {
+        branchParentByGroup.set(msg.branchGroupId, visibleParentId);
+      }
+      parentId = branchParentByGroup.get(msg.branchGroupId) ?? null;
+    }
+    const cached = cache?.get(msg);
+    const message = cached ?? toThreadMessage(msg);
+    if (cache && !cached) cache.set(msg, message);
+    items.push({ message, parentId });
+    if (!msg.hidden) {
+      visibleParentId = msg.id;
+      headId = msg.id;
+    }
+  }
+
+  return { items, headId };
 }

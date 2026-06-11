@@ -1,9 +1,11 @@
 import {
   ThreadPrimitive,
   MessagePrimitive,
+  BranchPickerPrimitive,
   useAuiState,
   type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import ToolCallCard from "../ToolCallCard";
 import {
   MarkdownText, ReasoningBlock, ApprovalNotice, StreamingActivity,
@@ -55,6 +57,25 @@ const PART_COMPONENTS = {
   },
 } as const;
 
+/** 1/2 branch navigation under a regenerated answer. The runtime drives it
+ *  (switching calls back through setMessages → applyBranchVisibility); it
+ *  renders nothing while the message has a single branch. */
+function BranchPicker() {
+  return (
+    <BranchPickerPrimitive.Root hideWhenSingleBranch className="hms-branch-picker">
+      <BranchPickerPrimitive.Previous className="hms-branch-picker-btn">
+        <ChevronLeft size={12} />
+      </BranchPickerPrimitive.Previous>
+      <span className="hms-branch-picker-pos">
+        <BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
+      </span>
+      <BranchPickerPrimitive.Next className="hms-branch-picker-btn">
+        <ChevronRight size={12} />
+      </BranchPickerPrimitive.Next>
+    </BranchPickerPrimitive.Root>
+  );
+}
+
 // ---- Message shell ----------------------------------------------------------
 
 /** One transcript bubble. Mirrors ChatBubble's row/role/bubble structure (so the
@@ -87,6 +108,8 @@ function HmsBubble() {
             </>
           )}
         </div>
+
+        {!isUser && <BranchPicker />}
 
         {/* Visibility driven by CSS hover on .hms-chat-bubble-row. */}
         {!hms.streaming && <MessageActions msg={hms} />}

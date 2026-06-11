@@ -95,6 +95,14 @@ export interface ChatMessage {
   approvalChoice?: string;
   /** Agents room: the profile-agent this turn was routed to (@mention). */
   agent?: string;
+  /** In-memory branch grouping: assistant answers regenerated from the same user
+   *  turn share a `branchGroupId` so the runtime presents them as branches
+   *  (BranchPicker 1/2). Not persisted — a superseded answer survives only for
+   *  the session view, like upstream desktop. */
+  branchGroupId?: string;
+  /** A superseded branch alternative — kept in the store (for the BranchPicker)
+   *  but off the active path. Toggled when the user switches branches. */
+  hidden?: boolean;
   createdAt: number;
   streaming?: boolean;
 }

@@ -361,6 +361,11 @@ export function useRunsStream() {
       opts?: { profileOverride?: string; truncateBeforeUserOrdinal?: number },
     ) => {
       const currentSessionId = useChatStore.getState().activeSessionId;
+      // In-session regenerate: supersedeTurn already kept the producing user
+      // bubble in the transcript, so don't append a duplicate; the re-run's
+      // assistant bubble joins the armed branch group instead.
+      const isRegenerate =
+        currentSessionId != null && opts?.truncateBeforeUserOrdinal != null;
 
       // Optimistic user bubble with a collision-free temp id; rebound to
       // turn-<runId>-user once POST returns so refresh/reconcile can map it.
@@ -368,17 +373,21 @@ export function useRunsStream() {
         typeof crypto !== "undefined" && crypto.randomUUID
           ? `user-pending-${crypto.randomUUID()}`
           : `user-pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      appendMessage({
-        id: tempUserId,
-        role: "user",
-        content: input,
-        attachments: attachments?.map((a) => ({
-          name: a.name, content: a.content,
-          isImage: a.isImage, isAudio: a.isAudio, isVideo: a.isVideo,
-        })),
-        ...(opts?.profileOverride ? { agent: opts.profileOverride } : {}),
-        createdAt: Date.now(),
-      });
+      if (!isRegenerate) {
+        // A fresh linear turn — a stale branch group must not tag its bubble.
+        useChatStore.getState().setPendingBranchGroup(null);
+        appendMessage({
+          id: tempUserId,
+          role: "user",
+          content: input,
+          attachments: attachments?.map((a) => ({
+            name: a.name, content: a.content,
+            isImage: a.isImage, isAudio: a.isAudio, isVideo: a.isVideo,
+          })),
+          ...(opts?.profileOverride ? { agent: opts.profileOverride } : {}),
+          createdAt: Date.now(),
+        });
+      }
 
       // Structured ContentPart[] — never concat into a single text blob, breaks multi-part parsing.
       let runInput: string | ContentPart[];
@@ -501,7 +510,7 @@ export function useRunsStream() {
         });
       }
 
-      renameMessageId(tempUserId, `turn-${runId}-user`);
+      if (!isRegenerate) renameMessageId(tempUserId, `turn-${runId}-user`);
       // Track the run under its session so a switch-away/back can re-attach it.
       setRunningForSession(currentSessionId ?? runId, runId);
       setActiveRunId(runId);
