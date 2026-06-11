@@ -190,13 +190,14 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
   );
 }
 
-// /chat empty state — the Hermes mark + a short intro (the logo's home now
-// that the sidebar header is a search box).
+// /chat empty state — the Hermes mark + wordmark + a short intro (the brand's
+// home now that the sidebar header is a search box).
 function ChatIntro() {
   const { t } = useI18n();
   return (
     <div className="hms-chat-intro">
-      <HermesMark size={44} />
+      <HermesMark size={72} />
+      <div className="hms-chat-intro-title">Hermes Station</div>
       <div className="hms-chat-intro-headline">{t.composer.introHeadline}</div>
       <div className="hms-chat-intro-body">{t.composer.introBody}</div>
     </div>

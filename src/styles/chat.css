@@ -363,6 +363,178 @@
   border-radius: 4px;
 }
 
+/* Tool rows — desktop-style flat disclosure rows. Collapsed: no card chrome,
+   just glyph + name + inline preview, caret revealed on hover, live timer /
+   copy on the right. Expanded: the block grows a 10px bordered shell with
+   labeled Input / Output sections. Success is silent (no green check). */
+.hms-tool {
+  min-width: 0;
+  max-width: 100%;
+  margin: 2px 0;
+  font-size: var(--hms-text-caption);
+}
+
+.hms-tool[data-open="true"] {
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hms-tool-header {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.hms-tool[data-open="true"] > .hms-tool-header {
+  border-bottom: 1px solid var(--hms-border);
+  padding: 6px 8px;
+}
+
+.hms-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+}
+
+.hms-tool-row:disabled {
+  cursor: default;
+}
+
+.hms-tool-glyph {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+}
+
+.hms-tool-glyph[data-tone="error"] {
+  color: var(--hms-error);
+}
+
+.hms-tool-glyph[data-tone="warning"] {
+  color: var(--hms-warning);
+}
+
+.hms-tool-spin {
+  animation: spin 1s linear infinite;
+}
+
+.hms-tool-title {
+  flex-shrink: 0;
+  font-weight: 500;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--hms-text) 78%, transparent);
+}
+
+.hms-tool-row:not(:disabled):hover .hms-tool-title {
+  color: var(--hms-text);
+}
+
+.hms-tool-title[data-status="error"] {
+  color: var(--hms-error);
+}
+
+.hms-tool-preview {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-tool-caret {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.hms-tool-header:hover .hms-tool-caret,
+.hms-tool[data-open="true"] .hms-tool-caret {
+  opacity: 0.8;
+}
+
+.hms-tool-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.hms-tool-meta {
+  font-size: 0.625rem;
+  color: var(--hms-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hms-tool-copy {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 1px 3px;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.hms-tool-header:hover .hms-tool-copy,
+.hms-tool-section-label:hover .hms-tool-copy {
+  opacity: 1;
+}
+
+.hms-tool-copy:hover {
+  color: var(--hms-text);
+}
+
+.hms-tool-body {
+  display: grid;
+  gap: var(--hms-space-2);
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.hms-tool-section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  margin-bottom: 4px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hms-text-muted);
+}
+
+.hms-tool-pre {
+  margin: 0;
+  padding: 6px 8px;
+  max-height: 14rem;
+  overflow: auto;
+  font-family: 'Fira Code', Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: color-mix(in srgb, var(--hms-text) 80%, transparent);
+}
+
 /* Inline edit composer — swaps in for a user bubble while editing (assistant-ui
    UserEditComposer). Send confirms the in-session edit; Cancel restores. */
 .hms-edit-composer {
@@ -863,13 +1035,20 @@
 }
 
 .hms-chat-intro .hms-mark {
-  color: var(--hms-text-muted);
-  opacity: 0.85;
+  color: var(--hms-accent);
+  opacity: 0.95;
+}
+
+.hms-chat-intro-title {
+  font-size: var(--hms-text-2xl);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--hms-text);
 }
 
 .hms-chat-intro-headline {
-  font-size: var(--hms-text-xl);
-  font-weight: 700;
+  font-size: var(--hms-text-lg);
+  font-weight: 600;
   color: var(--hms-text);
 }
 

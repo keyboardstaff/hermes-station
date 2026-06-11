@@ -1,146 +1,167 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, CheckCircle2, XCircle, Copy, Check, AlertTriangle, Clock, MinusCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ChevronDown, ChevronRight, Loader2, XCircle, Copy, Check,
+  AlertTriangle, Clock, MinusCircle, Wrench,
+} from "lucide-react";
 import type { ToolCall } from "@/lib/hermes-types";
 import { useToolViewStore } from "@/store/app";
 
-const STATUS_ICON: Record<ToolCall["status"], React.ReactNode> = {
-  running: <Loader2 size={13} style={{ animation: "spin 1s linear infinite", color: "var(--hms-info, #60a5fa)", flexShrink: 0 }} />,
-  done: <CheckCircle2 size={13} style={{ color: "var(--hms-success)", flexShrink: 0 }} />,
-  error: <XCircle size={13} style={{ color: "var(--hms-error)", flexShrink: 0 }} />,
-  approval_required: <AlertTriangle size={13} style={{ color: "var(--hms-warning)", flexShrink: 0 }} />,
-  cancelled: <MinusCircle size={13} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />,
-  timeout: <Clock size={13} style={{ color: "var(--hms-warning)", flexShrink: 0 }} />,
-};
+/** Leading glyph, desktop-style: success is silent (a quiet tool glyph instead
+ *  of a green check) — only running / failure states announce themselves. */
+function StatusGlyph({ status }: { status: ToolCall["status"] }) {
+  switch (status) {
+    case "running":
+      return (
+        <span className="hms-tool-glyph">
+          <Loader2 size={13} className="hms-tool-spin" />
+        </span>
+      );
+    case "error":
+      return (
+        <span className="hms-tool-glyph" data-tone="error">
+          <XCircle size={13} />
+        </span>
+      );
+    case "approval_required":
+      return (
+        <span className="hms-tool-glyph" data-tone="warning">
+          <AlertTriangle size={13} />
+        </span>
+      );
+    case "timeout":
+      return (
+        <span className="hms-tool-glyph" data-tone="warning">
+          <Clock size={13} />
+        </span>
+      );
+    case "cancelled":
+      return (
+        <span className="hms-tool-glyph">
+          <MinusCircle size={13} />
+        </span>
+      );
+    default:
+      return (
+        <span className="hms-tool-glyph">
+          <Wrench size={13} />
+        </span>
+      );
+  }
+}
 
+/** Live elapsed seconds while the tool runs (desktop's activity timer). */
+function Elapsed() {
+  const [start] = useState(() => Date.now());
+  const [now, setNow] = useState(start);
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return <span className="hms-tool-meta">{Math.max(0, Math.round((now - start) / 1000))}s</span>;
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
+      type="button"
+      className="hms-tool-copy"
+      title="Copy"
       onClick={(e) => {
         e.stopPropagation();
         navigator.clipboard.writeText(text).catch(() => {});
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      style={{ border: "none", background: "none", cursor: "pointer", padding: "1px 3px", color: "var(--hms-text-muted)", display: "flex", alignItems: "center" }}
-      title="Copy"
     >
       {copied ? <Check size={11} /> : <Copy size={11} />}
     </button>
   );
 }
 
+/** Unwrap the Hermes standard `{result, error}` envelope for display. */
+function unwrapResult(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed !== null && typeof parsed === "object" && "result" in parsed) {
+      const inner = parsed.result;
+      return typeof inner === "string" ? inner : JSON.stringify(inner, null, 2);
+    }
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * One tool action, styled after upstream desktop's tool rows: collapsed it is
+ * a flat disclosure row (no card chrome — glyph, name, inline preview, a caret
+ * revealed on hover, live timer / copy on the right); expanded it becomes a
+ * bordered block with labeled INPUT / OUTPUT sections. Product mode hides raw
+ * payloads entirely (no expansion), mirroring desktop's Tool Call Display.
+ */
 export default function ToolCallCard({ tc }: { tc: ToolCall }) {
-  const { toolView } = useToolViewStore();
-  // Product mode hides raw tool payloads (no expand); Technical shows the full
-  // ARGS/RESULT detail. Mirrors upstream desktop's Tool Call Display setting.
-  const technical = toolView === "technical";
+  const technical = useToolViewStore((s) => s.toolView === "technical");
   const [expanded, setExpanded] = useState(false);
+  const running = tc.status === "running";
+  const canExpand = technical && Boolean(tc.preview || tc.result);
+  const open = canExpand && expanded;
+  const copyText = tc.result ?? tc.preview ?? "";
 
   return (
-    <div
-      style={{
-        margin: "4px 0",
-        borderRadius: 10,
-        // border: "1px solid var(--hms-border)",
-        background: "color-mix(in srgb, var(--hms-surface) 80%, transparent)",
-        fontSize: 'var(--hms-text-caption)',
-        overflow: "hidden",
-      }}
-    >
-      {/* Header row */}
-      <div
-        onClick={technical ? () => setExpanded((e) => !e) : undefined}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 'var(--hms-space-2)',
-          padding: "6px 10px",
-          cursor: technical ? "pointer" : "default",
-          userSelect: "none",
-        }}
-      >
-        {STATUS_ICON[tc.status]}
-        {/* Tool name */}
-        <span style={{ fontFamily: "monospace", color: "var(--hms-text)", fontWeight: 600, flexShrink: 0 }}>
-          {tc.toolName}
-        </span>
-        {/* Preview inline (collapsed view) */}
-        {tc.preview && !expanded && (
-          <span style={{
-            flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)',
-          }}>
-            {tc.preview}
-          </span>
-        )}
-        {/* Right side: status badge + duration + chevron */}
-        <span style={{
-          marginLeft: "auto", flexShrink: 0,
-          fontSize: '0.625rem', color: "var(--hms-text-muted)",
-          display: "flex", alignItems: "center", gap: 'var(--hms-space-1)',
-        }}>
-          {tc.duration !== undefined && (
-            <span style={{ color: "var(--hms-text-muted)" }}>
-              {tc.duration.toFixed(2)}s
+    <div className="hms-tool" data-open={open ? "true" : undefined}>
+      <div className="hms-tool-header">
+        <button
+          type="button"
+          className="hms-tool-row"
+          onClick={canExpand ? () => setExpanded((e) => !e) : undefined}
+          disabled={!canExpand}
+          aria-expanded={canExpand ? open : undefined}
+        >
+          <StatusGlyph status={tc.status} />
+          <span className="hms-tool-title" data-status={tc.status}>{tc.toolName}</span>
+          {tc.preview && !open && <span className="hms-tool-preview">{tc.preview}</span>}
+          {canExpand && (
+            <span className="hms-tool-caret">
+              {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </span>
           )}
-          {technical && (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
+        </button>
+        <span className="hms-tool-trailing">
+          {running ? (
+            <Elapsed />
+          ) : (
+            <>
+              {tc.duration !== undefined && (
+                <span className="hms-tool-meta">{tc.duration.toFixed(1)}s</span>
+              )}
+              {copyText && <CopyButton text={copyText} />}
+            </>
+          )}
         </span>
       </div>
 
-      {/* Expandable detail — grid-row transition gives smooth height animation
-          without needing a fixed max-height guess. Technical mode only; Product
-          hides raw tool payloads entirely. */}
-      {technical && (
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: expanded ? "1fr" : "0fr",
-          transition: "grid-template-rows 0.2s ease",
-        }}
-      >
-        <div style={{ overflow: "hidden" }}>
-          {/* Expanded detail: show preview (the command/query) */}
+      {open && (
+        <div className="hms-tool-body">
           {tc.preview && (
-            <div style={{ borderTop: "1px solid var(--hms-border)", padding: "8px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', fontSize: '0.625rem', color: "var(--hms-text-muted)", marginBottom: 4 }}>
-                <span>ARGS</span>
+            <div>
+              <div className="hms-tool-section-label">
+                <span>Input</span>
                 <CopyButton text={tc.preview} />
               </div>
-              <pre style={{ margin: 0, fontSize: 'var(--hms-text-xs)', whiteSpace: "pre-wrap", wordBreak: "break-all", color: "var(--hms-text)", maxHeight: 200, overflowY: "auto" }}>
-                {tc.preview}
-              </pre>
+              <pre className="hms-tool-pre">{tc.preview}</pre>
             </div>
           )}
-
-          {/* Expanded detail: tool execution result */}
           {tc.result && (
-            <div style={{ borderTop: "1px solid var(--hms-border)", padding: "8px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-1)', fontSize: '0.625rem', color: "var(--hms-text-muted)", marginBottom: 4 }}>
-                <span>RESULT</span>
+            <div>
+              <div className="hms-tool-section-label">
+                <span>Output</span>
                 <CopyButton text={tc.result} />
               </div>
-              <pre style={{ margin: 0, fontSize: 'var(--hms-text-xs)', whiteSpace: "pre-wrap", wordBreak: "break-all", color: "var(--hms-text)", maxHeight: 300, overflowY: "auto" }}>
-                {(() => {
-                  try {
-                    const parsed = JSON.parse(tc.result);
-                    // Unwrap Hermes standard {result, error} envelope
-                    if (parsed !== null && typeof parsed === "object" && "result" in parsed) {
-                      const inner = parsed.result;
-                      return typeof inner === "string" ? inner : JSON.stringify(inner, null, 2);
-                    }
-                    return JSON.stringify(parsed, null, 2);
-                  } catch {
-                    return tc.result;
-                  }
-                })()}
-              </pre>
+              <pre className="hms-tool-pre">{unwrapResult(tc.result)}</pre>
             </div>
           )}
         </div>
-      </div>
       )}
     </div>
   );
