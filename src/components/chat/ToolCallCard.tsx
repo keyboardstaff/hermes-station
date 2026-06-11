@@ -118,8 +118,10 @@ function unwrapResult(raw: string): string {
  * One tool action, mirroring upstream desktop's tool rows. Collapsed: a flat
  * disclosure row — friendly verb title ("Ran command", shimmering "Running
  * command" while pending), the tool's icon (success is silent — no green
- * check), inline args preview, a caret revealed on hover, live timer / copy on
- * the right; rows mounting mid-stream play desktop's 180ms enter animation.
+ * check), inline args preview, a caret revealed on hover, a live timer /
+ * duration on the right; rows mounting mid-stream play desktop's 180ms enter
+ * animation. Expanded, the detail sits on a soft inset surface (Station
+ * aesthetic — no hard border), with copy on the section label.
  *
  * Tool Call Display (Settings → Appearance), same split as upstream:
  *   - Product: expands to the readable output (envelope-unwrapped result).
@@ -136,7 +138,6 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
 
   const canExpand = technical ? Boolean(tc.preview || tc.result) : Boolean(tc.result);
   const open = canExpand && expanded;
-  const copyText = tc.result ?? tc.preview ?? "";
 
   // Technical: one raw trace block (args + result), like desktop's technical
   // view; Product: just the readable output.
@@ -171,12 +172,9 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
           {running ? (
             <Elapsed />
           ) : (
-            <>
-              {tc.duration !== undefined && (
-                <span className="hms-tool-meta">{tc.duration.toFixed(1)}s</span>
-              )}
-              {copyText && <CopyButton text={copyText} />}
-            </>
+            tc.duration !== undefined && (
+              <span className="hms-tool-meta">{tc.duration.toFixed(1)}s</span>
+            )
           )}
         </span>
       </div>

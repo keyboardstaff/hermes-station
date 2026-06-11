@@ -23,6 +23,21 @@ export interface MessageRow {
   tool_name: string | null;
   tool_call_id: string | null;
   timestamp: number;
+  /** Assistant rows persist the thinking trace; restored so a refresh keeps
+   *  the Thinking disclosure (desktop reads the same fields, same order). */
+  reasoning?: string | null;
+  reasoning_content?: string | null;
+  reasoning_details?: unknown;
+}
+
+/** The thinking trace of an assistant row, desktop's field preference. */
+function rowReasoning(m: MessageRow): string {
+  return (
+    m.reasoning ||
+    m.reasoning_content ||
+    (typeof m.reasoning_details === "string" ? m.reasoning_details : "") ||
+    ""
+  );
 }
 
 /** Accepts plain string, JSON-serialised content array, or parsed array.
@@ -99,6 +114,7 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
   let runSegments: MessageSegment[] = [];
   let runFirstId: number | null = null;
   let runTimestamp = 0;
+  let runReasoning: string[] = [];
 
   const flushRun = () => {
     if (runSegments.length === 0 || runFirstId === null) return;
@@ -106,15 +122,18 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
       .filter((s): s is { type: "text"; content: string } => s.type === "text")
       .map((s) => s.content)
       .join("\n");
+    const reasoning = runReasoning.join("\n\n");
     out.push({
       id: `hist-run-${runFirstId}`,
       role: "assistant",
       content: textContent,
       segments: runSegments,
+      ...(reasoning ? { reasoning } : {}),
       createdAt: runTimestamp,
     });
     runSegments = [];
     runFirstId = null;
+    runReasoning = [];
   };
 
   for (const m of rows) {
@@ -137,6 +156,8 @@ export function historyToChatMessages(rows: MessageRow[]): ChatMessage[] {
     }
 
     if (m.role === "assistant") {
+      const reasoning = rowReasoning(m);
+      if (reasoning) runReasoning.push(reasoning);
       if (typeof m.content === "string" && m.content) {
         runSegments.push({ type: "text", content: m.content });
       }

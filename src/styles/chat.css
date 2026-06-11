@@ -363,21 +363,16 @@
   border-radius: 4px;
 }
 
-/* Tool rows — desktop-style flat disclosure rows. Collapsed: no card chrome,
-   just glyph + name + inline preview, caret revealed on hover, live timer /
-   copy on the right. Expanded: the block grows a 10px bordered shell with
-   labeled Input / Output sections. Success is silent (no green check). */
+/* Tool rows — desktop-style flat disclosure rows with Station's soft-surface
+   aesthetic. Collapsed: no card chrome, just glyph + friendly title + inline
+   preview, caret revealed on hover, live timer / duration on the right.
+   Expanded: the detail sits on a soft inset surface aligned under the title —
+   no hard border. Success is silent (no green check). */
 .hms-tool {
   min-width: 0;
   max-width: 100%;
   margin: 2px 0;
   font-size: var(--hms-text-caption);
-}
-
-.hms-tool[data-open="true"] {
-  border: 1px solid var(--hms-border);
-  border-radius: 10px;
-  overflow: hidden;
 }
 
 .hms-tool-header {
@@ -386,11 +381,6 @@
   gap: var(--hms-space-2);
   min-width: 0;
   padding: 2px 0;
-}
-
-.hms-tool[data-open="true"] > .hms-tool-header {
-  border-bottom: 1px solid var(--hms-border);
-  padding: 6px 8px;
 }
 
 .hms-tool-row {
@@ -527,8 +517,7 @@
   transition: opacity 0.15s ease;
 }
 
-.hms-tool-header:hover .hms-tool-copy,
-.hms-tool-section-label:hover .hms-tool-copy {
+.hms-tool-body:hover .hms-tool-copy {
   opacity: 1;
 }
 
@@ -536,11 +525,12 @@
   color: var(--hms-text);
 }
 
+/* Detail aligns under the title (past the 13px glyph + 6px gap). */
 .hms-tool-body {
   display: grid;
   gap: var(--hms-space-2);
   min-width: 0;
-  padding: 6px 8px;
+  padding: 2px 0 4px 19px;
 }
 
 .hms-tool-section-label {
@@ -557,9 +547,11 @@
 
 .hms-tool-pre {
   margin: 0;
-  padding: 6px 8px;
+  padding: 8px 10px;
   max-height: 14rem;
   overflow: auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hms-surface) 80%, transparent);
   font-family: 'Fira Code', Consolas, monospace;
   font-size: 0.7rem;
   line-height: 1.55;

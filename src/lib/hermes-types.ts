@@ -87,7 +87,8 @@ export interface ChatMessage {
   segments?: MessageSegment[];
   /** @deprecated Use segments. */
   toolCalls?: ToolCall[];
-  /** reasoning.available trace; not persisted, only populated during the live session. */
+  /** Thinking trace: streamed live via reasoning.available, and restored from
+   *  the DB rows' reasoning fields on history rebuild (survives refresh). */
   reasoning?: string;
   /** Synthesized non-user message (e.g. approval follow-up rendered as system notice). */
   kind?: "approval_notice";
