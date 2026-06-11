@@ -155,13 +155,16 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
         >
           <StatusGlyph tc={tc} />
           <span
-            className="hms-tool-title"
+            className={`hms-tool-title${running ? " hms-tool-shimmer" : ""}`}
             data-status={tc.status}
-            data-shimmer={running ? "true" : undefined}
           >
             {title}
           </span>
-          {tc.preview && !open && <span className="hms-tool-preview">{tc.preview}</span>}
+          {tc.preview && !open && (
+            <span className={`hms-tool-preview${running ? " hms-tool-shimmer" : ""}`}>
+              {tc.preview}
+            </span>
+          )}
           {canExpand && (
             <span className="hms-tool-caret">
               {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -179,27 +182,31 @@ export default function ToolCallCard({ tc }: { tc: ToolCall }) {
         </span>
       </div>
 
-      {open && (
-        <div className="hms-tool-body">
-          {technical ? (
-            <div>
-              <div className="hms-tool-section-label">
-                <span>{tc.toolName}</span>
-                <CopyButton text={rawTrace} />
-              </div>
-              <pre className="hms-tool-pre">{rawTrace}</pre>
-            </div>
-          ) : (
-            tc.result && (
-              <div>
-                <div className="hms-tool-section-label">
-                  <span>Output</span>
-                  <CopyButton text={tc.result} />
+      {canExpand && (
+        <div className="hms-tool-detail" data-open={open ? "true" : undefined}>
+          <div className="hms-tool-detail-clip">
+            <div className="hms-tool-body">
+              {technical ? (
+                <div>
+                  <div className="hms-tool-section-label">
+                    <span>{tc.toolName}</span>
+                    <CopyButton text={rawTrace} />
+                  </div>
+                  <pre className="hms-tool-pre">{rawTrace}</pre>
                 </div>
-                <pre className="hms-tool-pre">{unwrapResult(tc.result)}</pre>
-              </div>
-            )
-          )}
+              ) : (
+                tc.result && (
+                  <div>
+                    <div className="hms-tool-section-label">
+                      <span>Output</span>
+                      <CopyButton text={tc.result} />
+                    </div>
+                    <pre className="hms-tool-pre">{unwrapResult(tc.result)}</pre>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

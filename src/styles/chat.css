@@ -389,21 +389,33 @@
   gap: 6px;
   min-width: 0;
   border: none;
+  border-radius: 6px;
   background: transparent;
-  padding: 0;
+  padding: 2px 6px;
+  margin: -2px -6px;
   font: inherit;
   text-align: left;
   color: var(--hms-text-muted);
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+/* Content-hugging soft pill on hover — an affordance, not a slab. */
+.hms-tool-row:not(:disabled):hover {
+  background: color-mix(in srgb, var(--hms-text) 5%, transparent);
 }
 
 .hms-tool-row:disabled {
   cursor: default;
 }
 
+/* Fixed slot so titles align across rows regardless of glyph (icon vs
+   braille spinner frame widths). */
 .hms-tool-glyph {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 14px;
   flex-shrink: 0;
   color: var(--hms-text-muted);
 }
@@ -432,9 +444,9 @@
   color: color-mix(in srgb, var(--hms-text) 78%, transparent);
 }
 
-/* Pending title shimmer — a soft highlight sweeping the text while the tool
-   runs (desktop's tw-shimmer equivalent). */
-.hms-tool-title[data-shimmer="true"] {
+/* Pending shimmer — a soft highlight sweeping the title AND subtitle while
+   the tool runs (desktop's tw-shimmer equivalent). */
+.hms-tool-shimmer {
   background: linear-gradient(
     90deg,
     var(--hms-text-muted) 35%,
@@ -454,7 +466,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hms-tool-title[data-shimmer="true"] {
+  .hms-tool-shimmer {
     animation: none;
     background-position: 50% 0;
   }
@@ -525,12 +537,29 @@
   color: var(--hms-text);
 }
 
-/* Detail aligns under the title (past the 13px glyph + 6px gap). */
+/* Smooth open/close: grid-row 0fr→1fr animates to the content's height
+   without a max-height guess; the clip wrapper hides the collapsing body. */
+.hms-tool-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.18s ease;
+}
+
+.hms-tool-detail[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.hms-tool-detail-clip {
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Detail aligns under the title (past the 14px glyph slot + 6px gap). */
 .hms-tool-body {
   display: grid;
   gap: var(--hms-space-2);
   min-width: 0;
-  padding: 2px 0 4px 19px;
+  padding: 2px 0 4px 20px;
 }
 
 .hms-tool-section-label {

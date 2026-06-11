@@ -291,14 +291,20 @@ export function useRunsStream() {
           }
           const p = data.partial;
           if (p && (p.text || (p.tool_calls && p.tool_calls.length > 0))) {
-            if (p.text) appendDelta(p.text);
-            if (p.reasoning && useChatStore.getState().reasoningEffort !== "none") {
-              appendReasoning(p.reasoning);
-            }
+            // Tool cards BEFORE the accumulated text: the snapshot loses the
+            // true interleaving, and tools overwhelmingly run before the
+            // answer is written. Seeding text-first wedged the cards into the
+            // middle of the reply (subsequent deltas continued after them)
+            // and run.completed's setFinalContent — which orders non-text
+            // segments first — then visibly reshuffled the turn.
             for (const tc of p.tool_calls ?? []) {
               appendToolCallPart({
                 id: tc.tool_call_id, toolName: tc.tool, preview: tc.preview, status: tc.status,
               });
+            }
+            if (p.text) appendDelta(p.text);
+            if (p.reasoning && useChatStore.getState().reasoningEffort !== "none") {
+              appendReasoning(p.reasoning);
             }
             if (typeof data.seq === "number") lastSeqRef.current = data.seq;
           }
