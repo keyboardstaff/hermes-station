@@ -139,34 +139,16 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
   }
 
   return (
-    <div
-      className={containerClassName}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <div className={`hms-chat-stream ${containerClassName}`}>
       {showLoading ? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--hms-text-muted)",
-            fontSize: 'var(--hms-text-body)',
-            gap: 'var(--hms-space-2)',
-          }}
-        >
-          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+        <div className="hms-chat-stream-loading">
+          <Loader2 size={16} className="hms-tool-spin-icon" />
           Loading…
         </div>
       ) : showEmpty ? (
         <ChatIntro />
       ) : (
-        <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        <div className="hms-chat-stream-body">
           <AssistantThread
             scrollRef={scrollContainerRef}
             onScroll={handleScroll}
@@ -185,27 +167,8 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
           <button
             onClick={scrollToBottom}
             title="Scroll to bottom"
-            style={{
-              position: "absolute",
-              bottom: 12,
-              left: "50%",
-              width: 32,
-              height: 32,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "50%",
-              border: "1px solid var(--hms-border)",
-              background: "var(--hms-surface)",
-              color: "var(--hms-text-muted)",
-              cursor: userScrolledUp ? "pointer" : "default",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-              // Smooth appear / disappear
-              opacity: userScrolledUp ? 0.72 : 0,
-              transform: userScrolledUp ? "translateX(-50%) scale(1)" : "translateX(-50%) scale(0.9)",
-              pointerEvents: userScrolledUp ? "auto" : "none",
-              transition: "opacity 0.18s ease, transform 0.18s ease",
-            }}
+            className="hms-chat-scroll-btn"
+            data-visible={userScrolledUp ? "true" : undefined}
           >
             <ArrowDown size={13} />
           </button>
