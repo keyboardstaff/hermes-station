@@ -25,8 +25,20 @@ export default function AttachMenu({
   const [urlOpen, setUrlOpen] = useState(false);
   const [snippetsOpen, setSnippetsOpen] = useState(false);
   const [url, setUrl] = useState("");
+  // The composer toolbar clips overflow, so the panels position FIXED against
+  // the viewport (same approach as ContextMeter / PopupSelect).
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
+
+  const anchor = () => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setPos({
+      left: Math.min(r.left, window.innerWidth - 300),
+      bottom: window.innerHeight - r.top + 8,
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -63,12 +75,12 @@ export default function AttachMenu({
 
   return (
     <div ref={wrapRef} className="hms-attach-wrap">
-      <ToolbarBtn title={c.attachLabel} onClick={() => setOpen((v) => !v)}>
+      <ToolbarBtn title={c.attachLabel} onClick={() => { anchor(); setOpen((v) => !v); }}>
         <Plus size={16} />
       </ToolbarBtn>
 
-      {open && (
-        <div className="hms-attach-menu" role="menu">
+      {open && pos && (
+        <div className="hms-attach-menu" role="menu" style={{ left: pos.left, bottom: pos.bottom }}>
           <div className="hms-attach-label">{c.attachLabel}</div>
           {item(<FileText size={14} />, c.files, onPickFiles)}
           {item(<FolderOpen size={14} />, c.folder, onPickFolder)}
@@ -80,8 +92,8 @@ export default function AttachMenu({
         </div>
       )}
 
-      {urlOpen && (
-        <div className="hms-attach-menu hms-attach-dialog">
+      {urlOpen && pos && (
+        <div className="hms-attach-menu hms-attach-dialog" style={{ left: pos.left, bottom: pos.bottom }}>
           <div className="hms-attach-label">{c.urlTitle}</div>
           <form
             className="hms-attach-url-form"
@@ -104,8 +116,8 @@ export default function AttachMenu({
         </div>
       )}
 
-      {snippetsOpen && (
-        <div className="hms-attach-menu hms-attach-dialog">
+      {snippetsOpen && pos && (
+        <div className="hms-attach-menu hms-attach-dialog" style={{ left: pos.left, bottom: pos.bottom }}>
           <div className="hms-attach-label">{c.snippetsTitle}</div>
           {(Object.keys(snippets) as Array<keyof typeof snippets>).map((key) => {
             const s = snippets[key];
