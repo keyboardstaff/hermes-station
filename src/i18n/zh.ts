@@ -492,7 +492,6 @@ export const zh: Translations = {
     send: "发送",
     placeholder: "输入消息…（/ 调出命令，Shift+Enter 换行）",
     dropHere: "拖放文件到这里",
-    attach: "添加附件",
     voice: "语音输入",
     voiceStop: "停止聆听",
     voiceUnsupported: "当前浏览器不支持语音输入",
@@ -508,6 +507,34 @@ export const zh: Translations = {
     editingInComposer: "正在编辑器中编辑",
     attachmentOnly: "（仅附件）",
     attachmentsLabel: "个附件",
+    attachLabel: "附件",
+    files: "文件…",
+    folder: "文件夹…",
+    images: "图片…",
+    pasteImage: "粘贴图片",
+    url: "URL…",
+    promptSnippets: "提示词片段…",
+    urlTitle: "附加 URL",
+    urlAdd: "添加",
+    snippetsTitle: "提示词片段",
+    noClipboardImage: "剪贴板里没有图片。",
+    snippets: {
+      codeReview: {
+        label: "代码审查",
+        description: "审查改动中的 bug 与可简化点",
+        text: "请审查当前改动：找出正确性 bug、边界情况和可简化之处，给出具体文件/行号。",
+      },
+      implementationPlan: {
+        label: "实现计划",
+        description: "写代码前先出分步计划",
+        text: "先不要写代码，给出分步实现计划：涉及文件、数据流、风险点和测试策略。",
+      },
+      explainThis: {
+        label: "解释代码",
+        description: "解释附加的代码或文件",
+        text: "请解释附加的代码/文件：它做什么、关键设计决策，以及新维护者需要注意的坑。",
+      },
+    },
   },
 
   createProfile: {

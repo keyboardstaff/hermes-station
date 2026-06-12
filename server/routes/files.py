@@ -8,6 +8,7 @@ import asyncio
 import base64
 import json
 import logging
+import mimetypes
 import re
 import shutil
 import subprocess
@@ -551,6 +552,53 @@ def _git_info(root: Path) -> dict:
                 pass
 
     return {"branch": branch, "dirty": dirty, "ahead": ahead, "behind": behind}
+
+
+@router.get("/api/files/raw")
+async def get_raw(request: web.Request) -> web.Response:
+    """Serve a local file's bytes for inline chat media (the agent references
+    produced images/files by absolute path). Restricted to the hermes home,
+    the uploads dir and the current workspace; blocked-name patterns stay
+    blocked; capped at 64 MiB."""
+    raw_path = (request.query.get("path") or "").strip()
+    if not raw_path.startswith(("/", "~")):
+        return web.json_response({"error": "absolute_path_required"}, status=400)
+
+    def _resolve() -> Path:
+        return Path(raw_path).expanduser().resolve()
+
+    try:
+        candidate = await asyncio.to_thread(_resolve)
+    except (OSError, RuntimeError, ValueError):
+        return web.json_response({"error": "bad_path"}, status=400)
+
+    roots = [
+        upstream_paths.hermes_home().resolve(),
+        (upstream_paths.hms_data_dir() / "uploads").resolve(),
+    ]
+    ws = _current_dir()
+    if ws is not None:
+        roots.append(ws)
+    if not any(candidate.is_relative_to(root) for root in roots):
+        return web.json_response({"error": "path_outside_roots"}, status=403)
+    if _BLOCKED_RE.search(str(candidate)):
+        return web.json_response({"error": "blocked_name"}, status=403)
+
+    def _read() -> bytes | None:
+        if not candidate.is_file():
+            return None
+        if candidate.stat().st_size > 64 * 1024 * 1024:
+            raise ValueError("too_large")
+        return candidate.read_bytes()
+
+    try:
+        data = await asyncio.to_thread(_read)
+    except ValueError:
+        return web.json_response({"error": "too_large"}, status=413)
+    if data is None:
+        return web.json_response({"error": "not_found"}, status=404)
+    mime = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+    return web.Response(body=data, content_type=mime)
 
 
 @router.get("/api/files/git-info")

@@ -493,7 +493,6 @@ export const en: Translations = {
     send: "Send",
     placeholder: "Message… (/ for commands, Shift+Enter for newline)",
     dropHere: "Drop files here",
-    attach: "Attach file",
     voice: "Voice input",
     voiceStop: "Stop listening",
     voiceUnsupported: "Voice input not supported in this browser",
@@ -509,6 +508,34 @@ export const en: Translations = {
     editingInComposer: "Editing in composer",
     attachmentOnly: "(attachment only)",
     attachmentsLabel: "attachments",
+    attachLabel: "Attach",
+    files: "Files…",
+    folder: "Folder…",
+    images: "Images…",
+    pasteImage: "Paste image",
+    url: "URL…",
+    promptSnippets: "Prompt snippets…",
+    urlTitle: "Attach a URL",
+    urlAdd: "Add",
+    snippetsTitle: "Prompt snippets",
+    noClipboardImage: "No image on the clipboard.",
+    snippets: {
+      codeReview: {
+        label: "Code review",
+        description: "Review the changes for bugs and cleanups",
+        text: "Review the current changes for correctness bugs, edge cases, and simplification opportunities. Be specific and cite files/lines.",
+      },
+      implementationPlan: {
+        label: "Implementation plan",
+        description: "Plan before writing any code",
+        text: "Before writing code, produce a step-by-step implementation plan: affected files, data flow, risks, and a test strategy.",
+      },
+      explainThis: {
+        label: "Explain this",
+        description: "Explain the attached code or file",
+        text: "Explain what the attached code/file does, its key design decisions, and any pitfalls a new maintainer should know.",
+      },
+    },
   },
 
   createProfile: {

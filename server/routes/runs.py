@@ -40,6 +40,9 @@ router = web.RouteTableDef()
 _RUN_ID_RE = re.compile(r"^run_[a-f0-9]{32}$")
 # /api/upload/<id>/<name> — local content-addressed uploads; resolved before passing to agent.
 _UPLOAD_URL_RE = re.compile(r"^/api/upload/([^/]+)/([^/?#]+)$")
+# Non-anchored variant for scanning URLs inside prose (the anchored ^…$ form
+# never matches mid-text, which silently disabled text inlining).
+_UPLOAD_URL_INLINE_RE = re.compile(r"/api/upload/([^/\s]+)/([^/?#\s]+)")
 _UPLOAD_PART_RE = re.compile(r"^[A-Za-z0-9._\- ]{1,255}$")
 
 
@@ -85,10 +88,13 @@ async def _resolve_upload_images(input_data: str | list[dict]) -> str | list[dic
 
 
 def _resolve_upload_urls_in_text(text: str, root: Path) -> str:
-    """Inline text-mime uploads as code blocks; leave binaries as URLs for tools to fetch."""
+    """Resolve upload URLs for the agent: text-mime files inline as code
+    blocks; binaries (pdf / audio / video / archives …) become their absolute
+    on-disk path — the in-process agent can't fetch our HTTP routes, but its
+    file / vision / transcription tools all take local paths."""
     parts: list[str] = []
     last_end = 0
-    for m in _UPLOAD_URL_RE.finditer(text):
+    for m in _UPLOAD_URL_INLINE_RE.finditer(text):
         upload_id, name = m.group(1), m.group(2)
         if not (_UPLOAD_PART_RE.match(upload_id) and _UPLOAD_PART_RE.match(name)):
             continue
@@ -96,14 +102,15 @@ def _resolve_upload_urls_in_text(text: str, root: Path) -> str:
         if not (candidate.is_file() and candidate.resolve().is_relative_to(root.resolve())):
             continue
         mime = mimetypes.guess_type(name)[0] or ""
-        if not (mime.startswith("text/") or mime in {"application/json", "application/xml"}):
-            continue
         parts.append(text[last_end:m.start()])
-        try:
-            content = candidate.read_text("utf-8", errors="replace")
-            parts.append(f"```{name}\n{content}```")
-        except Exception:
-            logger.exception("[hms.runs] inline read failed for %s", candidate)
+        if mime.startswith("text/") or mime in {"application/json", "application/xml"}:
+            try:
+                content = candidate.read_text("utf-8", errors="replace")
+                parts.append(f"```{name}\n{content}```")
+            except Exception:
+                logger.exception("[hms.runs] inline read failed for %s", candidate)
+        else:
+            parts.append(f"{candidate} ({mime or 'unknown type'})")
         last_end = m.end()
     parts.append(text[last_end:])
     return "".join(parts)

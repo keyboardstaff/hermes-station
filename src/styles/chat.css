@@ -1589,3 +1589,114 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* ── Composer attach menu ──────────────────────────────────────────── */
+
+.hms-attach-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.hms-attach-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hms-attach-label {
+  padding: 4px 8px;
+  font-size: var(--hms-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hms-text-muted);
+}
+
+.hms-attach-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hms-text);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+  text-align: left;
+}
+
+.hms-attach-item:hover {
+  background: var(--hms-hover-bg);
+}
+
+.hms-attach-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--hms-border);
+}
+
+.hms-attach-dialog {
+  min-width: 280px;
+}
+
+.hms-attach-url-form {
+  display: flex;
+  gap: var(--hms-space-2);
+  padding: 2px 4px 4px;
+}
+
+.hms-attach-add {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--hms-accent);
+  color: var(--hms-accent-contrast, #fff);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.hms-attach-add:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hms-attach-snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hms-attach-snippet:hover {
+  background: var(--hms-hover-bg);
+}
+
+.hms-attach-snippet-label {
+  font-size: var(--hms-text-caption);
+  font-weight: 600;
+  color: var(--hms-text);
+}
+
+.hms-attach-snippet-desc {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}

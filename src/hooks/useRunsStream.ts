@@ -437,7 +437,11 @@ export function useRunsStream() {
           if (att.isImage) {
             parts.push({ type: "image_url", image_url: { url: att.content } });
           } else {
-            parts.push({ type: "text", text: `\`\`\`${att.name}\n${att.content}\n\`\`\`` });
+            // The server rewrites the upload URL: text-mime files inline as a
+            // code block, binaries become their absolute on-disk path (the
+            // agent's tools take local paths). No fences here — the server's
+            // text inlining brings its own.
+            parts.push({ type: "text", text: `Attached file ${att.name}: ${att.content}` });
           }
         }
         runInput = parts;

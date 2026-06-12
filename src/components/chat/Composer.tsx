@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Paperclip, Mic, Send, Square, User, Settings as SettingsIcon } from "lucide-react";
+import { Mic, Send, Square, User, Settings as SettingsIcon } from "lucide-react";
+import AttachMenu from "./composer/AttachMenu";
 import SlashMenu from "./SlashMenu";
 import type { SlashCommand } from "@/lib/slash-commands";
 import { useDiscoverSlashCommands } from "@/store/discovery";
@@ -58,6 +59,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   const openProfile = useOverlays((s) => s.openProfile);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Browser folder picker — webkitdirectory isn't a typed attribute.
+  useEffect(() => {
+    folderInputRef.current?.setAttribute("webkitdirectory", "");
+  }, []);
   const activeRunId = useChatStore((s) => s.activeRunId);
   const {
     selectedModel, setSelectedModel,
@@ -262,6 +270,28 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     requestAnimationFrame(() => textRef.current?.focus());
   }, []);
 
+  // Clipboard image → the same upload pipeline as a picked file.
+  const pasteClipboardImage = useCallback(async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      const files: File[] = [];
+      for (const item of items) {
+        const mime = item.types.find((type) => type.startsWith("image/"));
+        if (!mime) continue;
+        const blob = await item.getType(mime);
+        const ext = mime.split("/")[1]?.split("+")[0] || "png";
+        files.push(new File([blob], `clipboard-${Date.now()}.${ext}`, { type: mime }));
+      }
+      if (files.length === 0) {
+        setUploadError(t.composer.noClipboardImage);
+        return;
+      }
+      ingestFiles(files);
+    } catch {
+      setUploadError(t.composer.noClipboardImage);
+    }
+  }, [ingestFiles, setUploadError, t.composer.noClipboardImage]);
+
   const send = useCallback(() => {
     const trimmed = value.trim();
     const hasPayload = !!trimmed || attachments.length > 0;
@@ -415,12 +445,27 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         boxSizing: "border-box",
       }}
     >
-      {/* Hidden file input */}
+      {/* Hidden file inputs (files / folder / images) */}
       <input
         ref={fileInputRef}
         type="file"
         multiple
         accept="image/*,audio/*,video/*,text/*,.pdf,.epub,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md,.json,.csv,.ts,.tsx,.js,.jsx,.py,.sh,.yaml,.yml,.toml,.txt,.svg,.xml,.ini,.env"
+        style={{ display: "none" }}
+        onChange={onFileChange}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        style={{ display: "none" }}
+        onChange={onFileChange}
+      />
+      <input
+        ref={imageInputRef}
+        type="file"
+        multiple
+        accept="image/*"
         style={{ display: "none" }}
         onChange={onFileChange}
       />
@@ -572,9 +617,16 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
           }}
         >
           {/* Attach */}
-          <ToolbarBtn title={t.composer.attach} onClick={() => fileInputRef.current?.click()}>
-            <Paperclip size={16} />
-          </ToolbarBtn>
+          <AttachMenu
+            onPickFiles={() => fileInputRef.current?.click()}
+            onPickFolder={() => folderInputRef.current?.click()}
+            onPickImages={() => imageInputRef.current?.click()}
+            onPasteImage={() => void pasteClipboardImage()}
+            onInsertText={(text) => {
+              setValue((v) => (v && !v.endsWith("\n") && !v.endsWith(" ") ? v + "\n" : v) + text);
+              requestAnimationFrame(() => textRef.current?.focus());
+            }}
+          />
 
           {/* Mic — Web Speech API */}
           <ToolbarBtn

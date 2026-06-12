@@ -514,7 +514,6 @@ export interface Translations {
     send: string;
     placeholder: string;
     dropHere: string;
-    attach: string;
     voice: string;
     voiceStop: string;
     voiceUnsupported: string;
@@ -531,6 +530,23 @@ export interface Translations {
     editingInComposer: string;
     attachmentOnly: string;
     attachmentsLabel: string;
+    /** Attach menu */
+    attachLabel: string;
+    files: string;
+    folder: string;
+    images: string;
+    pasteImage: string;
+    url: string;
+    promptSnippets: string;
+    urlTitle: string;
+    urlAdd: string;
+    snippetsTitle: string;
+    noClipboardImage: string;
+    snippets: {
+      codeReview: { label: string; description: string; text: string };
+      implementationPlan: { label: string; description: string; text: string };
+      explainThis: { label: string; description: string; text: string };
+    };
   };
 
   createProfile: {

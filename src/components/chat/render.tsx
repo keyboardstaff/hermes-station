@@ -151,6 +151,17 @@ const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
       {children}
     </a>
   ),
+  // Images the agent references by absolute local path (or file://) can't
+  // load in a browser — route them through the scoped /api/files/raw reader.
+  img: ({ src, alt }) => {
+    const raw = typeof src === "string" ? src : "";
+    const local = raw.startsWith("file://") ? raw.slice(7) : raw;
+    const resolved =
+      (local.startsWith("/") && !local.startsWith("/api/")) || local.startsWith("~")
+        ? `/api/files/raw?path=${encodeURIComponent(local)}`
+        : raw;
+    return <img src={resolved} alt={alt ?? ""} loading="lazy" />;
+  },
 };
 
 export function MarkdownText({ content }: { content: string }) {
