@@ -513,6 +513,16 @@ export const zh: Translations = {
     options: "选项",
     effort: "思考强度",
     send: "发送",
+    queuedLabel: "条排队中",
+    queueSend: "加入队列（Enter）",
+    saveQueued: "保存到队列（Enter）",
+    editQueued: "编辑",
+    deleteQueued: "删除",
+    sendQueuedNow: "立即发送",
+    sendQueuedNext: "下一条发送（打断当前回合）",
+    editingInComposer: "正在编辑器中编辑",
+    attachmentOnly: "（仅附件）",
+    attachmentsLabel: "个附件",
   },
 
   createProfile: {

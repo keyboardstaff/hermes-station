@@ -514,6 +514,16 @@ export const en: Translations = {
     options: "Options",
     effort: "Effort",
     send: "Send",
+    queuedLabel: "queued",
+    queueSend: "Queue (Enter)",
+    saveQueued: "Save to queue (Enter)",
+    editQueued: "Edit",
+    deleteQueued: "Delete",
+    sendQueuedNow: "Send now",
+    sendQueuedNext: "Send next (interrupts the current turn)",
+    editingInComposer: "Editing in composer",
+    attachmentOnly: "(attachment only)",
+    attachmentsLabel: "attachments",
   },
 
   createProfile: {

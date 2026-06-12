@@ -16,13 +16,17 @@ import { ContextMeter, estimateTokenCount } from "./composer/ContextMeter";
 import { ModelPicker } from "./composer/ModelPicker";
 import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
 import { AttachmentChips } from "./composer/AttachmentChips";
+import QueuePanel from "./composer/QueuePanel";
 import { useVoiceInput } from "./composer/useVoiceInput";
 import { useComposerAttachments } from "./composer/useComposerAttachments";
 import { useOverlays } from "@/store/overlays";
+import {
+  useComposerQueue, queuedPromptsFor, shouldAutoDrainOnSettle, type QueuedPromptEntry,
+} from "@/store/composer-queue";
 import { highlightComposerTokens, composerCurrentToken, type ComposerToken } from "@/lib/composer-tokens";
 
 interface ComposerProps {
-  onSend: (text: string, attachments?: ComposerAttachment[]) => void;
+  onSend: (text: string, attachments?: ComposerAttachment[]) => void | Promise<unknown>;
   onStop: () => void;
   disabled?: boolean;
   /** Forwarded to upload API so images can be recovered after refresh. */
@@ -187,15 +191,121 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
   const showSlash = token?.kind === "slash" && filteredCmds.length > 0;
   const showMention = token?.kind === "mention" && filteredMentions.length > 0;
 
-  const send = useCallback(() => {
-    const trimmed = value.trim();
-    if ((!trimmed && attachments.length === 0) || isRunning || disabled) return;
-    onSend(trimmed, attachments.length > 0 ? attachments : undefined);
+  // ── Composer queue (desktop parity) ────────────────────────────────
+  // While a run streams, sends queue per session (persisted); the queue
+  // auto-drains head-first whenever the session settles (finish OR interrupt).
+  const queuesBySession = useComposerQueue((s) => s.queuesBySession);
+  const enqueueQueued = useComposerQueue((s) => s.enqueue);
+  const removeQueued = useComposerQueue((s) => s.remove);
+  const promoteQueued = useComposerQueue((s) => s.promote);
+  const updateQueuedText = useComposerQueue((s) => s.updateText);
+  const queued = useMemo(
+    () => queuedPromptsFor(queuesBySession, sessionId),
+    [queuesBySession, sessionId],
+  );
+  const [queueEditId, setQueueEditId] = useState<string | null>(null);
+  const queueEditIdRef = useRef(queueEditId);
+  queueEditIdRef.current = queueEditId;
+  const drainingRef = useRef(false);
+  const prevBusyRef = useRef(isRunning);
+
+  // Session switch / entry deleted while editing → drop the edit flag (the
+  // composer keeps whatever text is in it).
+  useEffect(() => { setQueueEditId(null); }, [sessionId]);
+  useEffect(() => {
+    if (queueEditId && !queued.some((e) => e.id === queueEditId)) setQueueEditId(null);
+  }, [queued, queueEditId]);
+
+  const clearComposer = useCallback(() => {
     setValue("");
     clearAttachments();
     setToken(null);
     setSlashIndex(0);
-  }, [value, attachments, isRunning, disabled, onSend, clearAttachments]);
+  }, [clearAttachments]);
+
+  // One shared send-then-remove drain path (head or by-id); a lock keeps the
+  // settle effect, Enter-drain and Send-now from double-sending.
+  const drainNext = useCallback(async (pickId?: string) => {
+    if (drainingRef.current || !sessionId) return;
+    const list = queuedPromptsFor(useComposerQueue.getState().queuesBySession, sessionId);
+    const entry = pickId
+      ? list.find((e) => e.id === pickId)
+      : list.find((e) => e.id !== queueEditIdRef.current);
+    if (!entry) return;
+    drainingRef.current = true;
+    try {
+      await Promise.resolve(
+        onSend(entry.text, entry.attachments.length > 0 ? entry.attachments : undefined),
+      );
+      removeQueued(sessionId, entry.id);
+    } finally {
+      drainingRef.current = false;
+    }
+  }, [sessionId, onSend, removeQueued]);
+
+  // Auto-drain on busy → false (turn settled) — natural finish or interrupt.
+  useEffect(() => {
+    const wasBusy = prevBusyRef.current;
+    prevBusyRef.current = isRunning;
+    if (shouldAutoDrainOnSettle({ wasBusy, isBusy: isRunning, queueLength: queued.length })) {
+      void drainNext();
+    }
+  }, [isRunning, queued.length, drainNext]);
+
+  const sendQueuedNow = useCallback((id: string) => {
+    if (id === queueEditIdRef.current) return;
+    if (isRunning) {
+      // Promote to the head, then interrupt — the settle auto-drain sends it.
+      promoteQueued(sessionId, id);
+      onStop();
+      return;
+    }
+    void drainNext(id);
+  }, [isRunning, promoteQueued, sessionId, onStop, drainNext]);
+
+  const beginQueueEdit = useCallback((entry: QueuedPromptEntry) => {
+    setQueueEditId(entry.id);
+    setValue(entry.text);
+    requestAnimationFrame(() => textRef.current?.focus());
+  }, []);
+
+  const send = useCallback(() => {
+    const trimmed = value.trim();
+    const hasPayload = !!trimmed || attachments.length > 0;
+    if (disabled) return;
+
+    // Saving a queued entry being edited — Enter writes it back in place.
+    if (queueEditId) {
+      if (trimmed) updateQueuedText(sessionId, queueEditId, trimmed);
+      setQueueEditId(null);
+      clearComposer();
+      return;
+    }
+
+    if (isRunning) {
+      // Busy: a payload queues instead of sending.
+      if (hasPayload && sessionId) {
+        enqueueQueued(sessionId, {
+          text: trimmed,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        });
+        clearComposer();
+      }
+      return;
+    }
+
+    // Idle + empty composer + queued turns → Enter drains the next one.
+    if (!hasPayload) {
+      if (queued.length > 0) void drainNext();
+      return;
+    }
+
+    onSend(trimmed, attachments.length > 0 ? attachments : undefined);
+    clearComposer();
+  }, [
+    value, attachments, isRunning, disabled, onSend, clearComposer,
+    queueEditId, updateQueuedText, sessionId, enqueueQueued, queued.length, drainNext,
+  ]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition: React drops isComposing; nativeEvent has it (keyCode 229 fallback).
@@ -244,6 +354,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         setToken(null);
         return;
       }
+    }
+    if (e.key === "Escape" && queueEditId) {
+      // Cancel a queued-entry edit without saving.
+      e.preventDefault();
+      setQueueEditId(null);
+      setValue("");
+      return;
     }
     if (e.key === "Enter" && !e.shiftKey && !composing) {
       e.preventDefault();
@@ -314,6 +431,17 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         style={{ display: "none" }}
         onChange={onFileChange}
       />
+
+      {/* Queued prompts — collapsed count header above the input */}
+      <QueuePanel
+        busy={isRunning}
+        editingId={queueEditId}
+        entries={queued}
+        onDelete={(id) => removeQueued(sessionId, id)}
+        onEdit={beginQueueEdit}
+        onSendNow={sendQueuedNow}
+      />
+
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -508,20 +636,32 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             usage={sessionUsage}
           />
 
-          {/* Stop / Send */}
+          {/* Stop / Send — while running, a payload can be queued (Enter does
+              the same); Stop stays one click away. */}
           {isRunning ? (
-            <button
-              onClick={onStop}
-              title="Stop"
-              style={sendStyle({ danger: true })}
-            >
-              <Square size={14} fill="currentColor" />
-            </button>
+            <>
+              {(value.trim().length > 0 || attachments.length > 0) && !queueEditId && (
+                <button
+                  onClick={send}
+                  title={t.composer.queueSend}
+                  style={sendStyle({})}
+                >
+                  <Send size={14} />
+                </button>
+              )}
+              <button
+                onClick={onStop}
+                title="Stop"
+                style={sendStyle({ danger: true })}
+              >
+                <Square size={14} fill="currentColor" />
+              </button>
+            </>
           ) : (
             <button
               onClick={send}
               disabled={(!value.trim() && attachments.length === 0) || !!disabled}
-              title="Send (Enter)"
+              title={queueEditId ? t.composer.saveQueued : "Send (Enter)"}
               style={sendStyle({ disabled: (!value.trim() && attachments.length === 0) || !!disabled })}
             >
               <Send size={14} />

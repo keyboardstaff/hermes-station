@@ -537,6 +537,17 @@ export interface Translations {
     options: string;
     effort: string;
     send: string;
+    /** Composer queue */
+    queuedLabel: string;
+    queueSend: string;
+    saveQueued: string;
+    editQueued: string;
+    deleteQueued: string;
+    sendQueuedNow: string;
+    sendQueuedNext: string;
+    editingInComposer: string;
+    attachmentOnly: string;
+    attachmentsLabel: string;
   };
 
   createProfile: {
