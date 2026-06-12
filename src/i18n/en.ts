@@ -585,6 +585,8 @@ export const en: Translations = {
     searchPlaceholder: "Search plugins…",
     refresh: "Refresh",
     enable: "Enable",
+    enabledLabel: "Enabled",
+    disabledLabel: "Disabled",
     disable: "Disable",
     uninstall: "Uninstall",
     update: "Update",

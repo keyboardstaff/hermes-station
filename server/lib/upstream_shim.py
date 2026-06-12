@@ -372,6 +372,11 @@ class _Models:
             "agent.models_dev", "get_model_capabilities"
         )
     )
+    get_model_context_length: Callable | None = field(
+        default_factory=lambda: _try_import(
+            "agent.model_metadata", "get_model_context_length"
+        )
+    )
     lookup_context: Callable | None = field(
         default_factory=lambda: _try_import(
             "agent.models_dev", "lookup_models_dev_context"

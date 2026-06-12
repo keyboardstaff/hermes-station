@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, RefreshCw } from "lucide-react";
+import { Search } from "lucide-react";
 import { useI18n } from "@/i18n";
-import PageTopBar from "@/components/layout/PageTopBar";
-import IconButton from "@/components/ui/IconButton";
 import CapabilityGate from "@/components/ui/CapabilityGate";
 import ChannelCard, { type MessagingPlatform } from "@/components/channels/ChannelCard";
 import { api } from "@/lib/api";
@@ -41,22 +39,6 @@ export default function ChannelsPanel() {
   return (
     <CapabilityGate require="dashboard">
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <PageTopBar
-        title={t.nav.channels}
-        subtitle={
-          platforms.length > 0
-            ? `${platforms.length} ${ch?.platforms ?? "platforms"}`
-            : ch?.platforms ?? "platforms"
-        }
-        actions={
-          <IconButton
-            title={ch?.refresh ?? "Refresh"}
-            onClick={() => { void platformsQuery.refetch(); }}
-          >
-            <RefreshCw size={14} />
-          </IconButton>
-        }
-      />
       <div
         style={{
           flex: 1,
@@ -68,8 +50,8 @@ export default function ChannelsPanel() {
         }}
       >
 
-      {/* Search */}
-      <div style={{ position: "relative", maxWidth: 360 }}>
+      {/* Search — adaptive full width */}
+      <div style={{ position: "relative" }}>
         <Search
           size={12}
           style={{
@@ -124,13 +106,12 @@ export default function ChannelsPanel() {
         </div>
       )}
 
-      {/* Cards — responsive CSS Grid */}
+      {/* Cards — single column */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          display: "flex",
+          flexDirection: "column",
           gap: "var(--hms-space-3)",
-          alignItems: "start",
         }}
       >
         {filtered.map((p) => (

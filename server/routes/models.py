@@ -139,6 +139,18 @@ async def model_context(request: web.Request) -> web.Response:
                 logger.exception(
                     "[hms.models] capabilities lookup failed for %r/%r", provider, model
                 )
+    # Last resort: upstream's own model-metadata resolution — the same source
+    # the agent seeds its compressor from, so config-declared / local models
+    # resolve here even when models.dev has never heard of them.
+    if not ctx:
+        meta_fn = shim.models.get_model_context_length
+        if meta_fn is not None:
+            try:
+                ctx = int(meta_fn(model) or 0)
+            except Exception:
+                logger.exception(
+                    "[hms.models] model_metadata context lookup failed for %r", model
+                )
     return web.json_response(
         {"model": model, "context_length": int(ctx) if isinstance(ctx, int) and ctx > 0 else None},
         status=200,

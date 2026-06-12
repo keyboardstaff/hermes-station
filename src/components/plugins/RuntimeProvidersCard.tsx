@@ -52,6 +52,7 @@ export default function RuntimeProvidersCard() {
           <div style={{ flex: "1 1 240px" }}>
             <Field label={p?.memoryProvider ?? "Memory provider"}>
               <PopupSelect
+                fullWidth
                 value={memory}
                 label={memory || (p?.builtIn ?? "built-in")}
                 options={[{ value: "", label: p?.builtIn ?? "built-in" }, ...memoryOptions.map((o) => ({ value: o.name, label: o.name }))]}
@@ -62,9 +63,10 @@ export default function RuntimeProvidersCard() {
           <div style={{ flex: "1 1 240px" }}>
             <Field label={p?.contextEngine ?? "Context engine"}>
               <PopupSelect
+                fullWidth
                 value={context}
-                label={context || (contextOptions[0]?.name ?? "default")}
-                options={contextOptions.map((o) => ({ value: o.name, label: o.name }))}
+                label={context || "default"}
+                options={[{ value: "", label: "default" }, ...contextOptions.map((o) => ({ value: o.name, label: o.name }))]}
                 onChange={setContext}
               />
             </Field>

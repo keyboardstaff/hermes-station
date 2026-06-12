@@ -584,6 +584,8 @@ export const zh: Translations = {
     searchPlaceholder: "搜索插件…",
     refresh: "刷新",
     enable: "启用",
+    enabledLabel: "已启用",
+    disabledLabel: "已禁用",
     disable: "禁用",
     uninstall: "卸载",
     update: "更新",

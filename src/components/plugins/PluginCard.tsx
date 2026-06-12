@@ -1,7 +1,5 @@
 import {
   Puzzle,
-  Power,
-  PowerOff,
   Trash2,
   ArrowUpCircle,
   Brain,
@@ -11,6 +9,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
+import Switch from "@/components/ui/Switch";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
   type Plugin,
@@ -130,16 +129,17 @@ export default function PluginCard({
       )}
 
       <div className="hms-plugin-card-actions">
-        <Button size="sm" onClick={handleToggle} disabled={enable.isPending || disable.isPending}>
-          {enable.isPending || disable.isPending ? (
-            <Loader size={11} className="hms-spin" />
-          ) : isEnabled ? (
-            <PowerOff size={11} />
-          ) : (
-            <Power size={11} />
-          )}
-          {isEnabled ? (p?.disable ?? "Disable") : (p?.enable ?? "Enable")}
-        </Button>
+        <span className="hms-plugin-card-toggle">
+          <Switch
+            checked={isEnabled}
+            disabled={enable.isPending || disable.isPending}
+            title={isEnabled ? (p?.disable ?? "Disable") : (p?.enable ?? "Enable")}
+            onChange={() => handleToggle()}
+          />
+          <span className="hms-plugin-card-toggle-label">
+            {isEnabled ? (p?.enabledLabel ?? "Enabled") : (p?.disabledLabel ?? "Disabled")}
+          </span>
+        </span>
 
         {plugin.can_update_git && (
           <Button size="sm" onClick={handleUpdate} disabled={update.isPending}>

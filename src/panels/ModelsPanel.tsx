@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n";
-import PageTopBar from "@/components/layout/PageTopBar";
+import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
 import { useCapabilityStore, type CapabilityFlags } from "@/store/capabilities";
 import { errorMessage } from "@/lib/errors";
 import {
@@ -71,8 +71,12 @@ export default function ModelsPanel() {
 
   return (
     <div className="hms-models-root">
-      <PageTopBar title={t.nav.models} showProfileScope />
       <div className="hms-models-body">
+        {/* Profile scope — which profile's keys/config this page reads/writes
+            (the page header is gone now that Models lives inside Settings). */}
+        <div className="hms-models-scope-row">
+          <ProfileScopeSelector />
+        </div>
         {/* Primary */}
         <SectionCard title={tabLabels.primary}>
           <PrimaryTab m={m} flags={flags} />

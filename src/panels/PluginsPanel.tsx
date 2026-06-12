@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
-import { Search, RefreshCw } from "lucide-react";
+import { Search } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { usePlugins, type Plugin } from "@/hooks/usePlugins";
 import CapabilityGate from "@/components/ui/CapabilityGate";
-import PageTopBar from "@/components/layout/PageTopBar";
-import IconButton from "@/components/ui/IconButton";
 import PluginCard from "@/components/plugins/PluginCard";
 import RuntimeProvidersCard from "@/components/plugins/RuntimeProvidersCard";
 import GitInstallCard from "@/components/plugins/GitInstallCard";
@@ -18,7 +16,7 @@ import GitInstallCard from "@/components/plugins/GitInstallCard";
 export default function PluginsPanel() {
   const { t } = useI18n();
   const p = t.plugins;
-  const { data, isLoading, isError, refetch } = usePlugins();
+  const { data, isLoading, isError } = usePlugins();
   const [query, setQuery] = useState("");
 
   const memoryProvider = data?.providers?.memory_provider;
@@ -54,14 +52,6 @@ export default function PluginsPanel() {
   return (
     <CapabilityGate require="agent">
       <div className="hms-plugins">
-        <PageTopBar
-          title={t.nav.plugins}
-          actions={
-            <IconButton title={p?.refresh ?? "Refresh"} onClick={() => refetch()}>
-              <RefreshCw size={14} />
-            </IconButton>
-          }
-        />
         <div className="hms-plugins-scroll">
           <RuntimeProvidersCard />
           <GitInstallCard />

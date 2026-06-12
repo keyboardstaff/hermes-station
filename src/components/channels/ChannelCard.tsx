@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Send, Settings2, ExternalLink } from "lucide-react";
+import Switch from "@/components/ui/Switch";
 import { api } from "@/lib/api";
 
 // 1:1 client of the upstream dashboard's messaging-platform management API
@@ -115,14 +116,12 @@ export default function ChannelCard({
         <span className="hms-channel-card-name">{platform.name}</span>
         <span className="hms-channel-card-state" data-tone={tone}>{stateLabel(platform.state)}</span>
         {/* Enable/disable — config-level; takes effect on gateway restart. */}
-        <label className="hms-channel-card-switch" title={labels.restartHint}>
-          <input
-            type="checkbox"
-            checked={platform.enabled}
-            disabled={busy}
-            onChange={(e) => void put({ enabled: e.target.checked })}
-          />
-        </label>
+        <Switch
+          checked={platform.enabled}
+          disabled={busy}
+          title={labels.restartHint}
+          onChange={(next) => void put({ enabled: next })}
+        />
       </div>
 
       {platform.error_message && (

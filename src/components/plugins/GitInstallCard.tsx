@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useI18n } from "@/i18n";
 import { useInstallPlugin } from "@/hooks/usePlugins";
 import { errorMessage } from "@/lib/errors";
-import SearchInput from "@/components/ui/SearchInput";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Field from "@/components/ui/Field";
+import Switch from "@/components/ui/Switch";
 
 /**
  * Install a plugin from a GitHub owner/repo shorthand or a full git URL.
@@ -49,7 +49,9 @@ export default function GitInstallCard() {
           </p>
         </div>
         <Field label={p?.gitUrlLabel ?? "Git URL or owner/repo"}>
-          <SearchInput
+          <input
+            type="text"
+            className="hms-input"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             placeholder="owner/repo or https://…"
@@ -58,11 +60,11 @@ export default function GitInstallCard() {
         </Field>
         <div style={{ display: "flex", gap: "var(--hms-space-4)", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)", fontSize: "var(--hms-text-sm)", cursor: "pointer" }}>
-            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
+            <Switch checked={force} onChange={setForce} />
             {p?.forceReinstall ?? "Force reinstall"}
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)", fontSize: "var(--hms-text-sm)", cursor: "pointer" }}>
-            <input type="checkbox" checked={enable} onChange={(e) => setEnable(e.target.checked)} />
+            <Switch checked={enable} onChange={setEnable} />
             {p?.enableAfterInstall ?? "Enable after install"}
           </label>
         </div>

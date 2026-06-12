@@ -608,6 +608,8 @@ export interface Translations {
     searchPlaceholder: string;
     refresh: string;
     enable: string;
+    enabledLabel: string;
+    disabledLabel: string;
     disable: string;
     uninstall: string;
     update: string;
