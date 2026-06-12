@@ -59,8 +59,7 @@ export const en: Translations = {
     drawerLabel: "Navigation",
     newSession: "New session",
     logout: "Logout",
-    moduleAgent: "Agent",
-    moduleActivity: "Activity",
+    more: "More",
     workspacesDrawer: "Workspace",
     exportSession: "Export",
     renameSession: "Rename",
@@ -201,6 +200,8 @@ export const en: Translations = {
       retentionHint: "1–365. Daily sweep drops older files.",
       saved: "Saved",
       restartHint: "Upload size, CORS take effect after gateway restart.",
+      sidebarSection: "Sidebar buttons",
+      sidebarHint: "Enabled pages show as sidebar buttons; the rest move under More.",
     },
     security: {
       networkSection: "Network exposure",

@@ -66,8 +66,7 @@ export interface Translations {
     drawerLabel: string;
     newSession: string;
     logout: string;
-    moduleAgent: string;
-    moduleActivity: string;
+    more: string;
     workspacesDrawer: string;
     exportSession: string;
     renameSession: string;
@@ -214,6 +213,8 @@ export interface Translations {
       retentionHint: string;
       saved: string;
       restartHint: string;
+      sidebarSection: string;
+      sidebarHint: string;
     };
     security: {
       networkSection: string;

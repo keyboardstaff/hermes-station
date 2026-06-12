@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Shield, Globe } from "lucide-react";
+import { Shield, Globe, PanelLeft } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
 import { useDebouncedEffect } from "@/hooks/useDebouncedValue";
 import { api, ApiError } from "@/lib/api";
 import { Section } from "@/components/settings/shared";
+import Switch from "@/components/ui/Switch";
+import { NAV_ROUTES } from "@/routes/registry";
+import { useSidebarNav, effectivePinned } from "@/store/sidebar-nav";
 
 interface AdvancedSettings {
   max_concurrent_runs?: number;
@@ -111,6 +114,36 @@ export function PreferencesTab() {
           {label.restartHint}
         </div>
       </Section>
+      <Section icon={<PanelLeft size={14} />} title={label.sidebarSection}>
+        <SidebarButtonsConfig hint={label.sidebarHint} />
+      </Section>
+    </div>
+  );
+}
+
+/** Which nav routes are pinned directly in the sidebar — enabled here means
+ *  shown as a button; everything else collapses under the sidebar's More. */
+function SidebarButtonsConfig({ hint }: { hint: string }) {
+  const { t } = useI18n();
+  const pinnedPaths = useSidebarNav((s) => s.pinnedPaths);
+  const togglePinned = useSidebarNav((s) => s.togglePinned);
+  const pinned = effectivePinned(pinnedPaths);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)' }}>
+      <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)" }}>{hint}</div>
+      {NAV_ROUTES.map(({ path, labelKey, icon: Icon }) => (
+        <div
+          key={path}
+          style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}
+        >
+          <Icon size={14} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 'var(--hms-text-caption)' }}>
+            {t.nav[labelKey] ?? labelKey}
+          </span>
+          <Switch checked={pinned.includes(path)} onChange={() => togglePinned(path)} />
+        </div>
+      ))}
     </div>
   );
 }

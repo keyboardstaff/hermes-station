@@ -19,13 +19,14 @@ test.describe("boot & shell", () => {
     await expect(page).toHaveURL(/\/sessions$/);
   });
 
-  test("module nav switches the page (click navigates)", async ({ page }) => {
+  test("More disclosure reveals secondary nav (click navigates)", async ({ page }) => {
     await mockReadyBackend(page);
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Sessions" })).toBeVisible();
 
-    // Click the "Activity" module tab → should navigate to its first route (/cron).
-    await page.getByRole("button", { name: "Activity" }).first().click();
+    // Cron is not pinned by default — it lives under "More".
+    await page.getByRole("button", { name: "More" }).first().click();
+    await page.getByRole("link", { name: "Cron" }).click();
     await expect(page).toHaveURL(/\/cron$/);
   });
 });

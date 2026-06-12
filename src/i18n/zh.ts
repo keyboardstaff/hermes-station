@@ -59,8 +59,7 @@ export const zh: Translations = {
     drawerLabel: "导航",
     newSession: "新会话",
     logout: "退出登录",
-    moduleAgent: "智能体",
-    moduleActivity: "动态",
+    more: "更多",
     workspacesDrawer: "工作区",
     exportSession: "导出",
     renameSession: "重命名",
@@ -201,6 +200,8 @@ export const zh: Translations = {
       retentionHint: "1–365。每天清理超期文件。",
       saved: "已保存",
       restartHint: "上传大小、CORS 等需重启网关生效。",
+    sidebarSection: "侧边栏按钮",
+      sidebarHint: "开启的页面直接显示为侧边栏按钮，其余自动归入「更多」。",
     },
     security: {
       networkSection: "网络暴露",

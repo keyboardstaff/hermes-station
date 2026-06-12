@@ -188,89 +188,28 @@
   padding: 4px 12px;
 }
 
-/* ── Module switcher tabs (pill segmented control) ────────────────── */
-.hms-module-tabs {
+/* ── Sidebar "More" disclosure ────────────────────────────────────── */
+.hms-sidebar-more {
   display: flex;
-  gap: 2px;
-  padding: 4px;
-  margin: 8px 8px 4px;
-  background: var(--hms-hover-bg);
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-.hms-module-tab {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--hms-text-muted);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-.hms-module-tabs .hms-module-tab {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  gap: 5px;
-  width: auto;
-  height: auto;
-  padding: 5px 6px;
-  border-radius: 7px;
   font-size: var(--hms-text-sm);
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  min-width: 0;
-}
-.hms-module-tab:hover,
-.hms-module-tabs .hms-module-tab:hover {
-  background: var(--hms-hover-bg);
-  color: var(--hms-text);
-}
-.hms-module-tab[aria-pressed="true"] {
-  background: var(--hms-selected-bg);
-  color: var(--hms-text);
-}
-.hms-module-tabs .hms-module-tab[aria-pressed="true"] {
-  background: var(--hms-bg);
-  color: var(--hms-text);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-.hms-module-tab[aria-pressed="true"]:hover,
-.hms-module-tabs .hms-module-tab[aria-pressed="true"]:hover {
-  background: var(--hms-bg);
-}
-/* Larger touch targets on mobile */
-.hms-sidebar-root.mobile .hms-module-tabs {
-  margin: 4px 12px 8px;
-}
-.hms-sidebar-root.mobile .hms-module-tabs .hms-module-tab {
-  padding: 8px 6px;
-  gap: 6px;
+  text-align: left;
 }
 
-/* Keyboard shortcut hint — fades in on parent :hover */
-.hms-shortcut-hint {
-  opacity: 0;
-  transition: opacity var(--hms-transition);
-  pointer-events: none;
-}
-.hms-sidebar-row:hover .hms-shortcut-hint {
-  opacity: 1;
+.hms-sidebar-more-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
 }
 
-/* Search "jump to message" — brief highlight when the chat view scrolls a
-   matched message into view (set by ChatStream via .classList.add). */
-.hms-msg-flash {
-  animation: hms-msg-flash 1.6s ease;
-  border-radius: 8px;
+.hms-sidebar-more[data-open] .hms-sidebar-more-chevron {
+  transform: rotate(90deg);
 }
-@keyframes hms-msg-flash {
-  0%, 100% { background: transparent; }
-  12% { background: var(--hms-accent-weak); }
-}
+
