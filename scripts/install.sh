@@ -39,17 +39,46 @@ fi
 # ── 1. Frontend → dist/ ──────────────────────────────────────────────────────
 if [[ "$SKIP_FRONTEND" == 0 ]]; then
     # pnpm only: the lockfile is pnpm-lock.yaml and a stray `npm install`
-    # corrupts the .pnpm layout.
-    if ! command -v pnpm >/dev/null 2>&1; then
-        echo "✗ pnpm not found — install it first:" >&2
-        echo "    corepack enable && corepack prepare pnpm@latest --activate" >&2
-        echo "  (or: npm install -g pnpm)" >&2
+    # corrupts the .pnpm layout. Resolution order:
+    #   1. pnpm on PATH;
+    #   2. the standalone installer's home — it only appends PNPM_HOME to the
+    #      shell rc, so the terminal that just ran it (and any script) doesn't
+    #      see it until a new shell;
+    #   3. corepack (ships with Node ≥ 16.13) running pnpm directly — no
+    #      `corepack enable` needed, so no root and no global mutation; honors
+    #      package.json's packageManager pin;
+    #   4. npx as a last resort (any npm install provides it).
+    PNPM=()
+    if command -v pnpm >/dev/null 2>&1; then
+        PNPM=(pnpm)
+    else
+        for probe in "${PNPM_HOME:-}" "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
+            if [[ -n "$probe" && -x "$probe/pnpm" ]]; then
+                PNPM=("$probe/pnpm")
+                break
+            fi
+        done
+    fi
+    if [[ ${#PNPM[@]} -eq 0 ]] && command -v corepack >/dev/null 2>&1; then
+        export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+        PNPM=(corepack pnpm)
+    fi
+    if [[ ${#PNPM[@]} -eq 0 ]] && command -v npx >/dev/null 2>&1; then
+        PNPM=(npx -y pnpm)
+    fi
+    if [[ ${#PNPM[@]} -eq 0 ]]; then
+        echo "✗ pnpm not found (no pnpm, corepack or npx on PATH)." >&2
+        echo "  Install Node.js ≥ 18 first, then one of:" >&2
+        echo "    corepack enable        (may need sudo with a system node)" >&2
+        echo "    npm install -g pnpm" >&2
+        echo "  If you installed pnpm via its standalone installer, open a NEW" >&2
+        echo "  terminal — it only adds PNPM_HOME to your shell rc." >&2
         exit 1
     fi
-    echo "→ pnpm install"
-    (cd "$REPO_ROOT" && pnpm install)
-    echo "→ pnpm build (SPA → dist/)"
-    (cd "$REPO_ROOT" && pnpm build)
+    echo "→ ${PNPM[*]} install"
+    (cd "$REPO_ROOT" && "${PNPM[@]}" install)
+    echo "→ ${PNPM[*]} build (SPA → dist/)"
+    (cd "$REPO_ROOT" && "${PNPM[@]}" build)
 fi
 
 # ── 2. Python package → hermes-agent venv ────────────────────────────────────
