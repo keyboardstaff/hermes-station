@@ -45,3 +45,4 @@ __pycache__/
 
 # Python virtualenv (local editor support; gateway uses ~/.hermes/hermes-agent/venv)
 venv/
+coverage/
