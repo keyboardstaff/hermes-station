@@ -1,6 +1,6 @@
 /**
- * Which profile a chat run targets (in-process Phase B: the run follows the
- * CURRENT profile, no "activate the profile + restart" step).
+ * Which profile a chat run targets (the run follows the CURRENT profile,
+ * no "activate the profile + restart" step).
  *
  * Precedence:
  *   1. an explicit override — the Agents room's `@mention` routes a turn to a

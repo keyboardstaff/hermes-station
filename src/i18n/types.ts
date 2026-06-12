@@ -843,6 +843,12 @@ export interface Translations {
     paretoTitle: string;
     paretoDisabled: string;
     paretoDesc: string;
+    /** Progressive disclosure */
+    filterPlaceholder: string;
+    modifiedOnly: string;
+    modifiedLabel: string;
+    noModified: string;
+    noMatches: string;
   };
 
   /** Config YAML editor strings. */

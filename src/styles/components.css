@@ -2282,5 +2282,70 @@ button.hms-artifacts-title {
 
 .hms-models-scope-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: var(--hms-space-3);
+}
+
+.hms-models-filter-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Collapsible Models sections (Auxiliary / Fallback) — summary header that
+   expands in place. */
+.hms-models-collapse-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--hms-text);
+}
+
+.hms-models-collapse-chevron {
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.hms-models-collapse[data-open] .hms-models-collapse-chevron {
+  transform: rotate(90deg);
+}
+
+.hms-models-collapse-title {
+  font-size: var(--hms-text-body);
+  font-weight: 700;
+}
+
+.hms-models-collapse-summary {
+  margin-left: auto;
+  font-size: var(--hms-text-caption);
+  color: var(--hms-text-muted);
+}
+
+.hms-models-collapse-body {
+  margin-top: 12px;
+}
+
+.hms-models-aux-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-3);
+}
+
+.hms-models-aux-toolbar .hms-models-hint {
+  flex: 1;
+  margin: 0;
+}
+
+.hms-models-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  flex-shrink: 0;
 }

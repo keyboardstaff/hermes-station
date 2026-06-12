@@ -20,19 +20,21 @@ import ParetoSlider from "@/components/models/ParetoSlider";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { RefreshCw, ArrowRightLeft, Info, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import Switch from "@/components/ui/Switch";
+import {
+  RefreshCw, ArrowRightLeft, Info, Plus, Trash2, ArrowUp, ArrowDown, ChevronRight,
+} from "lucide-react";
 
 /**
- * +16 — Models panel.
+ * Models panel — progressive disclosure.
  *
- * Four hash-routed tabs:
- *   #primary   — primary model w/ CHANGE button (opens ModelPickerDialog)
- *   #auxiliary — 9 upstream slots, each with CHANGE button
- *   #fallback  — clarifies the upstream v0.14 limitation
- *   #keys      — grouped API keys (provider/messaging/tool/...) w/ edit/delete
+ * Primary and API Keys stay open (the everyday surfaces); Auxiliary and
+ * Fallback collapse into summary headers (slots customized / chain length).
+ * A top filter box narrows aux slots, fallback entries and key names at once
+ * and force-opens the collapsed sections while active; Auxiliary additionally
+ * offers a "modified only" switch that hides slots still on Auto.
  */
 
-type Tab = "primary" | "auxiliary" | "fallback" | "keys";
 // 9 upstream auxiliary task slots, in canonical order.
 const AUX_SLOTS = [
   "vision",
@@ -46,6 +48,11 @@ const AUX_SLOTS = [
   "curator",
 ] as const;
 type AuxSlotKey = typeof AUX_SLOTS[number];
+
+/** A slot counts as customized once it pins a concrete provider/model (not Auto). */
+function isCustomized(entry: AuxSlot | undefined): boolean {
+  return !!entry && entry.provider !== "auto" && !!entry.model;
+}
 
 export default function ModelsPanel() {
   const { t } = useI18n();
@@ -62,39 +69,71 @@ export default function ModelsPanel() {
     }
   }, []);
 
-  const tabLabels: Record<Tab, string> = {
-    primary:   m?.tabPrimary   ?? "Primary",
-    auxiliary: m?.tabAuxiliary ?? "Auxiliary",
-    fallback:  m?.tabFallback  ?? "Fallback",
-    keys:      m?.tabKeys      ?? "API Keys",
-  };
+  const [query, setQuery] = useState("");
+  const [auxOpen, setAuxOpen] = useState(false);
+  const [fbOpen, setFbOpen] = useState(false);
+  const filter = query.trim().toLowerCase();
+  const filtering = filter.length > 0;
+
+  // Collapsed-header summaries read the same react-query caches the section
+  // bodies use, so these extra hook calls don't add requests.
+  const { data: auxData } = useAuxiliary();
+  const { data: fbData } = useFallback();
+  const auxModified = useMemo(() => {
+    if (!auxData?.tasks) return null;
+    const byTask = new Map(auxData.tasks.map((e) => [e.task, e]));
+    return AUX_SLOTS.filter((s) => isCustomized(byTask.get(s))).length;
+  }, [auxData]);
 
   return (
     <div className="hms-models-root">
       <div className="hms-models-body">
-        {/* Profile scope — which profile's keys/config this page reads/writes
-            (the page header is gone now that Models lives inside Settings). */}
+        {/* Filter + profile scope — which profile's keys/config this page
+            reads/writes (the page header is gone now that Models lives
+            inside Settings). */}
         <div className="hms-models-scope-row">
+          <input
+            type="text"
+            className="hms-input hms-models-filter-input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={m?.filterPlaceholder ?? "Filter slots and keys..."}
+          />
           <ProfileScopeSelector />
         </div>
-        {/* Primary */}
-        <SectionCard title={tabLabels.primary}>
+
+        {/* Primary — always open */}
+        <SectionCard title={m?.tabPrimary ?? "Primary"}>
           <PrimaryTab m={m} flags={flags} />
         </SectionCard>
 
-        {/* Auxiliary */}
-        <SectionCard title={tabLabels.auxiliary}>
-          <AuxiliaryTab m={m} />
-        </SectionCard>
+        {/* Auxiliary — collapsed by default; header shows customized count */}
+        <CollapsibleSection
+          title={m?.tabAuxiliary ?? "Auxiliary"}
+          summary={
+            auxModified !== null
+              ? `${auxModified}/${AUX_SLOTS.length} ${m?.modifiedLabel ?? "modified"}`
+              : undefined
+          }
+          open={filtering || auxOpen}
+          onToggle={() => setAuxOpen((v) => !v)}
+        >
+          <AuxiliaryTab m={m} filter={filter} />
+        </CollapsibleSection>
 
-        {/* Fallback */}
-        <SectionCard title={tabLabels.fallback}>
-          <FallbackTab m={m} />
-        </SectionCard>
+        {/* Fallback — collapsed by default; header shows chain length */}
+        <CollapsibleSection
+          title={m?.tabFallback ?? "Fallback"}
+          summary={fbData ? `${fbData.chain?.length ?? 0} ${m?.modelsCount ?? "models"}` : undefined}
+          open={filtering || fbOpen}
+          onToggle={() => setFbOpen((v) => !v)}
+        >
+          <FallbackTab m={m} filter={filter} />
+        </CollapsibleSection>
 
-        {/* API Keys */}
-        <SectionCard title={tabLabels.keys}>
-          <KeysTab m={m} />
+        {/* API Keys — always open */}
+        <SectionCard title={m?.tabKeys ?? "API Keys"}>
+          <KeysTab m={m} filter={filter} />
         </SectionCard>
       </div>
     </div>
@@ -110,7 +149,33 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-// ── Tabs ────────────────────────────────────────────────────────────
+function CollapsibleSection({
+  title, summary, open, onToggle, children,
+}: {
+  title: string;
+  summary?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="hms-models-collapse" data-open={open || undefined}>
+      <button
+        type="button"
+        className="hms-models-collapse-head"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <ChevronRight size={14} className="hms-models-collapse-chevron" />
+        <span className="hms-models-collapse-title">{title}</span>
+        {summary && <span className="hms-models-collapse-summary">{summary}</span>}
+      </button>
+      {open && <div className="hms-models-collapse-body">{children}</div>}
+    </section>
+  );
+}
+
+// ── Sections ────────────────────────────────────────────────────────
 
 type ML = NonNullable<ReturnType<typeof useI18n>["t"]["modelsPanel"]>;
 
@@ -233,11 +298,12 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
   );
 }
 
-function AuxiliaryTab({ m }: { m: ML | undefined }) {
+function AuxiliaryTab({ m, filter }: { m: ML | undefined; filter: string }) {
   const { data: providers } = useProviders();
   const { data: aux, isLoading } = useAuxiliary();
   const assign = useAssignModel();
   const [editingSlot, setEditingSlot] = useState<AuxSlotKey | null>(null);
+  const [modifiedOnly, setModifiedOnly] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const slotMap = useMemo(() => {
@@ -271,11 +337,29 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
     return (m?.[`aux_${slot}` as keyof ML] as string | undefined) ?? prettySlot(slot);
   };
 
+  const visibleSlots = AUX_SLOTS.filter((slot) => {
+    const entry = slotMap.get(slot);
+    if (modifiedOnly && !isCustomized(entry)) return false;
+    if (!filter) return true;
+    const value = `${entry?.provider ?? ""}/${entry?.model ?? ""}`.toLowerCase();
+    return (
+      slotLabel(slot).toLowerCase().includes(filter) ||
+      slot.includes(filter) ||
+      value.includes(filter)
+    );
+  });
+
   return (
     <div className="hms-models-aux">
-      <p className="hms-models-hint">
-        {m?.auxiliaryHintV2 ?? "Each upstream task uses an auxiliary model. Auto resolves to the primary provider's recommended model."}
-      </p>
+      <div className="hms-models-aux-toolbar">
+        <p className="hms-models-hint">
+          {m?.auxiliaryHintV2 ?? "Each upstream task uses an auxiliary model. Auto resolves to the primary provider's recommended model."}
+        </p>
+        <div className="hms-models-toggle">
+          <span className="hms-models-muted-caption">{m?.modifiedOnly ?? "Modified only"}</span>
+          <Switch checked={modifiedOnly} onChange={setModifiedOnly} />
+        </div>
+      </div>
 
       {statusMsg && (
         <div className="hms-settings-notice hms-settings-notice--success">
@@ -283,7 +367,17 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
         </div>
       )}
 
-      {AUX_SLOTS.map((slot) => {
+      {visibleSlots.length === 0 && (
+        <EmptyState
+          text={
+            modifiedOnly && !filter
+              ? m?.noModified ?? "All slots are Auto — nothing customized yet."
+              : m?.noMatches ?? "Nothing matches the filter."
+          }
+        />
+      )}
+
+      {visibleSlots.map((slot) => {
         const entry = slotMap.get(slot);
         const provider = entry?.provider || "auto";
         const model = entry?.model || "";
@@ -326,7 +420,7 @@ function AuxiliaryTab({ m }: { m: ML | undefined }) {
   );
 }
 
-function FallbackTab({ m }: { m: ML | undefined }) {
+function FallbackTab({ m, filter }: { m: ML | undefined; filter: string }) {
   // Fallback chain = `fallback_providers` (+ legacy `fallback_model`) — the
   // models GatewayRunner tries, in order, when the primary model fails.
   const { data: fb, isLoading } = useFallback();
@@ -355,6 +449,11 @@ function FallbackTab({ m }: { m: ML | undefined }) {
 
   if (isLoading) return <LoadingBox />;
 
+  // Filtered view keeps original chain indices so move/remove stay correct.
+  const visible = chain
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => !filter || `${entry.provider}/${entry.model}`.toLowerCase().includes(filter));
+
   return (
     <div className="hms-models-aux">
       <p className="hms-models-hint">
@@ -363,8 +462,10 @@ function FallbackTab({ m }: { m: ML | undefined }) {
 
       {chain.length === 0 ? (
         <EmptyState text={m?.fallbackEmpty ?? "No fallback models — add one to retry on failure."} />
+      ) : visible.length === 0 ? (
+        <EmptyState text={m?.noMatches ?? "Nothing matches the filter."} />
       ) : (
-        chain.map((e, i) => (
+        visible.map(({ entry: e, index: i }) => (
           <div key={`${e.provider}/${e.model}/${i}`} className="hms-models-provider">
             <span className="hms-models-fallback-index">{i + 1}</span>
             <span className="hms-models-aux-value">{e.provider} / {e.model}</span>
@@ -423,7 +524,7 @@ function FallbackTab({ m }: { m: ML | undefined }) {
   );
 }
 
-function KeysTab({ m }: { m: ML | undefined }) {
+function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
   const { data, isLoading, isError } = useKeys();
 
   if (isLoading) return <LoadingBox />;
@@ -438,9 +539,16 @@ function KeysTab({ m }: { m: ML | undefined }) {
     return <EmptyState text={m?.noKeys ?? "No API keys found in the Dashboard environment."} />;
   }
 
+  const keys = filter
+    ? data.keys.filter((k) => k.name.toLowerCase().includes(filter))
+    : data.keys;
+  if (!keys.length) {
+    return <EmptyState text={m?.noMatches ?? "Nothing matches the filter."} />;
+  }
+
   // Group by category. Unknown / empty categories fall under "other".
   const groups: Record<string, KeyEntry[]> = {};
-  for (const k of data.keys) {
+  for (const k of keys) {
     const cat = k.category || "other";
     (groups[cat] ??= []).push(k);
   }
@@ -518,5 +626,3 @@ function LoadingBox() {
 function EmptyState({ text }: { text: string }) {
   return <div className="hms-models-empty">{text}</div>;
 }
-
-

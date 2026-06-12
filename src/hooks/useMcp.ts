@@ -4,8 +4,8 @@ import { useScopeParam } from "@/hooks/useProfiles";
 
 // MCP server management — the configured ``mcp_servers``
 // block surfaced on the /skills page. Lists / toggles / adds / removes entries;
-// catalog git-install stays in the CLI. Reads + writes are profile-scoped
-// (Phase B): ?profile= targets the viewed profile's own config.yaml.
+// catalog git-install stays in the CLI. Reads + writes are profile-scoped:
+// ?profile= targets the viewed profile's own config.yaml.
 
 /** `?profile=<name>` for the current view-scope, or "" for the default home. */
 function scopeQuery(profile?: string): string {

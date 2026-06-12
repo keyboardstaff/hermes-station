@@ -808,6 +808,11 @@ export const zh: Translations = {
     paretoTitle: "Pareto 代码路由",
     paretoDisabled: "需要 v0.14+",
     paretoDesc: "OpenRouter Pareto 路由的最低编码分数阈值。在 config.yaml 中编辑。",
+    filterPlaceholder: "筛选槽位与密钥…",
+    modifiedOnly: "仅显示已修改",
+    modifiedLabel: "项已修改",
+    noModified: "所有槽位均为「自动」，暂无自定义。",
+    noMatches: "没有匹配的条目。",
   },
 
   config: {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { resolveRunProfile } from "@/lib/run-profile";
 
-describe("resolveRunProfile (Phase B — run follows the current profile)", () => {
+describe("resolveRunProfile (run follows the current profile)", () => {
   it("an explicit override wins (agents-room @mention)", () => {
     expect(resolveRunProfile("coder", "creative", "writer")).toBe("coder");
   });

@@ -809,6 +809,11 @@ export const en: Translations = {
     paretoTitle: "Pareto Code Router",
     paretoDisabled: "v0.14+ required",
     paretoDesc: "Minimum coding score threshold for OpenRouter Pareto routing. Edit in config.yaml.",
+    filterPlaceholder: "Filter slots and keys...",
+    modifiedOnly: "Modified only",
+    modifiedLabel: "modified",
+    noModified: "All slots are Auto — nothing customized yet.",
+    noMatches: "Nothing matches the filter.",
   },
 
   config: {

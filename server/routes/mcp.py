@@ -48,7 +48,7 @@ def _config_path():
 
 async def _write_scoped(profile: str | None, apply: Callable[[], str | None]) -> str | None:
     """Run a config-writing ``apply`` under the viewed profile's ``HERMES_HOME``
-    (Phase B — edit any profile), then reload the LIVE config only for the
+    (any profile is editable), then reload the LIVE config only for the
     active/default home. A named-profile write lands on *that* profile's on-disk
     ``config.yaml`` (applied when it runs); reloading under its override would
     pollute the live process's config with another home's values."""
