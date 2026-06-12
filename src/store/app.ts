@@ -138,8 +138,8 @@ export const useToolViewStore = create<ToolViewStore>((set) => ({
 
 export type ChatWidth = "narrow" | "default" | "wide";
 
-export const CHAT_WIDTHS: readonly ChatWidth[] = ["narrow", "default", "wide"] as const;
-export const DEFAULT_CHAT_WIDTH: ChatWidth = "default";
+const CHAT_WIDTHS: readonly ChatWidth[] = ["narrow", "default", "wide"] as const;
+const DEFAULT_CHAT_WIDTH: ChatWidth = "default";
 
 const CHAT_WIDTH_KEY = "hms_chat_width";
 
@@ -179,7 +179,7 @@ export const useChatWidthStore = create<ChatWidthStore>((set) => {
 export type FontSize = "small" | "default" | "large" | "extra-large";
 
 export const FONT_SIZES: readonly FontSize[] = ["small", "default", "large", "extra-large"] as const;
-export const DEFAULT_FONT_SIZE: FontSize = "default";
+const DEFAULT_FONT_SIZE: FontSize = "default";
 
 const FONT_SIZE_KEY = "hms_font_size";
 

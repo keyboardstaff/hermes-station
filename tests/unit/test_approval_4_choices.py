@@ -134,3 +134,31 @@ def test_fifo_order_when_multiple_pending() -> None:
     assert e3.result == "session"
 
     bridge.unregister("sess-fifo")
+
+
+def test_stale_mirror_popped_on_zero_resolve() -> None:
+    """A resolve that finds no blocked thread (timeout / dup click) must still
+    drop the replay mirror — otherwise every reconnect resurrects the dead
+    drawer and every subsequent click resolves 0 forever."""
+    bridge = ApprovalBridge(ws=WSManager())
+    bridge._pending["sess-stale"] = {"type": "approval.requested", "session_key": "sess-stale"}
+
+    assert bridge.resolve("sess-stale", "session") == 0
+    assert bridge.list_pending() == []
+
+
+def test_list_pending_prunes_mirrors_without_blocked_thread() -> None:
+    """Replay only mirrors whose session still has a blocked agent thread."""
+    bridge = ApprovalBridge(ws=WSManager())
+    # Dead mirror: nothing queued upstream for this session.
+    bridge._pending["sess-dead"] = {"type": "approval.requested", "session_key": "sess-dead"}
+    # Live mirror: a real blocked entry exists.
+    _enqueue_approval("sess-live")
+    bridge._pending["sess-live"] = {"type": "approval.requested", "session_key": "sess-live"}
+
+    replayed = bridge.list_pending()
+    assert [p["session_key"] for p in replayed] == ["sess-live"]
+    # The dead mirror was pruned, not just skipped.
+    assert "sess-dead" not in bridge._pending
+
+    bridge.unregister("sess-live")

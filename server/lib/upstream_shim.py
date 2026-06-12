@@ -187,6 +187,9 @@ class _Approval:
     unregister_notify: Callable | None = field(
         default_factory=lambda: _try_import("tools.approval", "unregister_gateway_notify")
     )
+    has_blocking: Callable | None = field(
+        default_factory=lambda: _try_import("tools.approval", "has_blocking_approval")
+    )
     set_session_key: Callable | None = field(
         default_factory=lambda: _try_import("tools.approval", "set_current_session_key")
     )

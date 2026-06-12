@@ -55,6 +55,8 @@ export default function ProviderCard({
   const slotLabel = (slot: string): string =>
     (m?.[`aux_${slot}` as keyof ML] as string | undefined) ?? prettySlot(slot);
 
+  const keyLabels = buildKeyRowLabels(m);
+
   const assignOptions: PopupSelectOption<string | null>[] = [
     { value: "primary", label: m?.assignPrimary ?? "Set as primary" },
     ...AUX_SLOTS.map((slot) => ({
@@ -159,7 +161,7 @@ export default function ProviderCard({
       {isOpen && (
         <div className="hms-provider-card-body">
           {keys.map((k) => (
-            <KeyRow key={k.name} entry={k} labels={buildKeyRowLabels(m)} />
+            <KeyRow key={k.name} entry={k} labels={keyLabels} />
           ))}
 
           <div className="hms-provider-card-models">

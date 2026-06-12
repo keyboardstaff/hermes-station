@@ -11,7 +11,7 @@ import { useActiveSessionProfile } from "@/hooks/useActiveSessionProfile";
 import { useProfileScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
 import { useI18n } from "@/i18n";
 import type { ComposerAttachment } from "@/lib/hermes-types";
-import type { ProviderInfo } from "@/hooks/useProviders";
+import { useProviders, type ProviderInfo } from "@/hooks/useProviders";
 import { ContextMeter, estimateTokenCount } from "./composer/ContextMeter";
 import { ModelPicker } from "./composer/ModelPicker";
 import { PillSelect, ToolbarBtn, sendStyle } from "./composer/parts";
@@ -113,20 +113,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     if (next !== currentProfileName || scope === ALL_PROFILES) setScope(next);
   }, [currentProfileName, scope, setScope]);
 
-  const { data: modelsResp } = useQuery<{
-    models: string[];
-    model_default: string | null;
-    providers: ProviderInfo[];
-  }>({
-    queryKey: ["fs-models"],
-    queryFn: () => fetch("/api/models").then((r) => r.ok ? r.json() : { models: [], model_default: null, providers: [] }),
-    retry: false,
-    staleTime: 60_000,
-  });
-  const models: string[] = modelsResp?.models ?? [];
+  // Shared profile-scoped provider catalog (same react-query cache as the
+  // Models page) — the picker follows the profile pill instead of always
+  // showing the default home's models.
+  const { data: modelsResp } = useProviders();
   const modelDefault = modelsResp?.model_default ?? null;
   const providers: ProviderInfo[] = modelsResp?.providers ?? [];
-  const firstModel = models[0] ?? null;
+  const firstModel = providers[0]?.models?.[0] ?? null;
 
   // Context-window length (models.dev) for the active model → context ring.
   // The lookup needs a provider; fall back to the provider that lists this model.
@@ -463,7 +456,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             pointerEvents: "none",
             fontSize: 'var(--hms-text-sm)', color: "var(--hms-accent)", fontWeight: 500,
           }}>
-            Drop files here
+            {t.composer.dropHere}
           </div>
         )}
         {/* Slash command menu */}
@@ -543,7 +536,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             onChange={(e) => { onChange(e); autoResize(); }}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            placeholder="Message… (/ for commands, Shift+Enter for newline)"
+            placeholder={t.composer.placeholder}
             disabled={disabled}
             rows={1}
             style={{
@@ -579,13 +572,13 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
           }}
         >
           {/* Attach */}
-          <ToolbarBtn title="Attach file" onClick={() => fileInputRef.current?.click()}>
+          <ToolbarBtn title={t.composer.attach} onClick={() => fileInputRef.current?.click()}>
             <Paperclip size={16} />
           </ToolbarBtn>
 
           {/* Mic — Web Speech API */}
           <ToolbarBtn
-            title={voice.supported ? (voice.listening ? "Stop listening" : "Voice input") : "Voice input not supported in this browser"}
+            title={voice.supported ? (voice.listening ? t.composer.voiceStop : t.composer.voice) : t.composer.voiceUnsupported}
             onClick={voice.toggle}
           >
             <Mic
@@ -651,7 +644,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
               )}
               <button
                 onClick={onStop}
-                title="Stop"
+                title={t.composer.stop}
                 style={sendStyle({ danger: true })}
               >
                 <Square size={14} fill="currentColor" />
@@ -661,7 +654,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
             <button
               onClick={send}
               disabled={(!value.trim() && attachments.length === 0) || !!disabled}
-              title={queueEditId ? t.composer.saveQueued : "Send (Enter)"}
+              title={queueEditId ? t.composer.saveQueued : t.composer.sendTitle}
               style={sendStyle({ disabled: (!value.trim() && attachments.length === 0) || !!disabled })}
             >
               <Send size={14} />

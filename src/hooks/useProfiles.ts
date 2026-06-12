@@ -237,13 +237,3 @@ export function useScopeParam(): string | undefined {
   return scopeProfileParam(scope, active?.current);
 }
 
-/** Set the sticky active profile. The caller is responsible for triggering
- *  a gateway restart afterwards if ``requires_restart`` flips true. */
-export function useSetActiveProfile() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (name: string) =>
-      api.json<ActiveProfilePayload>("/api/profiles/active", "POST", { name }),
-    onSuccess: (data) => qc.setQueryData(ACTIVE_KEY, data),
-  });
-}

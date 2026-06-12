@@ -76,16 +76,6 @@ export function useDiscoverSlashCommands() {
   });
 }
 
-export function useDiscoverThemes() {
-  return useQuery({
-    queryKey: THEMES_KEY,
-    queryFn: () => api.get<{ themes: DiscoveredTheme[]; count: number }>(
-      "/api/discover/themes",
-    ),
-    staleTime: STALE_TIME_MS,
-  });
-}
-
 /** Keep in sync with _BUILDERS in server/routes/plugins.py. */
 const RESOURCE_TO_KEY: Record<string, readonly string[]> = {
   platforms: PLATFORMS_KEY,

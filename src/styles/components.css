@@ -663,12 +663,6 @@ button.hms-artifacts-title {
   margin-top: 2px;
 }
 
-.hms-models-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .hms-models-muted-caption {
   font-size: var(--hms-text-caption);
   color: var(--hms-text-muted);
@@ -686,23 +680,6 @@ button.hms-artifacts-title {
 
 .hms-models-provider[data-current] {
   border-color: var(--hms-text);
-}
-
-.hms-models-provider-namerow {
-  display: flex;
-  gap: var(--hms-space-2);
-  align-items: center;
-}
-
-.hms-models-provider-name {
-  font-size: var(--hms-text-sm);
-  font-weight: 600;
-}
-
-.hms-models-provider-count {
-  font-size: var(--hms-text-xs);
-  color: var(--hms-text-muted);
-  margin-top: 2px;
 }
 
 .hms-models-pareto {
@@ -751,33 +728,6 @@ button.hms-artifacts-title {
   text-align: center;
   font-size: var(--hms-text-xs);
   font-weight: 600;
-  color: var(--hms-text-muted);
-}
-
-.hms-models-notice-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--hms-space-3);
-  border-radius: 10px;
-}
-
-.hms-models-notice-icon {
-  color: var(--hms-warning);
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.hms-models-notice-text {
-  font-size: var(--hms-text-sm);
-  line-height: 1.5;
-}
-
-.hms-models-notice-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.hms-models-notice-body {
   color: var(--hms-text-muted);
 }
 
@@ -1781,81 +1731,6 @@ button.hms-artifacts-title {
   gap: var(--hms-space-2);
 }
 
-.hms-channel-card-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.hms-channel-card-title {
-  font-size: var(--hms-text-body);
-  font-weight: var(--hms-fw-semibold);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hms-channel-card-id {
-  font-size: 0.625rem;
-  color: var(--hms-text-muted);
-}
-
-.hms-channel-card-kind {
-  font-size: 0.5625rem;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: var(--hms-border);
-  color: var(--hms-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: var(--hms-fw-semibold);
-  flex-shrink: 0;
-}
-
-.hms-channel-card-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--hms-space-1);
-  font-size: var(--hms-text-xs);
-  padding: 3px 8px;
-  border-radius: var(--hms-radius-pill);
-  font-weight: var(--hms-fw-semibold);
-}
-
-.hms-channel-card-details {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  row-gap: 4px;
-  column-gap: 12px;
-  font-size: var(--hms-text-xs);
-  color: var(--hms-text-muted);
-}
-
-.hms-channel-card-error-label {
-  display: flex;
-  align-items: center;
-  gap: var(--hms-space-1);
-  color: var(--hms-error-text);
-}
-
-.hms-channel-card-error-copy {
-  font-family: monospace;
-  color: var(--hms-error-text);
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-.hms-channel-card-warning {
-  display: flex;
-  align-items: center;
-  gap: var(--hms-space-2);
-  padding: 6px 8px;
-  background: var(--hms-warning-weak);
-  border: 1px solid var(--hms-warning-border);
-  border-radius: var(--hms-radius-md);
-  font-size: var(--hms-text-xs);
-  color: var(--hms-warning-text);
-}
-
 .hms-sessions-panel {
   display: flex;
   flex-direction: column;
@@ -2086,13 +1961,6 @@ button.hms-artifacts-title {
 .hms-channel-card-state[data-tone="muted"] {
   background: color-mix(in srgb, var(--hms-text) 6%, transparent);
   color: var(--hms-text-muted);
-}
-
-.hms-channel-card-switch {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  cursor: pointer;
 }
 
 .hms-channel-card-error {

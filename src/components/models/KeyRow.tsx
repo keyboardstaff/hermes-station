@@ -12,6 +12,7 @@ import { Eye, EyeOff, AlertCircle, Pencil, Trash2, ExternalLink } from "lucide-r
 import type { KeyEntry } from "@/hooks/useProviders";
 import { useRevealKey, useDeleteKey } from "@/hooks/useProviders";
 import { apiErrorStatus } from "@/lib/errors";
+import IconButton from "@/components/ui/IconButton";
 import KeyEditDialog from "./KeyEditDialog";
 
 interface Props {
@@ -172,38 +173,32 @@ export default function KeyRow({ entry, labels }: Props) {
 
         {/* Reveal/hide toggle */}
         {entry.set && (
-          <button
-            onClick={handleToggle}
+          <IconButton
+            size="sm"
+            onClick={() => void handleToggle()}
             disabled={reveal.isPending}
             title={shown ? labels.hide : labels.reveal}
-            style={iconBtn}
           >
             {shown ? <EyeOff size={13} /> : <Eye size={13} />}
-          </button>
+          </IconButton>
         )}
 
         {/* Edit */}
-        <button
-          onClick={() => setEditOpen(true)}
-          title={labels.edit}
-          style={iconBtn}
-        >
+        <IconButton size="sm" onClick={() => setEditOpen(true)} title={labels.edit}>
           <Pencil size={13} />
-        </button>
+        </IconButton>
 
         {/* Delete (only if set) */}
         {entry.set && (
-          <button
-            onClick={handleDelete}
+          <IconButton
+            size="sm"
+            danger
+            onClick={() => void handleDelete()}
             disabled={del.isPending}
             title={labels.delete}
-            style={{
-              ...iconBtn,
-              color: "var(--hms-error-text)",
-            }}
           >
             <Trash2 size={13} />
-          </button>
+          </IconButton>
         )}
       </div>
 
@@ -229,16 +224,3 @@ export default function KeyRow({ entry, labels }: Props) {
   );
 }
 
-const iconBtn: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 28,
-  height: 28,
-  borderRadius: 6,
-  border: "1px solid var(--hms-border)",
-  background: "transparent",
-  color: "var(--hms-text-muted)",
-  cursor: "pointer",
-  flexShrink: 0,
-};

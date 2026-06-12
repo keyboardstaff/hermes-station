@@ -6,7 +6,6 @@ export interface Translations {
     cancel: string;
     retry: string;
     search: string;
-    coming: string;
     /** MobileListDetail back-bar label. */
     back: string;
   };
@@ -64,10 +63,8 @@ export interface Translations {
     searchSessions: string;
     // Mobile drawer/header strings — optional; components ship English fallbacks.
     openDrawer: string;
-    closeDrawer: string;
     drawerLabel: string;
     newSession: string;
-    newTask: string;
     logout: string;
     moduleAgent: string;
     moduleActivity: string;
@@ -79,12 +76,10 @@ export interface Translations {
     exportMarkdown: string;
     exportPdf: string;
     copyId: string;
-    copyIdDone: string;
     pin: string;
     unpin: string;
     archiveSession: string;
     deleteSession: string;
-    clearLocal: string;
   };
 
   /** Primary CTAs surfaced in the Sidebar header etc. */
@@ -95,8 +90,6 @@ export interface Translations {
   /** Sidebar-only strings. */
   sidebar: {
     recents: string;
-    recentsEmpty: string;
-    recentsError: string;
     viewAll: string;
     pinned: string;
   };
@@ -181,8 +174,6 @@ export interface Translations {
     notInstalledHint: string;
     crashed: string;
     crashedHint: string;
-    editFullConfigHint: string;
-    openConfigTab: string;
     /** ConnectionDot tooltip when all systems are ok. */
     statusOk: string;
     /** ConnectionDot tooltip when caps.mode === "degraded" with no reason text. */
@@ -259,7 +250,6 @@ export interface Translations {
     title: string;
     tool: string;
     command: string;
-    riskLevel: string;
     deny: string;
     drawerTitle: string;
     approveOnce: string;
@@ -311,7 +301,6 @@ export interface Translations {
   /** Slash descriptions keyed by upstream command name; missing falls back to
    *  /api/discover/slash-commands.description (often empty). Never empty-shadows. */
   slash: {
-    pluginSourceLabel: string;
     [key: string]: string;
   };
 
@@ -349,7 +338,6 @@ export interface Translations {
   files: {
     rootHermes: string;
     rootWorkspace: string;
-    switchFolder: string;
     noSubfolders: string;
     useThisFolder: string;
     deleteConfirm: string;
@@ -368,7 +356,6 @@ export interface Translations {
     download: string;
     refresh: string;
     bytes: string;
-    binaryNote: string;
     binaryHint: string;
     showHidden: string;
     hideHidden: string;
@@ -377,13 +364,6 @@ export interface Translations {
     filesTab: string;
     artifactsTab: string;
     noArtifacts: string;
-    workspaceDefault: string;
-    workspaceAdd: string;
-    workspacePath: string;
-    workspaceName: string;
-    workspaceAlreadyExists: string;
-    workspaceNotFound: string;
-    workspaceSystemPath: string;
     historyTitle: string;
     historyEmpty: string;
     historyBy: string;
@@ -498,13 +478,9 @@ export interface Translations {
   kanban: {
     refresh: string;
     includeArchived: string;
-    strandedBadge: string;
-    strandedHint: string;
     loading: string;
     errorLoading: string;
-    upstreamHint: string;
     empty: string;
-    runningLocked: string;
     col_triage: string;
     col_todo: string;
     col_scheduled: string;
@@ -530,13 +506,19 @@ export interface Translations {
   };
 
   composer: {
-    /** ``{name}`` is the placeholder for the target profile name. */
-    profileSwitchConfirm: string;
     manageProfiles: string;
     thinking: string;
     options: string;
     effort: string;
     send: string;
+    placeholder: string;
+    dropHere: string;
+    attach: string;
+    voice: string;
+    voiceStop: string;
+    voiceUnsupported: string;
+    stop: string;
+    sendTitle: string;
     /** Composer queue */
     queuedLabel: string;
     queueSend: string;
@@ -593,8 +575,6 @@ export interface Translations {
     gateway: string;
     running: string;
     stopped: string;
-    openTerminal: string;
-    copyCmd: string;
     copied: string;
     rename: string;
     delete: string;
@@ -602,15 +582,12 @@ export interface Translations {
     save: string;
     saving: string;
     saved: string;
-    loadingSoul: string;
     name: string;
     newName: string;
-    cloneFromDefault: string;
     noSkills: string;
     create: string;
     creating: string;
     cancel: string;
-    renameDefaultWarning: string;
     startGateway: string;
     stopGateway: string;
   };
@@ -637,7 +614,6 @@ export interface Translations {
     groupMemory: string;
     groupActive: string;
     groupDisabled: string;
-    selectPlugin: string;
     runtimeTitle: string;
     runtimeHint: string;
     memoryProvider: string;
@@ -674,7 +650,6 @@ export interface Translations {
     disable: string;
     uninstall: string;
     confirmUninstall: string;
-    bundledLock: string;
     selectASkill: string;
     loading: string;
     errorLoading: string;
@@ -692,15 +667,6 @@ export interface Translations {
     version: string;
     status: string;
     path: string;
-    skillMdHint: string;
-    loadingContent: string;
-    allSources: string;
-    sourceBundled: string;
-    sourceUser: string;
-    sourceCommunity: string;
-    sourceHub: string;
-    sourceHf: string;
-    sourceGit: string;
   };
 
   /** MCP server management, shown on the /skills page. */
@@ -709,23 +675,16 @@ export interface Translations {
     intro: string;
     add: string;
     addTitle: string;
-    addConfirm: string;
     adding: string;
     cancel: string;
     remove: string;
     confirmRemove: string;
     enabled: string;
     disabled: string;
-    toggleHint: string;
     empty: string;
     loading: string;
     error: string;
-    alreadyExists: string;
     namePlaceholder: string;
-    commandPlaceholder: string;
-    argsPlaceholder: string;
-    urlPlaceholder: string;
-    oauth: string;
     serverJson: string;
     editTitle: string;
     save: string;
@@ -772,7 +731,6 @@ export interface Translations {
     errorLoading: string;
     noMatches: string;
     noJobs: string;
-    selectAJob: string;
     infoBarActive: string;
     infoBarStopped: string;
     emptyNoJobs: string;

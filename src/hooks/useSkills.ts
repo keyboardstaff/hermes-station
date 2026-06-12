@@ -136,22 +136,3 @@ export function useUninstallSkill() {
   });
 }
 
-export function useSkillContent(name: string | null) {
-  return useQuery({
-    queryKey: ["skill-content", name],
-    queryFn: async () => {
-      if (!name) return { content: "", exists: false };
-      try {
-        const res = await api.get<{ content: string; exists: boolean }>(
-          `/api/dashboard/skills/${encodeURIComponent(name)}/content`,
-        );
-        // api.get can return undefined on 204 / non-JSON — treat as "no content"
-        return res ?? { content: "", exists: false };
-      } catch {
-        return { content: "", exists: false };
-      }
-    },
-    enabled: name !== null,
-    staleTime: 5 * 60 * 1000,
-  });
-}

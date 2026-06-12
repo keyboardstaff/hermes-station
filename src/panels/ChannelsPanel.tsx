@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
 import { useI18n } from "@/i18n";
 import CapabilityGate from "@/components/ui/CapabilityGate";
 import ChannelCard, { type MessagingPlatform } from "@/components/channels/ChannelCard";
@@ -51,35 +50,13 @@ export default function ChannelsPanel() {
       >
 
       {/* Search — adaptive full width */}
-      <div style={{ position: "relative" }}>
-        <Search
-          size={12}
-          style={{
-            position: "absolute",
-            left: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--hms-text-muted)",
-          }}
-        />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={ch?.searchPlaceholder ?? "Search channels…"}
-          style={{
-            width: "100%",
-            padding: "5px 8px 5px 26px",
-            fontSize: 'var(--hms-text-caption)',
-            background: "var(--hms-bg)",
-            border: "1px solid var(--hms-border)",
-            borderRadius: 6,
-            color: "var(--hms-text)",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-      </div>
+      <input
+        type="text"
+        className="hms-input"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={ch?.searchPlaceholder ?? "Search channels…"}
+      />
 
       {platformsQuery.isLoading && (
         <div style={{ padding: 'var(--hms-space-4)', color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-sm)'}}>

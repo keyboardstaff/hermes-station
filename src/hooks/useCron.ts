@@ -112,16 +112,6 @@ export function useCronJobs() {
   });
 }
 
-export function useCronJob(id: string | null) {
-  return useQuery<CronJob>({
-    queryKey: ["cron-job", id],
-    queryFn: () => api.get<CronJob>(`/api/dashboard/cron/jobs/${id}`),
-    enabled: !!id,
-    staleTime: 5_000,
-    retry: 1,
-  });
-}
-
 export function useCreateJob() {
   const qc = useQueryClient();
   const { write } = useCronScope();

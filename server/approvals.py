@@ -50,9 +50,28 @@ class ApprovalBridge:
         register_gateway_notify(session_key, _notify)
 
     def list_pending(self) -> list[dict]:
-        """Snapshot of pending approval.requested payloads for replay to reconnecting clients."""
+        """Snapshot of pending approval.requested payloads for replay to reconnecting clients.
+
+        Verified against upstream's live queue: a mirror whose session has no
+        blocked agent thread (the wait timed out, or it was resolved during a
+        WS outage) is pruned instead of replayed — a stale mirror would
+        resurrect a dead drawer on every reconnect/remount.
+        """
+        has_blocking = shim.approval.has_blocking
         with self._pending_lock:
-            return list(self._pending.values())
+            items = list(self._pending.items())
+        alive: list[dict] = []
+        stale: list[str] = []
+        for key, payload in items:
+            if has_blocking is not None and not has_blocking(key):
+                stale.append(key)
+                continue
+            alive.append(payload)
+        if stale:
+            with self._pending_lock:
+                for key in stale:
+                    self._pending.pop(key, None)
+        return alive
 
     def unregister(self, session_key: str) -> None:
         with self._pending_lock:
@@ -95,9 +114,12 @@ class ApprovalBridge:
         if resolve_gateway_approval is None:
             raise RuntimeError("upstream tools.approval.resolve_gateway_approval unavailable")
         resolved = resolve_gateway_approval(session_key, choice)
-        if resolved:
-            with self._pending_lock:
-                self._pending.pop(session_key, None)
+        # Drop the replay mirror either way: resolved>0 means the choice was
+        # delivered; 0 means no agent thread is blocked for this session, so
+        # the mirror was stale (timeout / duplicate click) — keeping it would
+        # re-show the dead drawer on every reconnect, eating every click.
+        with self._pending_lock:
+            self._pending.pop(session_key, None)
         return resolved
 
 

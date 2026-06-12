@@ -7,19 +7,6 @@
   overflow: hidden;
 }
 
-.hms-nav {
-  width: var(--hms-nav-width);
-  flex-shrink: 0;
-  background-color: var(--hms-surface);
-  border-right: 1px solid var(--hms-border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-block: 8px;
-  gap: 2px;
-  /* Do NOT set overflow: hidden — tooltips (absolute) must escape the nav column */
-}
-
 .hms-sidebar {
   width: var(--hms-sidebar-width);
   flex-shrink: 0;
@@ -201,12 +188,6 @@
   padding: 4px 12px;
 }
 
-.hms-main-centered > * {
-  max-width: 960px;
-  margin-inline: auto;
-  padding: 0;
-}
-
 /* ── Module switcher tabs (pill segmented control) ────────────────── */
 .hms-module-tabs {
   display: flex;
@@ -293,7 +274,3 @@
   0%, 100% { background: transparent; }
   12% { background: var(--hms-accent-weak); }
 }
-
-/* Agents room list — reveal the delete affordance on row hover. */
-.hms-room-del { opacity: 0; transition: opacity 120ms; }
-.hms-room-row:hover .hms-room-del { opacity: 1; }

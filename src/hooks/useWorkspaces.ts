@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface Workspace {
@@ -24,38 +24,3 @@ export function useWorkspaces() {
   });
 }
 
-export function useAddWorkspace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { name: string; path: string }) =>
-      api.json<WorkspacesData>("/api/files/workspaces", "POST", body),
-    onSuccess: (data) => {
-      qc.setQueryData(WS_KEY, data);
-      qc.invalidateQueries({ queryKey: [TREE_KEY] });
-    },
-  });
-}
-
-export function useRemoveWorkspace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { id: string }) =>
-      api.json<WorkspacesData>("/api/files/workspaces", "DELETE", body),
-    onSuccess: (data) => {
-      qc.setQueryData(WS_KEY, data);
-      qc.invalidateQueries({ queryKey: [TREE_KEY] });
-    },
-  });
-}
-
-export function useSetActiveWorkspace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { id: string | null }) =>
-      api.json<WorkspacesData>("/api/files/workspaces/active", "PUT", body),
-    onSuccess: (data) => {
-      qc.setQueryData(WS_KEY, data);
-      qc.invalidateQueries({ queryKey: [TREE_KEY] });
-    },
-  });
-}

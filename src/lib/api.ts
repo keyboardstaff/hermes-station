@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-export class NetworkError extends Error {
+class NetworkError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
     this.name = "NetworkError";
