@@ -98,7 +98,8 @@ localization.
 
 - Python 3.11+ with `hermes-agent` installed at `~/.hermes/hermes-agent/venv`
   (the conventional location)
-- Node 20+ with `pnpm` 9+
+- Node 20+ — `pnpm` is preferred but not required: the installer falls back to
+  running it through `corepack` (or `npx`), pinned by `packageManager`
 - macOS or Linux
 
 **Install as a gateway plugin (one command)**

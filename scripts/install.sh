@@ -39,7 +39,10 @@ fi
 # ── 1. Frontend → dist/ ──────────────────────────────────────────────────────
 if [[ "$SKIP_FRONTEND" == 0 ]]; then
     # pnpm only: the lockfile is pnpm-lock.yaml and a stray `npm install`
-    # corrupts the .pnpm layout. Resolution order:
+    # corrupts the .pnpm layout. Every candidate is PROBED with `--version`
+    # before being adopted — present-but-broken tools fall through (e.g.
+    # Debian/Kali's `corepack` system package crashes running modern pnpm:
+    # ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING). Resolution order:
     #   1. pnpm on PATH;
     #   2. the standalone installer's home — it only appends PNPM_HOME to the
     #      shell rc, so the terminal that just ran it (and any script) doesn't
@@ -47,24 +50,35 @@ if [[ "$SKIP_FRONTEND" == 0 ]]; then
     #   3. corepack (ships with Node ≥ 16.13) running pnpm directly — no
     #      `corepack enable` needed, so no root and no global mutation; honors
     #      package.json's packageManager pin;
-    #   4. npx as a last resort (any npm install provides it).
+    #   4. npx, fetching the exact packageManager-pinned version.
+    probe_ok() { "$@" --version >/dev/null 2>&1; }
+
     PNPM=()
-    if command -v pnpm >/dev/null 2>&1; then
+    if command -v pnpm >/dev/null 2>&1 && probe_ok pnpm; then
         PNPM=(pnpm)
     else
-        for probe in "${PNPM_HOME:-}" "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
-            if [[ -n "$probe" && -x "$probe/pnpm" ]]; then
-                PNPM=("$probe/pnpm")
+        for dir in "${PNPM_HOME:-}" "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
+            if [[ -n "$dir" && -x "$dir/pnpm" ]] && probe_ok "$dir/pnpm"; then
+                PNPM=("$dir/pnpm")
                 break
             fi
         done
     fi
     if [[ ${#PNPM[@]} -eq 0 ]] && command -v corepack >/dev/null 2>&1; then
         export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-        PNPM=(corepack pnpm)
+        if probe_ok corepack pnpm; then
+            PNPM=(corepack pnpm)
+        else
+            echo "! corepack is present but can't run pnpm (Debian/Kali's corepack" >&2
+            echo "  package is known-broken) — falling back to npx" >&2
+        fi
     fi
     if [[ ${#PNPM[@]} -eq 0 ]] && command -v npx >/dev/null 2>&1; then
-        PNPM=(npx -y pnpm)
+        # e.g. "pnpm@11.5.2" — keeps the npx route on the lockfile's version.
+        PNPM_PIN="$(sed -n 's/^[[:space:]]*"packageManager":[[:space:]]*"\([^"]*\)".*/\1/p' "$REPO_ROOT/package.json")"
+        if probe_ok npx -y "${PNPM_PIN:-pnpm}"; then
+            PNPM=(npx -y "${PNPM_PIN:-pnpm}")
+        fi
     fi
     if [[ ${#PNPM[@]} -eq 0 ]]; then
         echo "✗ pnpm not found (no pnpm, corepack or npx on PATH)." >&2
