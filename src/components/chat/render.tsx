@@ -146,112 +146,24 @@ const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
     if (lang === "mermaid") return <MermaidDiagram code={code} />;
     return <CodeBlock language={lang} code={code} />;
   },
-  code: ({ className: _className, children, ...props }) => {
-    return (
-      <code
-        style={{
-    background: "color-mix(in srgb, var(--hms-border) 80%, transparent)",
-    borderRadius: 3,
-    padding: "1px 5px",
-    fontSize: "0.88em",
-    fontFamily: "'Fira Code', Consolas, monospace",
-        }}
-        {...props}
-      >
-        {children}
-      </code>
-    );
-  },
-  h1: ({ children }) => (
-    <h1 style={{ fontSize: "1.45em", fontWeight: 700, margin: "14px 0 6px", lineHeight: 1.3 }}>{children}</h1>
-  ),
-  h2: ({ children }) => (
-    <h2 style={{ fontSize: "1.25em", fontWeight: 700, margin: "12px 0 5px", lineHeight: 1.3 }}>{children}</h2>
-  ),
-  h3: ({ children }) => (
-    <h3 style={{ fontSize: "1.1em", fontWeight: 600, margin: "10px 0 4px", lineHeight: 1.3 }}>{children}</h3>
-  ),
-  h4: ({ children }) => (
-    <h4 style={{ fontSize: "1em", fontWeight: 600, margin: "8px 0 3px" }}>{children}</h4>
-  ),
-  h5: ({ children }) => (
-    <h5 style={{ fontSize: "0.95em", fontWeight: 600, margin: "6px 0 2px" }}>{children}</h5>
-  ),
-  h6: ({ children }) => (
-    <h6 style={{ fontSize: "0.9em", fontWeight: 600, margin: "6px 0 2px", color: "var(--hms-text-muted)" }}>{children}</h6>
-  ),
-  p: ({ children }) => <p style={{ margin: "4px 0" }}>{children}</p>,
-  hr: () => <hr style={{ border: "none", borderTop: "1px solid var(--hms-border)", margin: "10px 0" }} />,
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer noopener" style={{ color: "var(--hms-accent)", textDecoration: "underline" }}>
+    <a href={href} target="_blank" rel="noreferrer noopener">
       {children}
     </a>
   ),
-  ul: ({ children }) => (
-    <ul style={{ paddingLeft: "1.5em", margin: "4px 0", listStyleType: "disc" }}>{children}</ul>
-  ),
-  ol: ({ children }) => (
-    <ol style={{ paddingLeft: "1.5em", margin: "4px 0", listStyleType: "decimal" }}>{children}</ol>
-  ),
-  li: ({ children }) => <li style={{ margin: "2px 0", lineHeight: 1.6 }}>{children}</li>,
-  blockquote: ({ children }) => (
-    <blockquote
-      style={{
-        borderLeft: "3px solid var(--hms-accent)",
-        margin: "8px 0",
-        paddingLeft: 12,
-        color: "var(--hms-text-muted)",
-        fontStyle: "italic",
-      }}
-    >
-      {children}
-    </blockquote>
-  ),
-  table: ({ children }) => (
-    <div style={{ overflowX: "auto", margin: "8px 0" }}>
-      <table
-        style={{
-    borderCollapse: "collapse",
-    width: "100%",
-    fontSize: "0.9em",
-    border: "1px solid var(--hms-border)",
-    borderRadius: 6,
-        }}
-      >
-        {children}
-      </table>
-    </div>
-  ),
-  thead: ({ children }) => (
-    <thead style={{ background: "color-mix(in srgb, var(--hms-border) 60%, transparent)" }}>{children}</thead>
-  ),
-  tbody: ({ children }) => <tbody>{children}</tbody>,
-  tr: ({ children }) => <tr style={{ borderBottom: "1px solid var(--hms-border)" }}>{children}</tr>,
-  th: ({ children }) => (
-    <th
-      style={{
-        padding: "6px 10px",
-        textAlign: "left",
-        fontWeight: 600,
-        borderBottom: "2px solid var(--hms-border)",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children }) => <td style={{ padding: "5px 10px", verticalAlign: "top" }}>{children}</td>,
 };
 
 export function MarkdownText({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
-      components={MARKDOWN_COMPONENTS}
-    >
-      {content}
-    </ReactMarkdown>
+    <div className="hms-md">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={MARKDOWN_COMPONENTS}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 

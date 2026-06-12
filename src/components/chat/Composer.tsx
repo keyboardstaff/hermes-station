@@ -301,7 +301,7 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
         flexShrink: 0,
         width: "100%",
         // Match ChatStream's reading column (slightly wider for the controls).
-        maxWidth: "calc(var(--hms-content-max-w) + 80px)",
+        maxWidth: "calc(var(--hms-chat-max-w) + 80px)",
         margin: "0 auto",
         boxSizing: "border-box",
       }}

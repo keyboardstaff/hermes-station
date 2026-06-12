@@ -28,7 +28,16 @@ interface ChatState {
   /** sessionId → cumulative token usage from that session's last completed
    *  run — feeds the Composer context ring. Persisted (bounded) so the ring
    *  survives refresh and session switches. */
-  usageBySession: Record<string, { input_tokens: number; output_tokens: number; total_tokens: number }>;
+  usageBySession: Record<string, {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    cache_read_tokens?: number;
+    cache_write_tokens?: number;
+    context_length?: number;
+    auto_compress_at?: number;
+    auto_compress_percent?: number;
+  }>;
   /** Transient: runId → epoch-ms the run started (server clock on re-attach),
    *  so the turn timer survives a refresh instead of restarting at 0. */
   runStartedAt: Record<string, number>;

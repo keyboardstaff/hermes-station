@@ -157,8 +157,8 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
               height: "100%",
               paddingTop: 16,
               paddingBottom: 16,
-              paddingLeft: "max(20px, calc((100% - var(--hms-content-max-w)) / 2 + 20px))",
-              paddingRight: "max(20px, calc((100% - var(--hms-content-max-w)) / 2 + 20px))",
+              paddingLeft: "max(20px, calc((100% - var(--hms-chat-max-w)) / 2 + 20px))",
+              paddingRight: "max(20px, calc((100% - var(--hms-chat-max-w)) / 2 + 20px))",
               gap: 'var(--hms-space-2)',
             }}
           />

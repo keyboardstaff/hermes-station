@@ -629,6 +629,25 @@ async def _run_to_completion(
                 "output_tokens": int(getattr(agent, "session_completion_tokens", 0) or 0),
                 "total_tokens": int(getattr(agent, "session_total_tokens", 0) or 0),
             }
+            # Context-window enrichments for the Composer ring (best-effort
+            # attrs; omitted when the agent doesn't expose them). The
+            # compressor's context_length is authoritative — it covers local /
+            # custom models that models.dev can't resolve.
+            cache_read = int(getattr(agent, "session_cache_read_tokens", 0) or 0)
+            cache_write = int(getattr(agent, "session_cache_write_tokens", 0) or 0)
+            if cache_read or cache_write:
+                usage["cache_read_tokens"] = cache_read
+                usage["cache_write_tokens"] = cache_write
+            compressor = getattr(agent, "context_compressor", None)
+            if compressor is not None:
+                ctx_len = int(getattr(compressor, "context_length", 0) or 0)
+                compress_at = int(getattr(compressor, "threshold_tokens", 0) or 0)
+                compress_pct = float(getattr(compressor, "threshold_percent", 0) or 0)
+                if ctx_len > 0:
+                    usage["context_length"] = ctx_len
+                if compress_at > 0:
+                    usage["auto_compress_at"] = compress_at
+                    usage["auto_compress_percent"] = int(round(compress_pct * 100))
             handle.usage = usage
             handle.ended_at = time.time()
 

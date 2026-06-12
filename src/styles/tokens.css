@@ -165,6 +165,9 @@
   --hms-keyboard-h:  0px; /* useVisualViewport writes this at runtime */
 }
 
-/* Chat width presets (Settings → Appearance → Chat width). */
-:root[data-chat-width="narrow"] { --hms-content-max-w: 760px; }
-:root[data-chat-width="wide"] { --hms-content-max-w: 1200px; }
+/* Chat width presets (Settings → Appearance → Chat width) — scoped to the
+   /chat column via --hms-chat-max-w; other --hms-content-max-w consumers
+   (Settings panes, doc previews, profile) stay fixed. */
+:root { --hms-chat-max-w: var(--hms-content-max-w); }
+:root[data-chat-width="narrow"] { --hms-chat-max-w: 760px; }
+:root[data-chat-width="wide"] { --hms-chat-max-w: 1200px; }

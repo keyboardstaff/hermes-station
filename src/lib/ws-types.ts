@@ -33,7 +33,16 @@ export interface RunEventMessage {
   error?: boolean | string;
   status?: string;
   output?: string;
-  usage?: { input_tokens: number; output_tokens: number; total_tokens: number };
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    cache_read_tokens?: number;
+    cache_write_tokens?: number;
+    context_length?: number;
+    auto_compress_at?: number;
+    auto_compress_percent?: number;
+  };
 }
 
 export interface ApprovalRequestedMessage {

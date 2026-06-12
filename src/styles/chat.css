@@ -1371,3 +1371,77 @@
   pointer-events: auto;
   cursor: pointer;
 }
+
+/* ── Markdown body (.hms-md) ─────────────────────────────────────────────────
+   The chat transcript's markdown element styles, extracted verbatim from the
+   former MARKDOWN_COMPONENTS inline table. pre/code-fence routing (CodeBlock /
+   Mermaid) and link target/rel stay in the component; everything visual lives
+   here. Inline code targets :not(pre)>code so CodeBlock's internals are
+   untouched. */
+.hms-md :not(pre) > code {
+  background: color-mix(in srgb, var(--hms-border) 80%, transparent);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+  font-family: 'Fira Code', Consolas, monospace;
+}
+
+.hms-md h1 { font-size: 1.45em; font-weight: 700; margin: 14px 0 6px; line-height: 1.3; }
+.hms-md h2 { font-size: 1.25em; font-weight: 700; margin: 12px 0 5px; line-height: 1.3; }
+.hms-md h3 { font-size: 1.1em; font-weight: 600; margin: 10px 0 4px; line-height: 1.3; }
+.hms-md h4 { font-size: 1em; font-weight: 600; margin: 8px 0 3px; }
+.hms-md h5 { font-size: 0.95em; font-weight: 600; margin: 6px 0 2px; }
+.hms-md h6 { font-size: 0.9em; font-weight: 600; margin: 6px 0 2px; color: var(--hms-text-muted); }
+
+.hms-md p { margin: 4px 0; }
+
+.hms-md hr {
+  border: none;
+  border-top: 1px solid var(--hms-border);
+  margin: 10px 0;
+}
+
+.hms-md a {
+  color: var(--hms-accent);
+  text-decoration: underline;
+}
+
+.hms-md ul { padding-left: 1.5em; margin: 4px 0; list-style-type: disc; }
+.hms-md ol { padding-left: 1.5em; margin: 4px 0; list-style-type: decimal; }
+.hms-md li { margin: 2px 0; line-height: 1.6; }
+
+.hms-md blockquote {
+  border-left: 3px solid var(--hms-accent);
+  margin: 8px 0;
+  padding-left: 12px;
+  color: var(--hms-text-muted);
+  font-style: italic;
+}
+
+/* Tables scroll horizontally inside the bubble instead of overflowing it. */
+.hms-md table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+}
+
+.hms-md thead {
+  background: color-mix(in srgb, var(--hms-border) 60%, transparent);
+}
+
+.hms-md tr { border-bottom: 1px solid var(--hms-border); }
+
+.hms-md th {
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--hms-border);
+  white-space: nowrap;
+}
+
+.hms-md td { padding: 5px 10px; vertical-align: top; }
