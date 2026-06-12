@@ -15,6 +15,10 @@ export interface UsageBreakdown {
   /** Auto-compression threshold (tokens + percent of the window). */
   auto_compress_at?: number;
   auto_compress_percent?: number;
+  /** Current WINDOW occupancy (the last LLM call's prompt+completion) — the
+   *  ring's numerator. The session totals above accumulate across calls and
+   *  would over-count the ring by orders of magnitude. */
+  context_used_tokens?: number;
 }
 
 // ~4 chars per token (GPT approximation).
@@ -29,20 +33,20 @@ function formatTokens(n: number): string {
 }
 
 /**
- * Context ring — session tokens used vs the model's context window, with the
+ * Context ring — current window occupancy vs the model's context window, the
  * used-percent inside the ring (desktop-style). Hover (or click, for touch)
- * reveals the detail popover: used/left, totals, the auto-compress threshold
- * and prompt-cache hit rate. `usage.context_length` (the agent compressor's
- * window) wins over the models.dev lookup so local models read correctly.
+ * reveals the detail: used/left, window totals, auto-compress threshold,
+ * prompt-cache hit rate and the session token totals. `usage.context_*`
+ * (agent-compressor sourced) is authoritative; the models.dev lookup is the
+ * fallback window, and the draft estimate seeds the ring before turn one.
  */
 export function ContextMeter({
-  used, contextLength, usage, showTokens, onToggleTokens,
+  draftTokens, contextLength, usage,
 }: {
-  used: number;
+  /** Rough token estimate of the unsent draft (pre-first-turn fallback). */
+  draftTokens: number;
   contextLength: number | null;
   usage: UsageBreakdown | null;
-  showTokens: boolean;
-  onToggleTokens: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   // Fixed-position anchor: the popover must escape the composer toolbar's
@@ -62,6 +66,7 @@ export function ContextMeter({
   };
 
   const ctx = usage?.context_length ?? contextLength;
+  const used = usage?.context_used_tokens ?? draftTokens;
   const pct = ctx ? Math.min(1, used / ctx) : 0;
   const pctRound = Math.round(pct * 100);
   const r = 8;
@@ -86,7 +91,7 @@ export function ContextMeter({
         ref={btnRef}
         onClick={() => (open ? setOpen(false) : openPopover())}
         title={ctx ? `${used.toLocaleString()} / ${ctx.toLocaleString()} tokens` : `${used.toLocaleString()} tokens`}
-        style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "none", background: "transparent", cursor: "pointer", color: "var(--hms-text-muted)", fontSize: 'var(--hms-text-xs)', padding: 0 }}
+        style={{ display: "inline-flex", alignItems: "center", border: "none", background: "transparent", cursor: "pointer", color: "var(--hms-text-muted)", padding: 0 }}
       >
         <svg width={22} height={22} viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
           <circle cx="11" cy="11" r={r} fill="none" stroke="var(--hms-border)" strokeWidth="2" />
@@ -103,11 +108,6 @@ export function ContextMeter({
             </text>
           ) : null}
         </svg>
-        {showTokens && (
-          <span style={{ whiteSpace: "nowrap" }}>
-            {formatTokens(used)}{ctx ? ` / ${formatTokens(ctx)}` : "t"}
-          </span>
-        )}
       </button>
 
       {open && (
@@ -117,7 +117,7 @@ export function ContextMeter({
             position: "fixed",
             bottom: anchor?.bottom ?? 80,
             right: anchor?.right ?? 16,
-            width: 250,
+            width: 260,
             background: "var(--hms-surface)", border: "1px solid var(--hms-border)",
             borderRadius: 10, boxShadow: "var(--hms-shadow-popover)", zIndex: 9999, padding: "10px 12px",
             display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)', fontSize: 'var(--hms-text-caption)',
@@ -142,11 +142,15 @@ export function ContextMeter({
               text={`Cache: ${cacheHit}% hit (${formatTokens(cacheRead)} read / ${formatTokens(cacheWrite)} write)`}
             />
           )}
-          {!usage && used > 0 && <MeterLine text={`Draft estimate: ~${used.toLocaleString()} tokens`} />}
-          <label style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', cursor: "pointer", marginTop: 2, color: "var(--hms-text-muted)" }}>
-            <input type="checkbox" checked={showTokens} onChange={(e) => onToggleTokens(e.target.checked)} />
-            Show token count
-          </label>
+          {usage && (
+            <>
+              <div style={{ borderTop: "1px solid var(--hms-border)", margin: "2px 0" }} />
+              <MeterRow label="Session input" value={usage.input_tokens.toLocaleString()} />
+              <MeterRow label="Session output" value={usage.output_tokens.toLocaleString()} />
+              <MeterRow label="Session total" value={usage.total_tokens.toLocaleString()} strong />
+            </>
+          )}
+          {!usage && draftTokens > 0 && <MeterLine text={`Draft estimate: ~${draftTokens.toLocaleString()} tokens`} />}
         </div>
       )}
     </div>
@@ -155,4 +159,12 @@ export function ContextMeter({
 
 function MeterLine({ text }: { text: string }) {
   return <div style={{ color: "var(--hms-text-muted)" }}>{text}</div>;
+}
+
+function MeterRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", color: strong ? "var(--hms-text)" : "var(--hms-text-muted)", fontWeight: strong ? 600 : 400 }}>
+      <span>{label}</span><span style={{ fontFamily: "monospace" }}>{value}</span>
+    </div>
+  );
 }

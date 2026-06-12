@@ -24,7 +24,7 @@ type Row =
 
 /**
  * ⌘K command palette: search messages (FTS), navigate to any page, and run app
- * actions (new chat, toggle theme/reasoning/tokens) from one surface. Nav
+ * actions (new chat, toggle theme/reasoning) from one surface. Nav
  * commands derive from the ROUTES registry (see `lib/commands.ts`); message
  * results come from `/api/search`. Supersedes the old GlobalSearch (nav +
  * search only, and it queried a dead dashboard path).
@@ -36,8 +36,6 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
   const toolView = useToolViewStore((s) => s.toolView);
   const setToolView = useToolViewStore((s) => s.setToolView);
-  const showTokens = useChatStore((s) => s.showTokens);
-  const setShowTokens = useChatStore((s) => s.setShowTokens);
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const openProfile = useOverlays((s) => s.openProfile);
@@ -102,11 +100,6 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
       id: "act:reasoning", label: t.palette.toggleReasoning, group: "action",
       keywords: "tool detail product technical reasoning thinking trace",
       run: () => setToolView(toolView === "technical" ? "product" : "technical"),
-    },
-    {
-      id: "act:tokens", label: t.palette.toggleTokens, group: "action",
-      keywords: "tokens usage context ring",
-      run: () => setShowTokens(!showTokens),
     },
     {
       id: "act:profile", label: t.nav.profile, group: "action",

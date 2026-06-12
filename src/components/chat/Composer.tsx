@@ -59,7 +59,6 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
     selectedModel, setSelectedModel,
     selectedProvider, setSelectedProvider,
     reasoningEffort: reasoning, setReasoningEffort: setReasoning,
-    showTokens, setShowTokens,
   } = useChatStore();
   // Per-session cumulative usage (persisted) → the ring survives refresh.
   const sessionUsage = useChatStore((s) =>
@@ -502,19 +501,12 @@ const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
           {/* Spacer */}
           <div style={{ flex: 1 }} />
 
-          {/* Context ring — session tokens vs model context window */}
-          {(() => {
-            const used = sessionUsage?.total_tokens ?? (value.trim() ? estimateTokenCount(value) : 0);
-            return (
-              <ContextMeter
-                used={used}
-                contextLength={contextLength}
-                usage={sessionUsage}
-                showTokens={showTokens}
-                onToggleTokens={setShowTokens}
-              />
-            );
-          })()}
+          {/* Context ring — current window occupancy vs the model's window */}
+          <ContextMeter
+            draftTokens={value.trim() ? estimateTokenCount(value) : 0}
+            contextLength={contextLength}
+            usage={sessionUsage}
+          />
 
           {/* Stop / Send */}
           {isRunning ? (

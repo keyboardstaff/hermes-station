@@ -1,68 +1,40 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Search,
-  RefreshCw,
-  Plug,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Search, RefreshCw } from "lucide-react";
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
 import IconButton from "@/components/ui/IconButton";
 import CapabilityGate from "@/components/ui/CapabilityGate";
-import ChannelCard, { type PlatformRuntime } from "@/components/channels/ChannelCard";
-import { useDiscoverPlatforms } from "@/store/discovery";
-import { useCapabilityStore } from "@/store/capabilities";
+import ChannelCard, { type MessagingPlatform } from "@/components/channels/ChannelCard";
 import { api } from "@/lib/api";
 
 /**
- * Channels panel.
- *
- * Lists every messaging platform discovered via ``/api/discover/platforms``
- * (station + telegram + discord + any plugin-registered platform).
- * Runtime status comes from the Dashboard's ``/api/status`` →
- * ``gateway_platforms`` map (running / circuit_open / broken / stopped).
- *
- * Platform credentials are not edited here — those live in
- * ``/models#keys`` under category=messaging. We surface a "Manage keys"
- * shortcut so the operator never has to guess where to fix a misconfigured
- * platform.
+ * Channels panel — 1:1 with the upstream dashboard's messaging-platform
+ * management: each platform card shows its live state and supports
+ * enable/disable, credential configuration (env fields with required/secret
+ * metadata) and a connectivity test, all through the dashboard proxy
+ * (`/api/dashboard/messaging/platforms`).
  */
-
-// Shape of /api/dashboard/status's gateway_platforms entries is imported from ChannelCard.
-
-interface StatusPayload {
-  gateway_platforms?: Record<string, PlatformRuntime>;
-}
-
 export default function ChannelsPanel() {
   const { t } = useI18n();
   const ch = t.channels;
-  const navigate = useNavigate();
-  const { caps } = useCapabilityStore();
-  const circuitFlag = !!caps?.flags?.platform_circuit_breaker;
 
-  const platformsQuery = useDiscoverPlatforms();
-  const statusQuery = useQuery<StatusPayload>({
-    queryKey: ["dashboard-status-platforms"],
-    queryFn: () => api.get<StatusPayload>("/api/dashboard/status"),
+  const platformsQuery = useQuery<{ platforms: MessagingPlatform[] }>({
+    queryKey: ["messaging-platforms"],
+    queryFn: () => api.get<{ platforms: MessagingPlatform[] }>("/api/dashboard/messaging/platforms"),
     refetchInterval: 5_000,
     staleTime: 2_000,
     retry: 1,
   });
 
   const [query, setQuery] = useState("");
-
   const platforms = useMemo(() => platformsQuery.data?.platforms ?? [], [platformsQuery.data]);
-  const runtime = statusQuery.data?.gateway_platforms ?? {};
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return platforms;
     return platforms.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.label.toLowerCase().includes(q),
+      (p) => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q),
     );
   }, [platforms, query]);
 
@@ -79,10 +51,7 @@ export default function ChannelsPanel() {
         actions={
           <IconButton
             title={ch?.refresh ?? "Refresh"}
-            onClick={() => {
-              void platformsQuery.refetch();
-              void statusQuery.refetch();
-            }}
+            onClick={() => { void platformsQuery.refetch(); }}
           >
             <RefreshCw size={14} />
           </IconButton>
@@ -98,30 +67,6 @@ export default function ChannelsPanel() {
           gap: 'var(--hms-space-4)',
         }}
       >
-
-      {/* Manage keys hint */}
-      <div className="hms-settings-notice hms-settings-notice--info" style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-        <Plug size={12} style={{ color: "var(--hms-accent)" }} />
-        <span style={{ flex: 1 }}>
-          {ch?.keysHint ??
-            "Platform credentials (bot tokens, webhook URLs) are managed under "}
-          <button
-            onClick={() => navigate("/models#keys")}
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: 0,
-              color: "var(--hms-accent)",
-              cursor: "pointer",
-              textDecoration: "underline",
-              fontSize: 'var(--hms-text-xs)',
-            }}
-          >
-            {ch?.keysLink ?? "Models → API Keys"}
-          </button>
-          .
-        </span>
-      </div>
 
       {/* Search */}
       <div style={{ position: "relative", maxWidth: 360 }}>
@@ -183,31 +128,24 @@ export default function ChannelsPanel() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           gap: "var(--hms-space-3)",
+          alignItems: "start",
         }}
       >
         {filtered.map((p) => (
           <ChannelCard
-            key={p.name}
-            name={p.name}
-            label={p.label}
-            kind={p.kind}
-            runtime={runtime[p.name]}
-            circuitFlag={circuitFlag}
+            key={p.id}
+            platform={p}
+            onChanged={() => void platformsQuery.refetch()}
             labels={{
-              builtin: ch?.builtin ?? "built-in",
-              plugin: ch?.plugin ?? "plugin",
-              running: ch?.running ?? "running",
-              stopped: ch?.stopped ?? "stopped",
-              broken: ch?.broken ?? "broken",
-              circuitOpen: ch?.circuitOpen ?? "circuit open",
-              statusUnknown: ch?.statusUnknown ?? "status unknown",
-              inflight: ch?.inflight ?? "in flight",
-              lastSeen: ch?.lastSeen ?? "Last seen",
-              lastError: ch?.lastError ?? "Last error",
-              circuitHint: ch?.circuitHint ?? "Toggle with /platform pause|resume in chat.",
-              upstreamHint: ch?.upstreamHint ?? "Upstream does not expose pause/resume HTTP endpoints — use the chat slash command.",
+              configure: ch?.configure ?? "Configure",
+              test: ch?.test ?? "Test",
+              testing: ch?.testing ?? "Testing…",
+              save: t.common.save,
+              cancel: t.common.cancel,
+              clear: ch?.clear ?? "Clear",
+              restartHint: ch?.restartHint ?? "Takes effect after a gateway restart.",
             }}
           />
         ))}

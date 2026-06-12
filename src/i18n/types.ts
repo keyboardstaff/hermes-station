@@ -40,7 +40,6 @@ export interface Translations {
     newChat: string;
     toggleTheme: string;
     toggleReasoning: string;
-    toggleTokens: string;
   };
 
   nav: {
@@ -485,20 +484,11 @@ export interface Translations {
     refresh: string;
     searchPlaceholder: string;
     platforms: string;
-    keysHint: string;
-    keysLink: string;
-    builtin: string;
-    plugin: string;
-    running: string;
-    stopped: string;
-    broken: string;
-    circuitOpen: string;
-    statusUnknown: string;
-    inflight: string;
-    lastSeen: string;
-    lastError: string;
-    circuitHint: string;
-    upstreamHint: string;
+    configure: string;
+    test: string;
+    testing: string;
+    clear: string;
+    restartHint: string;
     loading: string;
     errorLoading: string;
     noPlatforms: string;

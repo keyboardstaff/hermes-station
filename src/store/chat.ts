@@ -19,8 +19,6 @@ interface ChatState {
   selectedProvider: string | null;
   /** Matches hermes_constants.VALID_REASONING_EFFORTS; null = use config.yaml default. */
   reasoningEffort: string | null;
-  /** Composer context-ring: show the numeric token label (the /usage toggle). */
-  showTokens: boolean;
   /** Transient: a DB message_id the chat view should scroll to (from search). */
   pendingScrollMessageId: number | null;
   /** Agents room: runId → the profile-agent that turn was routed to (attribution). */
@@ -37,6 +35,7 @@ interface ChatState {
     context_length?: number;
     auto_compress_at?: number;
     auto_compress_percent?: number;
+    context_used_tokens?: number;
   }>;
   /** Transient: runId → epoch-ms the run started (server clock on re-attach),
    *  so the turn timer survives a refresh instead of restarting at 0. */
@@ -101,7 +100,6 @@ interface ChatState {
   setSelectedModel: (m: string | null) => void;
   setSelectedProvider: (p: string | null) => void;
   setReasoningEffort: (v: string | null) => void;
-  setShowTokens: (v: boolean) => void;
   setPendingScrollMessageId: (id: number | null) => void;
   setAgentForRun: (runId: string, agent: string) => void;
   setUsageForSession: (sessionId: string, u: ChatState["usageBySession"][string]) => void;
@@ -168,7 +166,6 @@ export const useChatStore = create<ChatState>()(
   selectedModel: null,
   selectedProvider: null,
   reasoningEffort: null,
-  showTokens: true,
   pendingScrollMessageId: null,
   agentByRun: {},
   usageBySession: {},
@@ -469,7 +466,6 @@ export const useChatStore = create<ChatState>()(
   setSelectedModel: (m) => set({ selectedModel: m }),
   setSelectedProvider: (p) => set({ selectedProvider: p }),
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
-  setShowTokens: (v) => set({ showTokens: v }),
   setPendingScrollMessageId: (id) => set({ pendingScrollMessageId: id }),
   setAgentForRun: (runId, agent) => set((s) => ({ agentByRun: { ...s.agentByRun, [runId]: agent } })),
   setUsageForSession: (sessionId, u) =>
@@ -554,7 +550,6 @@ export const useChatStore = create<ChatState>()(
         selectedModel: state.selectedModel,
         selectedProvider: state.selectedProvider,
         reasoningEffort: state.reasoningEffort,
-        showTokens: state.showTokens,
         activeSessionId: state.activeSessionId,
         // Persisted so refresh can re-subscribe to run:<id> instead of stuck streaming.
         activeRunId: state.activeRunId,

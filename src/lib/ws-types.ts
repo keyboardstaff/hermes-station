@@ -42,6 +42,7 @@ export interface RunEventMessage {
     context_length?: number;
     auto_compress_at?: number;
     auto_compress_percent?: number;
+    context_used_tokens?: number;
   };
 }
 

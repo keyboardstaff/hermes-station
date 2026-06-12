@@ -2031,3 +2031,183 @@ button.hms-artifacts-title {
   margin-left: var(--hms-space-2);
 }
 
+
+/* ── Channel management cards (1:1 upstream dashboard messaging platforms) ── */
+.hms-channel-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  padding: 12px 14px;
+  border: 1px solid var(--hms-border);
+  border-radius: var(--hms-radius-lg);
+  background: var(--hms-surface);
+  font-size: var(--hms-text-caption);
+}
+
+.hms-channel-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  min-width: 0;
+}
+
+.hms-channel-card-name {
+  font-weight: var(--hms-fw-semibold);
+  color: var(--hms-text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-channel-card-state {
+  font-size: var(--hms-text-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.hms-channel-card-state[data-tone="ok"] {
+  background: color-mix(in srgb, var(--hms-success) 12%, transparent);
+  color: var(--hms-success-text);
+}
+
+.hms-channel-card-state[data-tone="warn"] {
+  background: color-mix(in srgb, var(--hms-warning) 14%, transparent);
+  color: var(--hms-warning-text);
+}
+
+.hms-channel-card-state[data-tone="err"] {
+  background: color-mix(in srgb, var(--hms-error) 12%, transparent);
+  color: var(--hms-error-dark);
+}
+
+.hms-channel-card-state[data-tone="muted"] {
+  background: color-mix(in srgb, var(--hms-text) 6%, transparent);
+  color: var(--hms-text-muted);
+}
+
+.hms-channel-card-switch {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.hms-channel-card-error {
+  color: var(--hms-error-dark);
+  font-size: var(--hms-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.hms-channel-card-actions {
+  display: flex;
+  gap: var(--hms-space-2);
+}
+
+.hms-channel-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  padding: 4px 10px;
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-xs);
+  cursor: pointer;
+}
+
+.hms-channel-card-btn:hover {
+  color: var(--hms-text);
+  background: var(--hms-border);
+}
+
+.hms-channel-card-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hms-channel-card-btn[data-variant="primary"] {
+  background: var(--hms-accent);
+  border-color: var(--hms-accent);
+  color: var(--hms-on-accent, #fff);
+}
+
+.hms-channel-card-btn[data-active="true"] {
+  border-color: var(--hms-error);
+  color: var(--hms-error-dark);
+}
+
+.hms-channel-card-test {
+  font-size: var(--hms-text-xs);
+  padding: 6px 8px;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.hms-channel-card-test[data-ok="true"] {
+  background: color-mix(in srgb, var(--hms-success) 10%, transparent);
+  color: var(--hms-success-text);
+}
+
+.hms-channel-card-test[data-ok="false"] {
+  background: color-mix(in srgb, var(--hms-error) 10%, transparent);
+  color: var(--hms-error-dark);
+}
+
+.hms-channel-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  border-top: 1px solid var(--hms-border);
+  padding-top: var(--hms-space-2);
+}
+
+.hms-channel-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hms-channel-card-label {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-channel-card-req {
+  color: var(--hms-error);
+}
+
+.hms-channel-card-doc {
+  display: inline-flex;
+  align-items: center;
+  color: var(--hms-text-muted);
+}
+
+.hms-channel-card-input-row {
+  display: flex;
+  gap: var(--hms-space-1);
+}
+
+.hms-channel-card-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  font-size: var(--hms-text-caption);
+  background: var(--hms-bg);
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+  color: var(--hms-text);
+  outline: none;
+}
+
+.hms-channel-card-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hms-space-2);
+}

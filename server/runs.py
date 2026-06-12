@@ -648,6 +648,13 @@ async def _run_to_completion(
                 if compress_at > 0:
                     usage["auto_compress_at"] = compress_at
                     usage["auto_compress_percent"] = int(round(compress_pct * 100))
+                # Current WINDOW occupancy = the last LLM call's prompt +
+                # completion (the session counters accumulate across calls and
+                # over-count the ring by orders of magnitude).
+                last_prompt = int(getattr(compressor, "last_prompt_tokens", 0) or 0)
+                last_completion = int(getattr(compressor, "last_completion_tokens", 0) or 0)
+                if last_prompt > 0:
+                    usage["context_used_tokens"] = last_prompt + last_completion
             handle.usage = usage
             handle.ended_at = time.time()
 

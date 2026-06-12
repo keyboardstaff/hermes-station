@@ -1,166 +1,210 @@
-import {
-  Radio,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Pause,
-  Play,
-  ExternalLink,
-} from "lucide-react";
+import { useState } from "react";
+import { Send, Settings2, ExternalLink } from "lucide-react";
+import { api } from "@/lib/api";
 
-// Shape of /api/dashboard/status's gateway_platforms entries.
-export interface PlatformRuntime {
-  status?: string;
-  enabled?: boolean;
-  last_error?: string | null;
-  last_seen_at?: string | null;
-  inflight?: number;
-  [key: string]: unknown;
+// 1:1 client of the upstream dashboard's messaging-platform management API
+// (GET/PUT /api/messaging/platforms + POST …/{id}/test), reached through the
+// Station dashboard proxy. The payload shape mirrors web_server.py's
+// _messaging_platform_payload.
+
+export interface PlatformEnvField {
+  key: string;
+  required: boolean;
+  is_set: boolean;
+  redacted_value: string | null;
+  description: string;
+  prompt: string;
+  url: string | null;
+  is_password: boolean;
+  advanced: boolean;
 }
 
-export interface ChannelCardLabels {
-  builtin: string;
-  plugin: string;
-  running: string;
-  stopped: string;
-  broken: string;
-  circuitOpen: string;
-  statusUnknown: string;
-  inflight: string;
-  lastSeen: string;
-  lastError: string;
-  circuitHint: string;
-  upstreamHint: string;
-}
-
-/**
- * ChannelCard — single platform card for the channels grid.
- *
- * Displays: platform name + kind badge, status badge, runtime details,
- * and circuit-breaker hint when applicable.
- */
-export default function ChannelCard({
-  name,
-  label,
-  kind,
-  runtime,
-  circuitFlag,
-  labels,
-}: {
+export interface MessagingPlatform {
+  id: string;
   name: string;
-  label: string;
-  kind: string;
-  runtime: PlatformRuntime | undefined;
-  circuitFlag: boolean;
-  labels: ChannelCardLabels;
+  enabled: boolean;
+  configured: boolean;
+  gateway_running: boolean;
+  state: string;
+  error_message?: string | null;
+  env_vars: PlatformEnvField[];
+}
+
+export interface ChannelLabels {
+  configure: string;
+  test: string;
+  testing: string;
+  save: string;
+  cancel: string;
+  clear: string;
+  restartHint: string;
+}
+
+const STATE_TONE: Record<string, string> = {
+  connected: "ok",
+  running: "ok",
+  disabled: "muted",
+  not_configured: "warn",
+  pending_restart: "warn",
+  stopped: "muted",
+  error: "err",
+  broken: "err",
+  circuit_open: "err",
+};
+
+function stateLabel(state: string): string {
+  return state.replace(/_/g, " ");
+}
+
+export default function ChannelCard({
+  platform, labels, onChanged,
+}: {
+  platform: MessagingPlatform;
+  labels: ChannelLabels;
+  onChanged: () => void;
 }) {
-  const status = runtime?.status?.toLowerCase() ?? "unknown";
-  const isRunning = status === "running" || status === "ok";
-  const isCircuitOpen = status === "circuit_open" || status === "open";
-  const isBroken = status === "broken" || status === "error";
-  const isStopped = status === "stopped" || status === "off" || !runtime;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [clearKeys, setClearKeys] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const statusLabel = isRunning
-    ? labels.running
-    : isCircuitOpen
-      ? labels.circuitOpen
-      : isBroken
-        ? labels.broken
-        : isStopped
-          ? labels.stopped
-          : labels.statusUnknown;
-
-  const statusColor = isRunning
-    ? "var(--hms-success)"
-    : isCircuitOpen
-      ? "var(--hms-warning)"
-      : isBroken
-        ? "var(--hms-error)"
-        : "var(--hms-muted)";
-
-  const StatusIcon = isRunning
-    ? CheckCircle2
-    : isCircuitOpen
-      ? AlertTriangle
-      : isBroken
-        ? XCircle
-        : Radio;
-
-  const formatTs = (iso?: string | null): string => {
-    if (!iso) return "--";
-    const t = Date.parse(iso);
-    if (Number.isNaN(t)) return iso;
-    const diff = (Date.now() - t) / 1000;
-    if (diff < 60) return `${Math.round(diff)}s`;
-    if (diff < 3600) return `${Math.round(diff / 60)}m`;
-    return `${Math.round(diff / 3600)}h`;
+  const put = async (body: { enabled?: boolean; env?: Record<string, string>; clear_env?: string[] }) => {
+    setBusy(true);
+    try {
+      await api.json(`/api/dashboard/messaging/platforms/${encodeURIComponent(platform.id)}`, "PUT", {
+        env: {}, clear_env: [], ...body,
+      });
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
   };
 
+  const saveConfig = async () => {
+    const env: Record<string, string> = {};
+    for (const [k, v] of Object.entries(draft)) {
+      if (v.trim()) env[k] = v.trim();
+    }
+    await put({ env, clear_env: [...clearKeys] });
+    setDraft({});
+    setClearKeys(new Set());
+    setEditing(false);
+  };
+
+  const runTest = async () => {
+    setBusy(true);
+    setTestMsg(null);
+    try {
+      const res = await api.json<{ ok: boolean; message: string }>(
+        `/api/dashboard/messaging/platforms/${encodeURIComponent(platform.id)}/test`, "POST", {},
+      );
+      setTestMsg({ ok: !!res?.ok, text: res?.message ?? "" });
+    } catch (err) {
+      setTestMsg({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const tone = STATE_TONE[platform.state] ?? "muted";
+
   return (
-    <div
-      className="hms-channel-card"
-      style={{
-        borderTop: `3px solid ${statusColor}`,
-      }}
-    >
-      {/* Header: icon + name + kind badge */}
+    <div className="hms-channel-card" data-state={tone}>
       <div className="hms-channel-card-head">
-        <StatusIcon size={18} style={{ color: statusColor, flexShrink: 0, marginTop: 2 }} />
-        <div className="hms-channel-card-copy">
-          <div className="hms-channel-card-title">{label}</div>
-          <code className="hms-channel-card-id">{name}</code>
-        </div>
-        <span className="hms-channel-card-kind">
-          {kind === "plugin" ? labels.plugin : labels.builtin}
-        </span>
+        <span className="hms-channel-card-name">{platform.name}</span>
+        <span className="hms-channel-card-state" data-tone={tone}>{stateLabel(platform.state)}</span>
+        {/* Enable/disable — config-level; takes effect on gateway restart. */}
+        <label className="hms-channel-card-switch" title={labels.restartHint}>
+          <input
+            type="checkbox"
+            checked={platform.enabled}
+            disabled={busy}
+            onChange={(e) => void put({ enabled: e.target.checked })}
+          />
+        </label>
       </div>
 
-      {/* Status badge */}
-      <div>
-        <span
-          className="hms-channel-card-status"
-          style={{
-            color: statusColor,
-            background: `${statusColor}1a`,
-            border: `1px solid ${statusColor}33`,
-          }}
+      {platform.error_message && (
+        <div className="hms-channel-card-error">{platform.error_message}</div>
+      )}
+
+      <div className="hms-channel-card-actions">
+        <button
+          type="button"
+          className="hms-channel-card-btn"
+          onClick={() => setEditing((v) => !v)}
         >
-          {statusLabel}
-        </span>
+          <Settings2 size={12} /> {labels.configure}
+        </button>
+        <button
+          type="button"
+          className="hms-channel-card-btn"
+          disabled={busy}
+          onClick={() => void runTest()}
+        >
+          <Send size={12} /> {busy ? labels.testing : labels.test}
+        </button>
       </div>
 
-      {/* Runtime details */}
-      {runtime && (
-        <div className="hms-channel-card-details">
-          {runtime.last_seen_at && (
-            <>
-              <span>{labels.lastSeen}</span>
-              <span>{formatTs(runtime.last_seen_at)}</span>
-            </>
-          )}
-          {runtime.inflight != null && (
-            <>
-              <span>{labels.inflight}</span>
-              <span>{String(runtime.inflight)}</span>
-            </>
-          )}
-          {runtime.last_error && (
-            <>
-              <span className="hms-channel-card-error-label">
-                <AlertTriangle size={11} /> {labels.lastError}
-              </span>
-              <span className="hms-channel-card-error-copy">{String(runtime.last_error)}</span>
-            </>
-          )}
+      {testMsg && (
+        <div className="hms-channel-card-test" data-ok={testMsg.ok ? "true" : "false"}>
+          {testMsg.text}
         </div>
       )}
 
-      {/* Circuit breaker hint */}
-      {circuitFlag && (isCircuitOpen || isBroken) && (
-        <div className="hms-channel-card-warning">
-          {isCircuitOpen ? <Pause size={11} /> : <Play size={11} />}
-          <span>{labels.circuitHint}</span>
-          <ExternalLink size={10} style={{ marginLeft: "auto", color: "var(--hms-text-muted)" }} />
+      {editing && (
+        <div className="hms-channel-card-form">
+          {platform.env_vars.map((f) => {
+            const queuedClear = clearKeys.has(f.key);
+            return (
+              <div key={f.key} className="hms-channel-card-field">
+                <label className="hms-channel-card-label" title={f.description}>
+                  {f.prompt}
+                  {f.required && <span className="hms-channel-card-req"> *</span>}
+                  {f.url && (
+                    <a href={f.url} target="_blank" rel="noreferrer noopener" className="hms-channel-card-doc">
+                      <ExternalLink size={10} />
+                    </a>
+                  )}
+                </label>
+                <div className="hms-channel-card-input-row">
+                  <input
+                    type={f.is_password ? "password" : "text"}
+                    value={draft[f.key] ?? ""}
+                    placeholder={queuedClear ? "" : f.is_set ? f.redacted_value ?? "••••" : ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                    className="hms-channel-card-input"
+                  />
+                  {f.is_set && (
+                    <button
+                      type="button"
+                      className="hms-channel-card-btn"
+                      data-active={queuedClear ? "true" : undefined}
+                      onClick={() =>
+                        setClearKeys((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(f.key)) next.delete(f.key);
+                          else next.add(f.key);
+                          return next;
+                        })
+                      }
+                    >
+                      {labels.clear}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <div className="hms-channel-card-form-actions">
+            <button type="button" className="hms-channel-card-btn" onClick={() => { setEditing(false); setDraft({}); setClearKeys(new Set()); }}>
+              {labels.cancel}
+            </button>
+            <button type="button" className="hms-channel-card-btn" data-variant="primary" disabled={busy} onClick={() => void saveConfig()}>
+              {labels.save}
+            </button>
+          </div>
         </div>
       )}
     </div>
