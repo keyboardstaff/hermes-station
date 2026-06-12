@@ -849,6 +849,17 @@ export interface Translations {
     modifiedLabel: string;
     noModified: string;
     noMatches: string;
+    /** Provider cards */
+    providersSection: string;
+    keySet: string;
+    keyMissing: string;
+    assign: string;
+    assignPrimary: string;
+    assignAuxPrefix: string;
+    assignFallback: string;
+    testOkModels: string;
+    modelsCapHint: string;
+    alreadyInFallback: string;
   };
 
   /** Config YAML editor strings. */

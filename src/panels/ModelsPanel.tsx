@@ -14,44 +14,40 @@ import {
   type AuxSlot,
   type KeyEntry,
 } from "@/hooks/useProviders";
+import { AUX_SLOTS, prettySlot, type AuxSlotKey } from "@/components/models/aux-slots";
+import { buildKeyRowLabels } from "@/components/models/key-labels";
 import ModelPickerDialog from "@/components/models/ModelPickerDialog";
+import ProviderCard from "@/components/models/ProviderCard";
 import KeyRow from "@/components/models/KeyRow";
 import ParetoSlider from "@/components/models/ParetoSlider";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
-import StatusBadge from "@/components/ui/StatusBadge";
 import Switch from "@/components/ui/Switch";
 import {
   RefreshCw, ArrowRightLeft, Info, Plus, Trash2, ArrowUp, ArrowDown, ChevronRight,
 } from "lucide-react";
 
 /**
- * Models panel — progressive disclosure.
+ * Models panel — provider-centric with progressive disclosure.
  *
- * Primary and API Keys stay open (the everyday surfaces); Auxiliary and
+ * Top half = the task-slot summary: Primary stays open; Auxiliary and
  * Fallback collapse into summary headers (slots customized / chain length).
- * A top filter box narrows aux slots, fallback entries and key names at once
- * and force-opens the collapsed sections while active; Auxiliary additionally
- * offers a "modified only" switch that hides slots still on Auto.
+ * Bottom half = the resource pool: one first-class card per provider (key
+ * status + key management, connectivity test, model catalog) from which
+ * models are ASSIGNED into slots via a per-model menu. Provider-matched API
+ * keys live on their provider card; everything else stays under API Keys.
+ * A top filter narrows slots, providers, models and key names at once and
+ * force-opens collapsed sections/cards while active.
  */
-
-// 9 upstream auxiliary task slots, in canonical order.
-const AUX_SLOTS = [
-  "vision",
-  "web_extract",
-  "compression",
-  "session_search",
-  "skills_hub",
-  "approval",
-  "mcp",
-  "title_generation",
-  "curator",
-] as const;
-type AuxSlotKey = typeof AUX_SLOTS[number];
 
 /** A slot counts as customized once it pins a concrete provider/model (not Auto). */
 function isCustomized(entry: AuxSlot | undefined): boolean {
   return !!entry && entry.provider !== "auto" && !!entry.model;
+}
+
+/** ``slug`` → env-var prefix, e.g. "z.ai" → "Z_AI_". */
+function slugEnvPrefix(slug: string): string {
+  return slug.toUpperCase().replace(/[^A-Z0-9]+/g, "_") + "_";
 }
 
 export default function ModelsPanel() {
@@ -75,15 +71,56 @@ export default function ModelsPanel() {
   const filter = query.trim().toLowerCase();
   const filtering = filter.length > 0;
 
-  // Collapsed-header summaries read the same react-query caches the section
-  // bodies use, so these extra hook calls don't add requests.
+  // Summaries + the provider/key join read the same react-query caches the
+  // section bodies use, so these extra hook calls don't add requests.
+  const providersQuery = useProviders();
+  const keysQuery = useKeys();
+  const refreshProviders = useRefreshProviders();
   const { data: auxData } = useAuxiliary();
   const { data: fbData } = useFallback();
+
   const auxModified = useMemo(() => {
     if (!auxData?.tasks) return null;
     const byTask = new Map(auxData.tasks.map((e) => [e.task, e]));
     return AUX_SLOTS.filter((s) => isCustomized(byTask.get(s))).length;
   }, [auxData]);
+
+  const providerList = useMemo(
+    () => providersQuery.data?.providers ?? [],
+    [providersQuery.data],
+  );
+  const currentModel = providersQuery.data?.model ?? null;
+
+  // Provider-category keys whose name starts with the provider's slug prefix
+  // (ANTHROPIC_API_KEY ↔ anthropic) render inside that provider's card; the
+  // rest stay in the API Keys section.
+  const providerKeysBySlug = useMemo(() => {
+    const map = new Map<string, KeyEntry[]>();
+    const keys = keysQuery.data?.keys ?? [];
+    for (const p of providerList) {
+      const prefix = slugEnvPrefix(p.slug);
+      map.set(p.slug, keys.filter(
+        (k) => k.category === "provider" && k.name.toUpperCase().startsWith(prefix),
+      ));
+    }
+    return map;
+  }, [keysQuery.data, providerList]);
+
+  const claimedKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const list of providerKeysBySlug.values()) for (const k of list) s.add(k.name);
+    return s;
+  }, [providerKeysBySlug]);
+
+  const visibleProviders = useMemo(() => {
+    if (!filter) return providerList;
+    return providerList.filter(
+      (p) =>
+        p.name.toLowerCase().includes(filter) ||
+        p.slug.toLowerCase().includes(filter) ||
+        p.models.some((name) => name.toLowerCase().includes(filter)),
+    );
+  }, [providerList, filter]);
 
   return (
     <div className="hms-models-root">
@@ -97,7 +134,7 @@ export default function ModelsPanel() {
             className="hms-input hms-models-filter-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={m?.filterPlaceholder ?? "Filter slots and keys..."}
+            placeholder={m?.filterPlaceholder ?? "Filter providers, models, slots and keys..."}
           />
           <ProfileScopeSelector />
         </div>
@@ -131,9 +168,47 @@ export default function ModelsPanel() {
           <FallbackTab m={m} filter={filter} />
         </CollapsibleSection>
 
-        {/* API Keys — always open */}
+        {/* Providers — the first-class resource pool */}
+        <section>
+          <div className="hms-models-providers-head">
+            <h2 className="hms-models-section-title">{m?.providersSection ?? "Providers"}</h2>
+            <span className="hms-models-muted-caption">
+              {providerList.length} {m?.providersLabel ?? "providers"}
+            </span>
+            <Button size="sm" onClick={refreshProviders}>
+              <RefreshCw size={12} />
+              {m?.refresh ?? "Refresh"}
+            </Button>
+          </div>
+          {providersQuery.isLoading ? (
+            <LoadingBox />
+          ) : visibleProviders.length === 0 ? (
+            <EmptyState
+              text={
+                filtering
+                  ? m?.noMatches ?? "Nothing matches the filter."
+                  : m?.providerUnavailable ?? "Provider data unavailable."
+              }
+            />
+          ) : (
+            <div className="hms-models-providers-list">
+              {visibleProviders.map((p) => (
+                <ProviderCard
+                  key={p.slug}
+                  provider={p}
+                  currentModel={currentModel}
+                  keys={providerKeysBySlug.get(p.slug) ?? []}
+                  filter={filter}
+                  forceOpen={filtering}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* API Keys — everything not claimed by a provider card */}
         <SectionCard title={m?.tabKeys ?? "API Keys"}>
-          <KeysTab m={m} filter={filter} />
+          <KeysTab m={m} filter={filter} exclude={claimedKeys} />
         </SectionCard>
       </div>
     </div>
@@ -181,7 +256,6 @@ type ML = NonNullable<ReturnType<typeof useI18n>["t"]["modelsPanel"]>;
 
 function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | undefined }) {
   const { data, isLoading, isError } = useProviders();
-  const refreshProviders = useRefreshProviders();
   const assign = useAssignModel();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -234,36 +308,6 @@ function PrimaryTab({ m, flags }: { m: ML | undefined; flags: CapabilityFlags | 
           {statusMsg}
         </div>
       )}
-
-      <div className="hms-models-toolbar">
-        <span className="hms-models-muted-caption">
-          {providers.length} {m?.providersLabel ?? "providers"}
-        </span>
-        <Button size="sm" onClick={refreshProviders}>
-          <RefreshCw size={12} />
-          {m?.refresh ?? "Refresh"}
-        </Button>
-      </div>
-
-      {/* Provider summary cards (without Test button — keep the layout compact) */}
-      {providers.map((p) => (
-        <div key={p.slug} className="hms-models-provider" data-current={p.is_current || undefined}>
-          <div className="hms-models-main">
-            <div className="hms-models-provider-namerow">
-              <span className="hms-models-provider-name">{p.name || p.slug}</span>
-              {p.is_current && (
-                <StatusBadge tone="success" uppercase={false}>{m?.current ?? "current"}</StatusBadge>
-              )}
-              {p.source && p.source !== "built-in" && (
-                <StatusBadge tone="muted" uppercase={false}>{p.source}</StatusBadge>
-              )}
-            </div>
-            <div className="hms-models-provider-count">
-              {p.models?.length ?? p.total_models ?? 0} {m?.modelsCount ?? "models"}
-            </div>
-          </div>
-        </div>
-      ))}
 
       {flags?.pareto_code_router && (
         <div className="hms-models-pareto">
@@ -524,7 +568,7 @@ function FallbackTab({ m, filter }: { m: ML | undefined; filter: string }) {
   );
 }
 
-function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
+function KeysTab({ m, filter, exclude }: { m: ML | undefined; filter: string; exclude: Set<string> }) {
   const { data, isLoading, isError } = useKeys();
 
   if (isLoading) return <LoadingBox />;
@@ -539,9 +583,10 @@ function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
     return <EmptyState text={m?.noKeys ?? "No API keys found in the Dashboard environment."} />;
   }
 
+  const unclaimed = data.keys.filter((k) => !exclude.has(k.name));
   const keys = filter
-    ? data.keys.filter((k) => k.name.toLowerCase().includes(filter))
-    : data.keys;
+    ? unclaimed.filter((k) => k.name.toLowerCase().includes(filter))
+    : unclaimed;
   if (!keys.length) {
     return <EmptyState text={m?.noMatches ?? "Nothing matches the filter."} />;
   }
@@ -563,24 +608,6 @@ function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
     return ai - bi;
   });
 
-  const labels = {
-    reveal: m?.reveal ?? "Reveal",
-    hide: m?.hide ?? "Hide",
-    notSet: m?.notSet ?? "(not set)",
-    rateLimited: m?.rateLimited ?? "Rate limited",
-    edit: m?.edit ?? "Edit",
-    delete: m?.delete ?? "Delete",
-    confirmDelete: m?.confirmDelete ?? "Remove key",
-    editTitle: m?.editTitle ?? "Edit key",
-    editValueLabel: m?.editValueLabel ?? "Value",
-    editValuePlaceholder: m?.editValuePlaceholder ?? "Paste key value...",
-    editSave: m?.editSave ?? "Save",
-    editSaving: m?.editSaving ?? "Saving...",
-    editCancel: m?.editCancel ?? "Cancel",
-    editGetKeyAt: m?.editGetKeyAt ?? "Get a key",
-    editClose: m?.close ?? "Close",
-  };
-
   return (
     <div>
       <div className="hms-settings-notice hms-settings-notice--info hms-models-notice-inline">
@@ -597,7 +624,7 @@ function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
           </div>
           <div className="hms-models-cat-rows">
             {groups[cat].map((k) => (
-              <KeyRow key={k.name} entry={k} labels={labels} />
+              <KeyRow key={k.name} entry={k} labels={buildKeyRowLabels(m)} />
             ))}
           </div>
         </div>
@@ -607,13 +634,6 @@ function KeysTab({ m, filter }: { m: ML | undefined; filter: string }) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-function prettySlot(slot: string): string {
-  return slot
-    .split("_")
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 function prettyCat(cat: string): string {
   return cat[0]?.toUpperCase() + cat.slice(1);

@@ -2349,3 +2349,123 @@ button.hms-artifacts-title {
   gap: var(--hms-space-2);
   flex-shrink: 0;
 }
+
+/* Provider-centric cards — key status + model catalog + assign actions. */
+.hms-models-providers-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-3);
+  margin-bottom: 12px;
+}
+
+.hms-models-providers-head .hms-models-section-title {
+  margin: 0;
+  flex: 1;
+}
+
+.hms-models-providers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+}
+
+.hms-provider-card {
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 8px;
+}
+
+.hms-provider-card[data-current] {
+  border-color: var(--hms-text);
+}
+
+.hms-provider-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.hms-provider-card-chevron {
+  flex-shrink: 0;
+  color: var(--hms-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.hms-provider-card[data-open] .hms-provider-card-chevron {
+  transform: rotate(90deg);
+}
+
+.hms-provider-card-name {
+  font-size: var(--hms-text-sm);
+  font-weight: 600;
+}
+
+.hms-provider-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid var(--hms-text-muted);
+}
+
+.hms-provider-card-dot[data-set] {
+  background: var(--hms-success);
+  border-color: var(--hms-success);
+}
+
+.hms-provider-card-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-provider-card-msg {
+  padding: 0 14px 8px;
+  font-size: var(--hms-text-caption);
+}
+
+.hms-provider-card-msg[data-ok="true"] {
+  color: var(--hms-success-text);
+}
+
+.hms-provider-card-msg[data-ok="false"] {
+  color: var(--hms-error-text);
+}
+
+.hms-provider-card-body {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+}
+
+.hms-provider-card-models {
+  display: flex;
+  flex-direction: column;
+}
+
+.hms-provider-card-model {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  padding: 4px 0;
+  border-top: 1px solid color-mix(in srgb, var(--hms-border) 50%, transparent);
+}
+
+.hms-provider-card-model-name {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  font-size: var(--hms-text-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-provider-card-caphint {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
