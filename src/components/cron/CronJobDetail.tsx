@@ -26,6 +26,7 @@ import {
   useTriggerJob,
   useDeleteJob,
   type CronJob,
+  type CronUpdateBody,
 } from "@/hooks/useCron";
 import { useDiscoverPlatforms } from "@/store/discovery";
 import { errorMessage } from "@/lib/errors";
@@ -115,15 +116,15 @@ export default function CronJobDetail({ job, onDeleted, labels }: Props) {
   const handleSave = async () => {
     setErrMsg(null);
     try {
-      const body = {
+      // Raw form strings; `CronUpdateBody.updates` already widens `schedule`
+      // to `string | CronSchedule` (the server normalizes the string), so no
+      // cast is needed.
+      const body: CronUpdateBody = {
         updates: {
           schedule: schedule || undefined,
           prompt: prompt || undefined,
           deliver: deliver || undefined,
-        // Raw form strings; the cron update mutation accepts a loose partial
-        // and the server normalizes `schedule` into a CronSchedule.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
+        },
       };
       await update.mutateAsync({ id: job.id, body });
       setSavedFlash(true);

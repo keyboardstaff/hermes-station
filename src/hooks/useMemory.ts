@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 export interface MemoryFact {
   fact_id: number;
@@ -36,14 +37,8 @@ export function useMemory(profile?: string) {
   });
 
   const forget = useMutation({
-    mutationFn: async (factId: number) => {
-      const r = await fetch(`/api/memory/${factId}${qs}`, {
-        method: "DELETE",
-        headers: { "X-HMS-CSRF": "1" },
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.json() as Promise<{ removed: boolean }>;
-    },
+    mutationFn: (factId: number) =>
+      api.json<{ removed: boolean }>(`/api/memory/${factId}${qs}`, "DELETE"),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 

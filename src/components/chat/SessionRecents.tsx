@@ -367,7 +367,15 @@ export default function SessionRecents({
     },
     retry: false,
     staleTime: 2_000,
-    refetchInterval: 5_000,
+    // The sidebar is always mounted, so a flat 5s poll ran forever even with
+    // nothing running. Poll fast (4s) only while a run is in flight (local
+    // activeRunId or the last sample still showed runs); back off to 30s when
+    // idle — still catches a cross-tab run within 30s without the constant hit.
+    refetchInterval: (query) => {
+      const hasRuns = (query.state.data?.runs?.length ?? 0) > 0;
+      const localRunning = useChatStore.getState().activeRunId != null;
+      return hasRuns || localRunning ? 4_000 : 30_000;
+    },
   });
   const activeRuns = useMemo(() => {
     const latestBySession = new Map<string, ActiveRun>();

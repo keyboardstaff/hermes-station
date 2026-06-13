@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useChatStore } from "@/store/chat";
 import type { SessionSummary } from "@/lib/hermes-types";
@@ -39,5 +40,11 @@ export default function ChatLanding() {
     navigate("/chat", { replace: true });
   }, [isLoading, isError, data, setActiveSession, navigate]);
 
-  return null;
+  // Brief centered spinner instead of a blank flash while the session list
+  // resolves (this view unmounts the moment it redirects to /chat).
+  return (
+    <div className="hms-landing-loading">
+      <Loader2 size={20} className="hms-spin" />
+    </div>
+  );
 }

@@ -9,6 +9,7 @@
  * so a surface that can't (say) archive simply doesn't show Archive.
  */
 import type { ReactNode } from "react";
+import { api } from "@/lib/api";
 import {
   Pencil,
   Pin,
@@ -24,11 +25,12 @@ import type { Translations } from "@/i18n";
 /** Wipe a session's transcript server-side (real clear, keeps the session row).
  *  POST /api/sessions/{id}/clear → upstream SessionDB.clear_messages. */
 export async function clearSessionMessages(sessionId: string): Promise<boolean> {
-  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/clear`, {
-    method: "POST",
-    headers: { "X-HMS-CSRF": "1" },
-  });
-  return res.ok;
+  try {
+    await api.json(`/api/sessions/${encodeURIComponent(sessionId)}/clear`, "POST");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface SessionActionItem {

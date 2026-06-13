@@ -92,9 +92,11 @@ export interface CronCreateBody {
   deliver?: string;
 }
 
-/** Body for ``PUT /api/dashboard/cron/jobs/{id}``. */
+/** Body for ``PUT /api/dashboard/cron/jobs/{id}``. `schedule` accepts a raw
+ *  form string (the server normalizes it into a CronSchedule) — `Omit` so the
+ *  widened field replaces, not intersects with, `Partial<CronJob>`'s. */
 export interface CronUpdateBody {
-  updates: Partial<CronJob> & { schedule?: string | CronSchedule };
+  updates: Omit<Partial<CronJob>, "schedule"> & { schedule?: string | CronSchedule };
 }
 
 // ── Hooks ────────────────────────────────────────────────────────────

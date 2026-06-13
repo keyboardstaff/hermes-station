@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 // Server is the source of truth (owner-level, syncs across browsers/devices);
 // localStorage is only a fast-start cache so the first paint doesn't flash an
@@ -26,22 +27,14 @@ function writeCache(ids: string[]): void {
 }
 
 async function fetchPinned(): Promise<string[]> {
-  const res = await fetch("/api/preferences/pinned");
-  if (!res.ok) throw new Error(`${res.status}`);
-  const json = (await res.json()) as { pinned?: string[] };
+  const json = await api.get<{ pinned?: string[] }>("/api/preferences/pinned");
   const ids = Array.isArray(json.pinned) ? json.pinned : [];
   writeCache(ids); // keep the fast-start cache in step with server truth
   return ids;
 }
 
 async function persistPinned(ids: string[]): Promise<string[]> {
-  const res = await fetch("/api/preferences/pinned", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-    body: JSON.stringify({ pinned: ids }),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  const json = (await res.json()) as { pinned?: string[] };
+  const json = await api.json<{ pinned?: string[] }>("/api/preferences/pinned", "PUT", { pinned: ids });
   return Array.isArray(json.pinned) ? json.pinned : ids;
 }
 
