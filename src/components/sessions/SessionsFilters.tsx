@@ -24,8 +24,8 @@ export default function SessionsFilters({ total }: { total: number }) {
   const { t } = useI18n();
   const s = t.sessions;
   const {
-    search, sourceFilter, profileFilter,
-    setSearch, setDebouncedSearch, setSourceFilter, setProfileFilter,
+    search, sourceFilter, profileFilter, view,
+    setSearch, setDebouncedSearch, setSourceFilter, setProfileFilter, setView,
   } = useSessionsFilters();
 
   const debounced = useDebouncedValue(search, 400);
@@ -60,6 +60,15 @@ export default function SessionsFilters({ total }: { total: number }) {
           <SegmentedControl<string>
             size="sm" ariaLabel={s.source} value={sourceFilter} onChange={setSourceFilter}
             options={opt(["all", ...sources])}
+          />
+        </Group>
+        <Group label={s.viewLabel}>
+          <SegmentedControl<"active" | "archived">
+            size="sm" ariaLabel={s.viewLabel} value={view} onChange={setView}
+            options={[
+              { value: "active", label: s.viewActive },
+              { value: "archived", label: s.viewArchived },
+            ]}
           />
         </Group>
       </div>

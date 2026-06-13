@@ -456,6 +456,11 @@ export interface Translations {
     empty: string;
     page: string;
     allProfiles: string;
+    archive: string;
+    unarchive: string;
+    viewLabel: string;
+    viewActive: string;
+    viewArchived: string;
   };
 
   channels: {
@@ -581,6 +586,7 @@ export interface Translations {
     noProfiles: string;
     selectAProfile: string;
     defaultBadge: string;
+    colorLabel: string;
     distributionLabel: string;
     path: string;
     model: string;

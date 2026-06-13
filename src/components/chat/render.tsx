@@ -151,6 +151,13 @@ const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
       {children}
     </a>
   ),
+  // Wrap tables in a scroll container so a wide table scrolls instead of
+  // overflowing the bubble — and a narrow one still fills the column width.
+  table: ({ children }) => (
+    <div className="hms-md-table-wrap">
+      <table>{children}</table>
+    </div>
+  ),
   // Images the agent references by absolute local path (or file://) can't
   // load in a browser — route them through the scoped /api/files/raw reader.
   img: ({ src, alt }) => {

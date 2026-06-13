@@ -42,6 +42,69 @@
   color: var(--hms-text-muted);
 }
 
+/* Profile color dot replacing the chat glyph — encodes the owning profile. */
+.hms-session-recents-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 2px;
+}
+
+/* ── Profile tabs (sidebar scope switcher, horizontal) ─────────────── */
+.hms-profile-tabs {
+  display: flex;
+  gap: var(--hms-space-1);
+  padding: 8px 10px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.hms-profile-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hms-profile-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hms-profile-tab:hover {
+  background: var(--hms-hover-bg);
+  color: var(--hms-text);
+}
+
+.hms-profile-tab[data-active] {
+  background: var(--hms-selected-bg);
+  border-color: var(--hms-border);
+  color: var(--hms-text);
+  font-weight: 600;
+}
+
+.hms-profile-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hms-profile-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
 /* Trailing action button — absolute overlay (out of flow), so revealing it on
    hover never reflows the row. The date sits underneath in normal flow and is
    hidden (visibility, so its box is kept) when the overlay is shown → the
@@ -286,11 +349,6 @@
 
 .hms-chat-bubble-row[data-role="user"] {
   align-items: flex-end;
-  /* Desktop-style sticky prompt: the turn's question stays pinned while its
-     answer scrolls beneath. */
-  position: sticky;
-  top: 4px;
-  z-index: 3;
 }
 
 /* Clamp the pinned prompt to ~2 lines so a long question doesn't dominate the
@@ -1409,12 +1467,17 @@
   font-style: italic;
 }
 
-/* Tables scroll horizontally inside the bubble instead of overflowing it. */
-.hms-md table {
-  display: block;
+/* Scroll wrapper: the table fills the column (width:100%) and only scrolls when
+   its content is genuinely wider. (Setting display:block on the <table> itself
+   made the browser-generated inner table shrink to content → half-width.) */
+.hms-md-table-wrap {
   max-width: 100%;
   overflow-x: auto;
   margin: 8px 0;
+}
+
+.hms-md table {
+  width: 100%;
   border-collapse: collapse;
   font-size: 0.9em;
   border: 1px solid var(--hms-border);

@@ -9,6 +9,7 @@ import MarkdownDocEditor from "@/components/profile/MarkdownDocEditor";
 import MemoryFacts from "@/components/profile/MemoryFacts";
 import Personalities from "@/components/profile/Personalities";
 import { useThemeStore } from "@/store/app";
+import { useProfileColors, profileColor, PROFILE_PALETTE } from "@/store/profile-colors";
 import {
   useProfiles,
   useProfileSoul,
@@ -154,6 +155,7 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
           {profile.name}
           {profile.is_default && <StatusBadge tone="accent" uppercase={false}>{pf?.defaultBadge ?? "default"}</StatusBadge>}
         </h2>
+        <ProfileColorPicker name={profile.name} label={pf?.colorLabel ?? "Color"} />
         {profile.distribution_name && (
           <p style={{ margin: "6px 0 0", fontSize: "var(--hms-text-xs)", color: "var(--hms-text-muted)" }}>
             {pf?.distributionLabel ?? "Distribution"}: <code>{profile.distribution_name}</code>
@@ -189,6 +191,30 @@ function ProfileDetail({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<t
       ) : (
         <MemoryTab name={profile.name} tab={tab} monacoTheme={monacoTheme} />
       )}
+    </div>
+  );
+}
+
+// ── Profile color picker (the session-row / tab dot color) ───────────
+
+function ProfileColorPicker({ name, label }: { name: string; label: string }) {
+  const colors = useProfileColors((s) => s.colors);
+  const setColor = useProfileColors((s) => s.setColor);
+  const current = profileColor(name, colors);
+  return (
+    <div className="hms-profile-color-row">
+      <span className="hms-profile-color-label">{label}</span>
+      {PROFILE_PALETTE.map((c) => (
+        <button
+          key={c}
+          type="button"
+          aria-label={c}
+          className="hms-profile-color-swatch"
+          data-active={current.toLowerCase() === c.toLowerCase() || undefined}
+          style={{ background: c }}
+          onClick={() => setColor(name, c)}
+        />
+      ))}
     </div>
   );
 }

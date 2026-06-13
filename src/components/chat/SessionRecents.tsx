@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, MoreHorizontal, Trash2, X, Check, Loader2, ChevronDown } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, X, Check, Loader2, ChevronDown } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import { useProfileScope, filterSessionsByScope } from "@/store/profile-scope";
+import { useProfileColors, profileColor } from "@/store/profile-colors";
 import { useSidebarSearch } from "@/store/sidebar-search";
 import { useActiveProfile } from "@/hooks/useProfiles";
 import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
@@ -100,6 +101,8 @@ function SessionItem({
   onDelete,
 }: SessionItemProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const colors = useProfileColors((st) => st.colors);
+  const dotColor = profileColor(s.profile, colors);
 
   useEffect(() => {
     if (isRenaming) inputRef.current?.select();
@@ -112,7 +115,14 @@ function SessionItem({
       data-active={isActive}
       data-running={isRunning || undefined}
     >
-      <MessageSquare size={13} className="hms-session-recents-icon" />
+      {/* Profile color dot — encodes which profile this session belongs to
+          (custom color set in Profiles management; falls back to a stable
+          per-name palette pick). */}
+      <span
+        className="hms-session-recents-dot"
+        style={{ background: dotColor }}
+        title={s.profile || "default"}
+      />
       {isRenaming ? (
         <div className="hms-session-recents-rename" onClick={(e) => e.stopPropagation()}>
           <input
@@ -443,7 +453,7 @@ export default function SessionRecents({
     >
       {/* Profile view-scope picker (the workspace switcher) sits at the very top,
           above Pinned + Recents — it scopes both. Self-hides for single-profile. */}
-      {showScopeSelector && <ProfileScopeSelector />}
+      {showScopeSelector && <ProfileScopeSelector variant="tabs" />}
 
       {/* Pinned section — only when caller provides pinnedIds and list is non-empty */}
       {pinnedSessions.length > 0 && (

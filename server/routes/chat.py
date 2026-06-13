@@ -111,6 +111,11 @@ async def list_sessions(request: web.Request) -> web.Response:
         return web.json_response({"error": "invalid_source"}, status=400)
 
     order_by_last_active = (request.query.get("sort") or "started_at") == "last_active"
+    # archived filter: "" / "exclude" → active only (default); "only" → archived
+    # only; "include" → both. Mirrors upstream list_sessions_rich flags.
+    archived_arg = (request.query.get("archived") or "").strip().lower()
+    archived_only = archived_arg == "only"
+    include_archived = archived_arg in ("include", "all")
 
     # Read each profile's own state.db, tag rows with their profile, then merge +
     # sort + page. Reading offset+limit per profile keeps the merged page correct;
@@ -127,6 +132,8 @@ async def list_sessions(request: web.Request) -> web.Response:
                 limit=per_profile,
                 offset=0,
                 order_by_last_active=order_by_last_active,
+                include_archived=include_archived,
+                archived_only=archived_only,
             )
         except Exception as exc:  # noqa: BLE001
             if home is None:
@@ -205,6 +212,20 @@ async def patch_session(request: web.Request) -> web.Response:
             return web.json_response(
                 {"error": "title_conflict", "detail": str(exc)}, status=409
             )
+        if not ok:
+            return web.json_response({"error": "not_found"}, status=404)
+        return web.json_response({"ok": True})
+
+    if "archived" in body:
+        archived = body["archived"]
+        if not isinstance(archived, bool):
+            return web.json_response({"error": "invalid_archived"}, status=400)
+        set_archived = getattr(sdb, "set_session_archived", None)
+        if set_archived is None:
+            return web.json_response({"error": "unsupported"}, status=503)
+        # Upstream archives the whole compression lineage (and unarchive resurrects
+        # the tip); we just relay the flag.
+        ok = await run_db(set_archived, sid, archived)
         if not ok:
             return web.json_response({"error": "not_found"}, status=404)
         return web.json_response({"ok": True})

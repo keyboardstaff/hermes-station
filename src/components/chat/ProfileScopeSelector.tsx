@@ -2,6 +2,7 @@ import { Layers } from "lucide-react";
 import { PopupSelect, type PopupSelectOption } from "@/components/ui/PopupSelect";
 import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
 import { useProfileScope, ALL_PROFILES } from "@/store/profile-scope";
+import { useProfileColors, profileColor } from "@/store/profile-colors";
 import { useI18n } from "@/i18n";
 
 /**
@@ -10,13 +11,23 @@ import { useI18n } from "@/i18n";
  * "All profiles" for the aggregated view. Read-only scope, decoupled from the
  * Composer run-profile pill. Hidden for single-profile users (only the default
  * home exists — nothing to switch), so their path is byte-for-byte unchanged.
+ *
+ * `variant="tabs"` (sidebar) renders a horizontal, scrollable tab strip with a
+ * per-profile color dot; `"dropdown"` (topbar / Models) stays a compact pill.
  */
-export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?: boolean }) {
+export default function ProfileScopeSelector({
+  fullWidth = true,
+  variant = "dropdown",
+}: {
+  fullWidth?: boolean;
+  variant?: "dropdown" | "tabs";
+}) {
   const { t } = useI18n();
   const { data: profilesData } = useProfiles();
   const { data: active } = useActiveProfile();
   const scope = useProfileScope((s) => s.scope);
   const setScope = useProfileScope((s) => s.setScope);
+  const colors = useProfileColors((s) => s.colors);
 
   const profiles = profilesData?.profiles ?? [];
   if (profiles.length <= 1) return null; // single-profile → no switcher
@@ -25,14 +36,47 @@ export default function ProfileScopeSelector({ fullWidth = true }: { fullWidth?:
   // scope === null means "follow active"; surface that as the active profile.
   const current = scope === ALL_PROFILES ? ALL_PROFILES : (scope ?? activeName);
 
+  if (variant === "tabs") {
+    return (
+      <div className="hms-profile-tabs" role="tablist" aria-label={t.nav.profile}>
+        {profiles.map((p) => (
+          <button
+            key={p.name}
+            type="button"
+            role="tab"
+            aria-selected={current === p.name}
+            className="hms-profile-tab"
+            data-active={current === p.name || undefined}
+            onClick={() => setScope(p.name)}
+          >
+            <span
+              className="hms-profile-tab-dot"
+              style={{ background: profileColor(p.name, colors) }}
+            />
+            <span className="hms-profile-tab-label">{p.name}</span>
+          </button>
+        ))}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={current === ALL_PROFILES}
+          className="hms-profile-tab"
+          data-active={current === ALL_PROFILES || undefined}
+          onClick={() => setScope(ALL_PROFILES)}
+        >
+          <Layers size={12} />
+          <span className="hms-profile-tab-label">{t.sessions.allProfiles}</span>
+        </button>
+      </div>
+    );
+  }
+
   const options: PopupSelectOption[] = [
     ...profiles.map((p) => ({ value: p.name, label: p.name })),
     { value: ALL_PROFILES, label: t.sessions.allProfiles },
   ];
   const label = current === ALL_PROFILES ? t.sessions.allProfiles : current;
 
-  // Sidebar (fullWidth) renders as a deliberate top band (own class); the inline
-  // pill (topbar) sits bare in the actions row.
   return (
     <div className={fullWidth ? "hms-scope-switcher" : undefined}>
       <PopupSelect

@@ -55,17 +55,21 @@ export const useLogsFilters = create<LogsFiltersState>((set) => ({
 
 // ── Sessions ──────────────────────────────────────────────────────
 
+export type SessionsView = "active" | "archived";
+
 interface SessionsFiltersState {
   search: string;
   debouncedSearch: string;
   sourceFilter: string; // "all" or a literal source value (e.g. "hms")
   profileFilter: string; // "all" or a literal profile name (e.g. "default")
+  view: SessionsView; // active list vs the archived-only management view
   page: number;
 
   setSearch: (v: string) => void;
   setDebouncedSearch: (v: string) => void;
   setSourceFilter: (v: string) => void;
   setProfileFilter: (v: string) => void;
+  setView: (v: SessionsView) => void;
   setPage: (p: number) => void;
   resetPage: () => void;
 }
@@ -75,12 +79,14 @@ export const useSessionsFilters = create<SessionsFiltersState>((set) => ({
   debouncedSearch: "",
   sourceFilter: "all",
   profileFilter: "all",
+  view: "active",
   page: 0,
 
   setSearch: (search) => set({ search }),
   setDebouncedSearch: (debouncedSearch) => set({ debouncedSearch, page: 0 }),
   setSourceFilter: (sourceFilter) => set({ sourceFilter, page: 0 }),
   setProfileFilter: (profileFilter) => set({ profileFilter, page: 0 }),
+  setView: (view) => set({ view, page: 0 }),
   setPage: (page) => set({ page }),
   resetPage: () => set({ page: 0 }),
 }));

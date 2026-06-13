@@ -434,6 +434,11 @@ export const zh: Translations = {
     empty: "未找到会话。",
     page: "第",
     allProfiles: "全部 Profile",
+    archive: "归档",
+    unarchive: "取消归档",
+    viewLabel: "视图",
+    viewActive: "活动",
+    viewArchived: "已归档",
   },
 
   channels: {
@@ -569,6 +574,7 @@ export const zh: Translations = {
     noProfiles: "暂无身份。",
     selectAProfile: "请选择一个身份。",
     defaultBadge: "默认",
+    colorLabel: "颜色",
     distributionLabel: "分发版本",
     path: "路径",
     model: "模型",

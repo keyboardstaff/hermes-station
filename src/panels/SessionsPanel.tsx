@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Trash2, X, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { Download, Trash2, X, ChevronLeft, ChevronRight, MessageSquare, Archive, ArchiveRestore } from "lucide-react";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
 import { formatSessionTitle } from "@/lib/session-title";
@@ -78,16 +78,44 @@ const PAGE_SIZE = 50;
 
 export default function SessionsPanel() {
   const { t } = useI18n();
-  const { debouncedSearch, sourceFilter, profileFilter, page, setPage } = useSessionsFilters();
+  const { debouncedSearch, sourceFilter, profileFilter, view, page, setPage } = useSessionsFilters();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const archivedView = view === "archived";
 
-  // Fetch ALL sessions once, do client-side filter/search/pagination
+  // Fetch ALL sessions once, do client-side filter/search/pagination. The
+  // archived view uses a SEPARATE cache key + `?archived=only` so the canonical
+  // `sessions-table-all` (sidebar Recents, title bar) stays active-only.
   const { data: allData, isLoading } = useQuery<{ sessions: SessionSummary[] }>({
-    queryKey: ["sessions-table-all"],
-    queryFn: () => api.get<{ sessions: SessionSummary[] }>("/api/sessions?limit=1000"),
+    queryKey: archivedView ? ["sessions-table-archived"] : ["sessions-table-all"],
+    queryFn: () =>
+      api.get<{ sessions: SessionSummary[] }>(
+        `/api/sessions?limit=1000${archivedView ? "&archived=only" : ""}`,
+      ),
     staleTime: 10_000,
+  });
+
+  const invalidateSessions = () => {
+    queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
+    queryClient.invalidateQueries({ queryKey: ["sessions-table-archived"] });
+  };
+
+  // Bulk archive / unarchive — profile-scoped PATCH (rows carry their profile).
+  const { mutate: setArchivedBulk, isPending: archiving } = useMutation({
+    mutationFn: async ({ ids, archived }: { ids: string[]; archived: boolean }) => {
+      const byId = new Map((allData?.sessions ?? []).map((s) => [s.session_id, s.profile]));
+      await Promise.all(
+        ids.map((id) =>
+          api.json<unknown>(
+            `/api/sessions/${encodeURIComponent(id)}${profileQuery(byId.get(id))}`,
+            "PATCH",
+            { archived },
+          ),
+        ),
+      );
+    },
+    onSuccess: () => { setSelected(new Set()); invalidateSessions(); },
   });
 
   // Fetch preview messages. The previous swallow-non-2xx-as-empty code
@@ -303,6 +331,15 @@ export default function SessionsPanel() {
             <Button size="sm" onClick={() => exportSessionsPdf(Array.from(selected))}>
               <Download size={12} /> {t.sessions.exportPdf}
             </Button>
+            {archivedView ? (
+              <Button size="sm" disabled={archiving} onClick={() => setArchivedBulk({ ids: Array.from(selected), archived: false })}>
+                <ArchiveRestore size={12} /> {t.sessions.unarchive}
+              </Button>
+            ) : (
+              <Button size="sm" disabled={archiving} onClick={() => setArchivedBulk({ ids: Array.from(selected), archived: true })}>
+                <Archive size={12} /> {t.sessions.archive}
+              </Button>
+            )}
             <Button size="sm" variant="danger" disabled={deleting} onClick={() => { if (confirm(t.sessions.deleteConfirm)) deleteSelected(Array.from(selected)); }}>
               <Trash2 size={12} /> {t.sessions.delete}
             </Button>

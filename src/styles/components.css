@@ -2337,3 +2337,31 @@ button.hms-artifacts-title {
   font-size: var(--hms-text-xs);
   color: var(--hms-text-muted);
 }
+
+/* ── Profile color picker (the session-row / tab dot) ──────────────── */
+.hms-profile-color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.hms-profile-color-label {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-profile-color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hms-profile-color-swatch[data-active] {
+  border-color: var(--hms-text);
+  box-shadow: 0 0 0 1px var(--hms-bg) inset;
+}

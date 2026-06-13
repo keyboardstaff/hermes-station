@@ -90,3 +90,46 @@ async def test_list_sessions_deduplicates_same_session_id(quiet_hms_env, monkeyp
     data = json.loads(resp.body)
     assert [s["session_id"] for s in data["sessions"]] == ["run_dup"]
     assert data["sessions"][0]["profile"] == "creative"
+
+
+@pytest.mark.asyncio
+async def test_list_sessions_archived_only_passes_flags(quiet_hms_env, monkeypatch) -> None:
+    """`?archived=only` → list_sessions_rich(archived_only=True)."""
+    import server.routes.chat as chat
+    from aiohttp.test_utils import make_mocked_request
+
+    sdb = MagicMock()
+    sdb.list_sessions_rich.return_value = []
+    monkeypatch.setattr(chat, "_profile_homes", lambda: [("default", None)])
+    monkeypatch.setattr(chat, "db", lambda: sdb)
+
+    await chat.list_sessions(make_mocked_request("GET", "/api/sessions?archived=only"))
+    _, kwargs = sdb.list_sessions_rich.call_args
+    assert kwargs["archived_only"] is True
+    assert kwargs["include_archived"] is False
+
+
+@pytest.mark.asyncio
+async def test_patch_session_archives(quiet_hms_env, monkeypatch) -> None:
+    """PATCH {archived:true} → SessionDB.set_session_archived (was rejected as
+    no_supported_fields, so Archive was a silent no-op)."""
+    import server.routes.chat as chat
+    from aiohttp.test_utils import make_mocked_request
+
+    sdb = MagicMock()
+    sdb.set_session_archived.return_value = True
+    monkeypatch.setattr(chat, "_session_db", lambda req: (sdb, None))
+
+    req = make_mocked_request(
+        "PATCH", "/api/sessions/run_abc",
+        headers={"Content-Type": "application/json"},
+    )
+    req._payload_writer = None  # noqa: SLF001
+    async def _json():
+        return {"archived": True}
+    req.json = _json  # type: ignore[method-assign]
+    req.match_info["session_id"] = "run_abc"  # type: ignore[index]
+
+    resp = await chat.patch_session(req)
+    assert json.loads(resp.body) == {"ok": True}
+    sdb.set_session_archived.assert_called_once_with("run_abc", True)

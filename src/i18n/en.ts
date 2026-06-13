@@ -435,6 +435,11 @@ export const en: Translations = {
     empty: "No sessions found.",
     page: "Page",
     allProfiles: "All profiles",
+    archive: "Archive",
+    unarchive: "Unarchive",
+    viewLabel: "View",
+    viewActive: "Active",
+    viewArchived: "Archived",
   },
 
   channels: {
@@ -570,6 +575,7 @@ export const en: Translations = {
     noProfiles: "No profiles.",
     selectAProfile: "Select a profile.",
     defaultBadge: "default",
+    colorLabel: "Color",
     distributionLabel: "Distribution",
     path: "Path",
     model: "Model",
