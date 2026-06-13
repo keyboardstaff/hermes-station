@@ -62,7 +62,7 @@ export default function OnboardingWizard({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="hms-onboard-root">
+    <div className="hms-auth-root">
       <div className="hms-onboard-card">
         <header className="hms-onboard-head">
           <HermesMark size={40} />

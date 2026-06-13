@@ -24,11 +24,15 @@ export default function UserButton({ collapsed = false }: { collapsed?: boolean 
   const [open, setOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [userName, setUserName] = useState("");
   const popRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get<{ requiresLogin: boolean; loggedIn: boolean }>("/api/auth-status")
-      .then((s) => setShowLogout(s.requiresLogin && s.loggedIn))
+    api.get<{ requiresLogin: boolean; loggedIn: boolean; userName?: string }>("/api/auth-status")
+      .then((s) => {
+        setShowLogout(s.requiresLogin && s.loggedIn);
+        setUserName((s.userName ?? "").trim());
+      })
       .catch(() => setShowLogout(false));
   }, []);
 
@@ -51,7 +55,8 @@ export default function UserButton({ collapsed = false }: { collapsed?: boolean 
     window.location.reload();
   };
 
-  const label = t.user.localUser;
+  // Show the configured login name once set; fall back to the generic label.
+  const label = userName || t.user.localUser;
 
   return (
     <div style={{ position: "relative", width: "100%" }} ref={popRef}>

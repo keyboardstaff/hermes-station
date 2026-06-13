@@ -210,6 +210,7 @@ export const zh: Translations = {
       bindAllInterfaces: "0.0.0.0（所有网卡，需密码）",
       restartHint: "绑定变更需要重启服务器才生效。",
       authSection: "认证",
+    loginName: "登录名",
       passwordConfigured: "密码已配置",
       passwordNotSet: "未设置密码",
       newPassword: "新密码",

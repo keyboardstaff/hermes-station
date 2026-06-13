@@ -223,6 +223,7 @@ export interface Translations {
       bindAllInterfaces: string;
       restartHint: string;
       authSection: string;
+    loginName: string;
       passwordConfigured: string;
       passwordNotSet: string;
       newPassword: string;

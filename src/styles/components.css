@@ -2224,8 +2224,8 @@ button.hms-artifacts-title {
   .hms-breathe { animation: none; }
 }
 
-/* ── First-run onboarding wizard ───────────────────────────────────── */
-.hms-onboard-root {
+/* ── Auth surfaces (login + onboarding) — shared centered card ──────── */
+.hms-auth-root {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2235,6 +2235,62 @@ button.hms-artifacts-title {
     radial-gradient(circle at top left, color-mix(in srgb, var(--hms-accent) 10%, transparent), transparent 34%),
     radial-gradient(circle at bottom right, color-mix(in srgb, var(--hms-info) 10%, transparent), transparent 30%),
     var(--hms-bg);
+}
+
+.hms-auth-card {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-5);
+  padding: 32px 28px;
+  border-radius: var(--hms-radius-lg);
+  border: 1px solid var(--hms-border);
+  background: var(--hms-surface);
+  box-shadow: var(--hms-shadow-card);
+}
+
+.hms-auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hms-space-2);
+  text-align: center;
+  color: var(--hms-accent);
+}
+
+.hms-auth-wordmark {
+  font-size: var(--hms-text-lg);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--hms-text);
+}
+
+.hms-auth-subtitle {
+  margin: 0;
+  font-size: var(--hms-text-caption);
+  line-height: 1.5;
+  color: var(--hms-text-muted);
+}
+
+.hms-auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+}
+
+.hms-auth-label {
+  font-size: var(--hms-text-caption);
+  font-weight: 600;
+  color: var(--hms-text-muted);
+}
+
+.hms-auth-error {
+  padding: 6px 10px;
+  border-radius: var(--hms-radius-md);
+  background: var(--hms-error-weak);
+  border: 1px solid var(--hms-error-border);
+  font-size: var(--hms-text-caption);
+  color: var(--hms-error-dark);
 }
 
 .hms-onboard-card {

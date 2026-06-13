@@ -37,110 +37,42 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: 'var(--hms-space-6)',
-        background: [
-          "radial-gradient(circle at top left, color-mix(in srgb, var(--hms-accent) 10%, transparent), transparent 34%)",
-          "radial-gradient(circle at bottom right, color-mix(in srgb, var(--hms-info) 10%, transparent), transparent 30%)",
-          "var(--hms-bg)",
-        ].join(", "),
-      }}
-    >
-      <form
-        onSubmit={submit}
-        style={{
-          width: "min(100%, 380px)",
-          padding: 28,
-          borderRadius: 12,
-          border: "1px solid var(--hms-border)",
-          background: "var(--hms-surface)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 'var(--hms-space-4)',
-          boxShadow: "var(--hms-shadow-card)",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 'var(--hms-space-2)' }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-3)' }}>
-            <HermesMark size={24} />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--hms-text-xs)', color: "var(--hms-text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                Hermes Station
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)' }}>
-                <Lock size={16} style={{ color: "var(--hms-accent)" }} />
-                <span style={{ fontSize: 'var(--hms-text-md)', fontWeight: 600 }}>{t.login.title}</span>
-              </div>
-            </div>
-          </div>
-          <p style={{ margin: 0, fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", lineHeight: 1.5 }}>
-            {t.login.subtitle}
-          </p>
-        </div>
+    <div className="hms-auth-root">
+      <form onSubmit={submit} className="hms-auth-card">
+        <header className="hms-auth-brand">
+          <HermesMark size={44} />
+          <div className="hms-auth-wordmark">Hermes Station</div>
+          <p className="hms-auth-subtitle">{t.login.subtitle}</p>
+        </header>
 
-        <div>
-          <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
-            {t.login.username}
-          </div>
+        <div className="hms-auth-fields">
+          <label className="hms-auth-label">{t.login.username}</label>
           <input
             type="text"
             autoFocus
             autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            style={loginInputStyle}
+            className="hms-input"
           />
-        </div>
-
-        <div>
-          <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
-            {t.login.password}
-          </div>
+          <label className="hms-auth-label">{t.login.password}</label>
           <input
             type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={loginInputStyle}
+            className="hms-input"
           />
         </div>
 
-        {error && (
-          <div style={{ padding: "6px 10px", borderRadius: 6, background: "var(--hms-error-weak)", border: "1px solid var(--hms-error-border)", fontSize: 'var(--hms-text-caption)', color: "var(--hms-error-dark)" }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="hms-auth-error">{error}</div>}
 
-        <Button
-          type="submit"
-          size="lg"
-          variant="primary"
-          disabled={busy || !password}
-          style={{
-            width: "100%",
-          }}
-        >
+        <Button type="submit" size="lg" variant="primary" disabled={busy || !password} style={{ width: "100%" }}>
+          <Lock size={13} />
           {busy ? t.login.signingIn : t.login.signIn}
           {!busy && <ArrowRight size={13} />}
         </Button>
       </form>
     </div>
   );
-}
-
-const loginInputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 10px",
-  borderRadius: 6,
-  border: "1px solid var(--hms-border)",
-  background: "var(--hms-bg)",
-  color: "var(--hms-text)",
-  fontSize: 'var(--hms-text-body)',
-  outline: "none",
-  boxSizing: "border-box",
 }

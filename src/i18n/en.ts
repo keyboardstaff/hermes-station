@@ -210,6 +210,7 @@ export const en: Translations = {
       bindAllInterfaces: "0.0.0.0 (all interfaces, password required)",
       restartHint: "Bind changes apply on next server restart.",
       authSection: "Authentication",
+    loginName: "Login name",
       passwordConfigured: "Password configured",
       passwordNotSet: "No password set",
       newPassword: "New password",

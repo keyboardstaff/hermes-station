@@ -12,6 +12,7 @@ interface SecuritySettings {
   /** Server-side hash is never returned; this boolean is the only signal. */
   password_set?: boolean;
   session_ttl_seconds?: number;
+  user_name?: string;
 }
 
 export function SecurityTab() {
@@ -27,6 +28,7 @@ export function SecurityTab() {
 
   const [bindHost, setBindHost] = useState("127.0.0.1");
   const [sessionTtl, setSessionTtl] = useState(86400);
+  const [loginName, setLoginName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,6 +43,7 @@ export function SecurityTab() {
     if (!settings) return;
     setBindHost(settings.host ?? "127.0.0.1");
     setSessionTtl(settings.session_ttl_seconds ?? 86400);
+    setLoginName(settings.user_name ?? "");
     hydratedRef.current = true;
   }, [settings]);
 
@@ -49,7 +52,7 @@ export function SecurityTab() {
   const bindChanged = !!settings && (settings.host ?? "127.0.0.1") !== bindHost;
 
   const saveSecurity = useCallback(async (
-    payload: { host?: string; session_ttl_seconds?: number },
+    payload: { host?: string; session_ttl_seconds?: number; user_name?: string },
   ) => {
     setSaveStatus("saving");
     setSaveError("");
@@ -78,16 +81,19 @@ export function SecurityTab() {
     if (!hydratedRef.current) return;
     if (dangerHost) return;
     // PATCH only diverging fields to avoid clobbering concurrent edits.
-    const payload: { host?: string; session_ttl_seconds?: number } = {};
+    const payload: { host?: string; session_ttl_seconds?: number; user_name?: string } = {};
     if (settings && bindHost !== (settings.host ?? "127.0.0.1")) {
       payload.host = bindHost;
     }
     if (settings && sessionTtl !== (settings.session_ttl_seconds ?? 86400)) {
       payload.session_ttl_seconds = sessionTtl;
     }
+    if (settings && loginName.trim() !== (settings.user_name ?? "")) {
+      payload.user_name = loginName.trim();
+    }
     if (Object.keys(payload).length === 0) return;
     void saveSecurity(payload);
-  }, [bindHost, sessionTtl, dangerHost, saveSecurity], 600);
+  }, [bindHost, sessionTtl, loginName, dangerHost, saveSecurity], 600);
 
   const submitPassword = async () => {
     setPwStatus("idle");
@@ -159,6 +165,14 @@ export function SecurityTab() {
       </Section>
 
       <Section icon={<Key size={14} />} title={t.settings.security.authSection}>
+        {/* Login name — debounce-saved like the network fields. */}
+        <Field
+          label={t.settings.security.loginName}
+          value={loginName}
+          onChange={setLoginName}
+          autoComplete="username"
+        />
+
         <div style={{ display: "flex", alignItems: "center", gap: 'var(--hms-space-2)', fontSize: 'var(--hms-text-sm)'}}>
           <span style={{ color: hasStoredPassword ? "var(--hms-success)" : "var(--hms-error)" }}>
             {hasStoredPassword ? "✓" : "✗"}
