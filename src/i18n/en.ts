@@ -434,7 +434,7 @@ export const en: Translations = {
     loading: "Loading…",
     empty: "No sessions found.",
     page: "Page",
-    allProfiles: "All profiles",
+    allShort: "All",
     archive: "Archive",
     unarchive: "Unarchive",
     viewLabel: "View",
@@ -581,9 +581,6 @@ export const en: Translations = {
     model: "Model",
     provider: "Provider",
     skillCount: "Skills",
-    gateway: "Gateway",
-    running: "running",
-    stopped: "stopped",
     copied: "Copied",
     rename: "Rename",
     delete: "Delete",
@@ -597,8 +594,6 @@ export const en: Translations = {
     create: "Create",
     creating: "Creating…",
     cancel: "Cancel",
-    startGateway: "Start",
-    stopGateway: "Stop",
   },
 
   plugins: {

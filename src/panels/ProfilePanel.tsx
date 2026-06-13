@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Pencil, User, Play, Square, Download } from "lucide-react";
+import { Trash2, Pencil, User, Download } from "lucide-react";
 import { useI18n } from "@/i18n";
 import Button from "@/components/ui/Button";
-import StatusDot from "@/components/ui/StatusDot";
 import StatusBadge from "@/components/ui/StatusBadge";
 import RenameProfileDialog from "@/components/profile/RenameProfileDialog";
 import MarkdownDocEditor from "@/components/profile/MarkdownDocEditor";
@@ -17,8 +16,6 @@ import {
   useProfileMemory,
   useSetProfileMemory,
   useDeleteProfile,
-  useStartProfileGateway,
-  useStopProfileGateway,
   type ProfileInfo,
   type ProfileMemoryTab,
 } from "@/hooks/useProfiles";
@@ -223,12 +220,9 @@ function ProfileColorPicker({ name, label }: { name: string; label: string }) {
 
 function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typeof useI18n>["t"]["profile"] }) {
   const del = useDeleteProfile();
-  const startGw = useStartProfileGateway();
-  const stopGw = useStopProfileGateway();
   const setSelected = useProfileSelection((s) => s.setSelected);
   const [renameOpen, setRenameOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const gwPending = startGw.isPending || stopGw.isPending;
 
   const handleDelete = async () => {
     if (profile.is_default) return;
@@ -244,20 +238,10 @@ function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typ
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--hms-space-4)", maxWidth: "var(--hms-content-max-w, 72ch)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-2)", flexWrap: "wrap" }}>
-        <StatusDot
-          tone={profile.gateway_running ? "success" : "muted"}
-          filled={profile.gateway_running}
-          label={profile.gateway_running ? (pf?.running ?? "running") : (pf?.stopped ?? "stopped")}
-        />
-        {profile.gateway_running ? (
-          <Button size="sm" onClick={() => stopGw.mutate(profile.name)} disabled={gwPending}>
-            <Square size={11} /> {pf?.stopGateway ?? "Stop"}
-          </Button>
-        ) : (
-          <Button size="sm" onClick={() => startGw.mutate(profile.name)} disabled={gwPending}>
-            <Play size={11} /> {pf?.startGateway ?? "Start"}
-          </Button>
-        )}
+        {/* Per-profile gateway start/stop removed: Station runs in-process under
+            ONE gateway (managed in Settings → Connection); a profile's chats
+            resolve in-process via the home override, so there's no separate
+            per-profile daemon to toggle here. */}
         <div style={{ flex: 1 }} />
         <Button size="sm" onClick={() => downloadProfileExport(profile.name)}>
           <Download size={12} />
@@ -308,14 +292,6 @@ function OverviewTab({ profile, pf }: { profile: ProfileInfo; pf: ReturnType<typ
         )}
         <span style={metaLabel}>{pf?.skillCount ?? "Skills"}</span>
         <span>{profile.skill_count}</span>
-        <span style={metaLabel}>{pf?.gateway ?? "Gateway"}</span>
-        <span>
-          {profile.gateway_running ? (
-            <span style={{ color: "var(--hms-success-text)" }}>● {pf?.running ?? "running"}</span>
-          ) : (
-            <span style={{ color: "var(--hms-text-muted)" }}>○ {pf?.stopped ?? "stopped"}</span>
-          )}
-        </span>
       </Card>
 
       {err && (

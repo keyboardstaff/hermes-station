@@ -147,29 +147,6 @@ export function useSetProfileMemory() {
   });
 }
 
-// ── Per-profile gateway control (upstream multi-gateway model) ───────
-// Each profile is a separate gateway service; start/stop shells out to
-// `hermes -p <profile> gateway start|stop`. List refresh reflects status.
-
-function useGatewayAction(action: "start" | "stop") {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (profile: string) =>
-      api.json<{ ok: boolean; reason?: string }>(
-        `/api/lifecycle/gateway/${action}`,
-        "POST",
-        { profile },
-      ),
-    onSuccess: () => {
-      // Status flips a moment after the detached process acts; refetch shortly.
-      setTimeout(() => qc.invalidateQueries({ queryKey: LIST_KEY }), 2500);
-    },
-  });
-}
-
-export const useStartProfileGateway = () => useGatewayAction("start");
-export const useStopProfileGateway = () => useGatewayAction("stop");
-
 export function useCreateProfile() {
   const qc = useQueryClient();
   return useMutation({

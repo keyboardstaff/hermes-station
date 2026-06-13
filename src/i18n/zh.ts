@@ -433,7 +433,7 @@ export const zh: Translations = {
     loading: "加载中…",
     empty: "未找到会话。",
     page: "第",
-    allProfiles: "全部 Profile",
+    allShort: "全部",
     archive: "归档",
     unarchive: "取消归档",
     viewLabel: "视图",
@@ -580,9 +580,6 @@ export const zh: Translations = {
     model: "模型",
     provider: "提供商",
     skillCount: "技能数",
-    gateway: "Gateway",
-    running: "运行中",
-    stopped: "已停止",
     copied: "已复制",
     rename: "重命名",
     delete: "删除",
@@ -596,8 +593,6 @@ export const zh: Translations = {
     create: "创建",
     creating: "创建中…",
     cancel: "取消",
-    startGateway: "启动",
-    stopGateway: "停止",
   },
 
   plugins: {

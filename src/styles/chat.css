@@ -1,24 +1,4 @@
 
-.hms-agents-chip-button {
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-  font-size: var(--hms-text-caption);
-}
-
-.hms-agents-chip-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--hms-text-muted);
-}
 
 .hms-session-recents-item {
   display: flex;
@@ -35,11 +15,6 @@
 .hms-session-recents-item:hover,
 .hms-session-recents-item[data-active="true"] {
   background: var(--hms-border);
-}
-
-.hms-session-recents-icon {
-  flex-shrink: 0;
-  color: var(--hms-text-muted);
 }
 
 /* Profile color dot replacing the chat glyph — encodes the owning profile. */

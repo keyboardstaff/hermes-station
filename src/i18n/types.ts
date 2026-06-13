@@ -455,7 +455,7 @@ export interface Translations {
     loading: string;
     empty: string;
     page: string;
-    allProfiles: string;
+    allShort: string;
     archive: string;
     unarchive: string;
     viewLabel: string;
@@ -592,9 +592,6 @@ export interface Translations {
     model: string;
     provider: string;
     skillCount: string;
-    gateway: string;
-    running: string;
-    stopped: string;
     copied: string;
     rename: string;
     delete: string;
@@ -608,8 +605,6 @@ export interface Translations {
     create: string;
     creating: string;
     cancel: string;
-    startGateway: string;
-    stopGateway: string;
   };
 
   plugins: {

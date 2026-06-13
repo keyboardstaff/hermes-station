@@ -106,13 +106,14 @@ export default function SessionsPanel() {
     mutationFn: async ({ ids, archived }: { ids: string[]; archived: boolean }) => {
       const byId = new Map((allData?.sessions ?? []).map((s) => [s.session_id, s.profile]));
       await Promise.all(
-        ids.map((id) =>
-          api.json<unknown>(
-            `/api/sessions/${encodeURIComponent(id)}${profileQuery(byId.get(id))}`,
-            "PATCH",
-            { archived },
-          ),
-        ),
+        ids.map((id) => {
+          // First (only) query param ⇒ `?profile=`. profileQuery() yields the
+          // `&`-prefixed form for appending to an existing query string, which
+          // would malform `/api/sessions/{id}` (no `?`) → wrong db.
+          const prof = byId.get(id);
+          const q = prof && prof !== "default" ? `?profile=${encodeURIComponent(prof)}` : "";
+          return api.json<unknown>(`/api/sessions/${encodeURIComponent(id)}${q}`, "PATCH", { archived });
+        }),
       );
     },
     onSuccess: () => { setSelected(new Set()); invalidateSessions(); },

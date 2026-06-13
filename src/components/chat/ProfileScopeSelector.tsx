@@ -1,4 +1,4 @@
-import { Layers } from "lucide-react";
+import { Asterisk } from "lucide-react";
 import { PopupSelect, type PopupSelectOption } from "@/components/ui/PopupSelect";
 import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
 import { useProfileScope, ALL_PROFILES } from "@/store/profile-scope";
@@ -39,6 +39,18 @@ export default function ProfileScopeSelector({
   if (variant === "tabs") {
     return (
       <div className="hms-profile-tabs" role="tablist" aria-label={t.nav.profile}>
+        {/* "All" first — the aggregated every-profile view. */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={current === ALL_PROFILES}
+          className="hms-profile-tab"
+          data-active={current === ALL_PROFILES || undefined}
+          onClick={() => setScope(ALL_PROFILES)}
+        >
+          <Asterisk size={13} />
+          <span className="hms-profile-tab-label">{t.sessions.allShort}</span>
+        </button>
         {profiles.map((p) => (
           <button
             key={p.name}
@@ -56,31 +68,20 @@ export default function ProfileScopeSelector({
             <span className="hms-profile-tab-label">{p.name}</span>
           </button>
         ))}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={current === ALL_PROFILES}
-          className="hms-profile-tab"
-          data-active={current === ALL_PROFILES || undefined}
-          onClick={() => setScope(ALL_PROFILES)}
-        >
-          <Layers size={12} />
-          <span className="hms-profile-tab-label">{t.sessions.allProfiles}</span>
-        </button>
       </div>
     );
   }
 
   const options: PopupSelectOption[] = [
+    { value: ALL_PROFILES, label: t.sessions.allShort },
     ...profiles.map((p) => ({ value: p.name, label: p.name })),
-    { value: ALL_PROFILES, label: t.sessions.allProfiles },
   ];
-  const label = current === ALL_PROFILES ? t.sessions.allProfiles : current;
+  const label = current === ALL_PROFILES ? t.sessions.allShort : current;
 
   return (
     <div className={fullWidth ? "hms-scope-switcher" : undefined}>
       <PopupSelect
-        icon={<Layers size={15} />}
+        icon={<Asterisk size={15} />}
         label={label}
         value={current}
         options={options}

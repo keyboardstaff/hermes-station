@@ -18,7 +18,6 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useElapsedSeconds, formatElapsed } from "@/hooks/useElapsedSeconds";
 import { precedingUserIndex, messagePlainText, userOrdinal, nextHistRowId } from "@/lib/branch";
 import { messageText } from "@/lib/chat-runtime";
-import { profileQuery } from "@/lib/load-session";
 import type { ChatMessage, SessionSummary } from "@/lib/hermes-types";
 import type { ReactNode } from "react";
 
@@ -353,9 +352,12 @@ export function MessageActions({ msg, editSlot }: { msg: ChatMessage; editSlot?:
       .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
       ?.sessions.find((sx) => sx.session_id === sid)?.profile;
     const cut = nextHistRowId(messages, idx);
+    // `/branch` carries no other query param, so `profile` needs a `?` prefix —
+    // profileQuery() emits the `&`-form for appending to an existing string.
+    const profileParam = profile && profile !== "default" ? `?profile=${encodeURIComponent(profile)}` : "";
     try {
       const res = await fetch(
-        `/api/sessions/${encodeURIComponent(sid)}/branch${profileQuery(profile)}`,
+        `/api/sessions/${encodeURIComponent(sid)}/branch${profileParam}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
