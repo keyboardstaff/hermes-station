@@ -22,14 +22,12 @@ import yaml
 from aiohttp import BodyPartReader, web
 
 from server.lib import yaml_edit
+from server.lib.route_helpers import PROFILE_ID_RE
 from server.lib.upstream_shim import shim
 
 logger = logging.getLogger(__name__)
 
 router = web.RouteTableDef()
-
-# Matches upstream profiles._PROFILE_ID_RE (lower-snake/hyphen, ≤64 chars).
-_PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -141,11 +139,11 @@ async def create_profile(request: web.Request) -> web.Response:
         return web.json_response({"error": "invalid_json"}, status=400)
 
     name = body.get("name")
-    if not isinstance(name, str) or not _PROFILE_ID_RE.match(name):
+    if not isinstance(name, str) or not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     clone_from = body.get("clone_from") or None
     if clone_from is not None and (
-        not isinstance(clone_from, str) or not _PROFILE_ID_RE.match(clone_from)
+        not isinstance(clone_from, str) or not PROFILE_ID_RE.match(clone_from)
     ):
         return web.json_response({"error": "invalid_clone_from"}, status=400)
     no_skills = bool(body.get("no_skills", False))
@@ -185,14 +183,14 @@ async def rename_profile(request: web.Request) -> web.Response:
     if fn is None:
         return web.json_response({"error": "upstream_unavailable"}, status=503)
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     try:
         body = await request.json()
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
     new_name = body.get("new_name")
-    if not isinstance(new_name, str) or not _PROFILE_ID_RE.match(new_name):
+    if not isinstance(new_name, str) or not PROFILE_ID_RE.match(new_name):
         return web.json_response({"error": "invalid_new_name"}, status=400)
     try:
         path = fn(name, new_name)
@@ -212,7 +210,7 @@ async def delete_profile(request: web.Request) -> web.Response:
     if fn is None:
         return web.json_response({"error": "upstream_unavailable"}, status=503)
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     try:
         path = fn(name, yes=True)
@@ -227,7 +225,7 @@ async def delete_profile(request: web.Request) -> web.Response:
 @router.get("/api/profiles/{name}/soul")
 async def get_soul(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -244,7 +242,7 @@ async def get_soul(request: web.Request) -> web.Response:
 @router.put("/api/profiles/{name}/soul")
 async def put_soul(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -282,7 +280,7 @@ def _memory_path(name: str, tab: str) -> Path | None:
 @router.get("/api/profiles/{name}/memory/{tab}")
 async def get_memory(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     tab = request.match_info["tab"]
     if tab not in _MEMORY_FILES:
@@ -301,7 +299,7 @@ async def get_memory(request: web.Request) -> web.Response:
 @router.put("/api/profiles/{name}/memory/{tab}")
 async def put_memory(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     tab = request.match_info["tab"]
     if tab not in _MEMORY_FILES:
@@ -343,7 +341,7 @@ async def post_active(request: web.Request) -> web.Response:
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
     name = body.get("name")
-    if not isinstance(name, str) or not _PROFILE_ID_RE.match(name):
+    if not isinstance(name, str) or not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     try:
         set_active(name)
@@ -365,7 +363,7 @@ async def post_active(request: web.Request) -> web.Response:
 @router.get("/api/profiles/{name}/config")
 async def get_profile_config(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -386,7 +384,7 @@ async def get_profile_config(request: web.Request) -> web.Response:
 @router.put("/api/profiles/{name}/config")
 async def put_profile_config(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -440,7 +438,7 @@ async def put_profile_config(request: web.Request) -> web.Response:
 @router.get("/api/profiles/{name}/config/values")
 async def get_profile_config_values(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -463,7 +461,7 @@ async def get_profile_config_values(request: web.Request) -> web.Response:
 @router.put("/api/profiles/{name}/config/values")
 async def put_profile_config_values(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -526,7 +524,7 @@ async def get_profile_personalities(request: web.Request) -> web.Response:
     ``{description, system_prompt}`` dict. Read-only — the *active* overlay is a
     runtime, per-chat choice (the ``/personality`` picker), not a profile setting."""
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     profile_dir = _profile_dir(name)
     if profile_dir is None:
@@ -570,7 +568,7 @@ async def export_profile_route(request: web.Request) -> web.Response:
     if fn is None:
         return web.json_response({"error": "upstream_unavailable"}, status=503)
     name = request.match_info["name"]
-    if not _PROFILE_ID_RE.match(name):
+    if not PROFILE_ID_RE.match(name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
     if _profile_dir(name) is None:
         return web.json_response({"error": "upstream_unavailable"}, status=503)
@@ -624,7 +622,7 @@ async def import_profile_route(request: web.Request) -> web.Response:
         return web.json_response({"error": "no_file"}, status=400)
     if len(archive_bytes) > _IMPORT_MAX_BYTES:
         return web.json_response({"error": "too_large"}, status=413)
-    if override_name is not None and not _PROFILE_ID_RE.match(override_name):
+    if override_name is not None and not PROFILE_ID_RE.match(override_name):
         return web.json_response({"error": "invalid_profile_name"}, status=400)
 
     def _do() -> str:

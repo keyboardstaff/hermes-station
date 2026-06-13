@@ -13,6 +13,7 @@ import time
 from aiohttp import web
 
 from server import lifecycle
+from server.lib.route_helpers import PROFILE_ID_RE
 from server.ws import get_ws_manager
 
 logger = logging.getLogger(__name__)
@@ -118,16 +119,13 @@ async def post_gateway_restart(request: web.Request) -> web.Response:
     return web.json_response(out, status=status)
 
 
-_PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
-
-
 async def _post_profile_gateway(request: web.Request, action: str) -> web.Response:
     try:
         body = await request.json()
     except Exception:
         return web.json_response({"ok": False, "reason": "invalid_json"}, status=400)
     profile = body.get("profile")
-    if not isinstance(profile, str) or not _PROFILE_ID_RE.match(profile):
+    if not isinstance(profile, str) or not PROFILE_ID_RE.match(profile):
         return web.json_response({"ok": False, "reason": "invalid_profile"}, status=400)
     try:
         out = await asyncio.to_thread(lifecycle.spawn_profile_gateway, profile, action)

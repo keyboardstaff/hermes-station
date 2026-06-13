@@ -262,12 +262,20 @@ export function useRunsStream() {
             // only on a click/refresh. The provisionalTitles fallback covers the
             // gap so the row never reads "Untitled" in between.
             queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
-            for (const ms of [3000, 8000, 18000]) {
+            // Refetch a few more times as the run's auto-title lands
+            // asynchronously. Track the timer ids so they can be cancelled if
+            // the hook unmounts or detaches before they fire.
+            const titleTimers = [3000, 8000, 18000].map((ms) =>
               setTimeout(
                 () => queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] }),
                 ms,
-              );
-            }
+              )
+            );
+            // Register cleanup so unmount / detach doesn't fire stale queries.
+            const prevOff = offRunEventRef.current;
+            offRunEventRef.current = prevOff
+              ? () => { titleTimers.forEach(clearTimeout); prevOff(); }
+              : () => titleTimers.forEach(clearTimeout);
 
             // Fill tool-result bodies from the DB by tool_call_id — keeps the live
             // bubble (incl. reasoning / approval notices) but lands the persisted

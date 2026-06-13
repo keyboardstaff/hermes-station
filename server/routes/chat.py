@@ -16,16 +16,15 @@ from typing import Any
 
 from aiohttp import web
 
-from server.lib.route_helpers import SESSION_ID_RE, coerce_int_arg
+from server.lib.route_helpers import SESSION_ID_RE, PROFILE_ID_RE, coerce_int_arg
 from server.lib.state_db import db, db_for_home, run_db
 
 logger = logging.getLogger(__name__)
 
 router = web.RouteTableDef()
 
-_KNOWN_SOURCE_PREFIX_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,32}$")
+# Single pattern covers both source-filter tokens and CSV-split validation.
 _SOURCE_TOKEN_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,32}$")
-_PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _VALID_SEARCH_SORTS = frozenset({"newest", "oldest"})
 
 
@@ -50,7 +49,7 @@ def _session_db(request: web.Request) -> tuple[Any, web.Response | None]:
     raw = request.query.get("profile")
     if not raw or raw == "default":
         return db(), None
-    if not _PROFILE_ID_RE.match(raw):
+    if not PROFILE_ID_RE.match(raw):
         return None, web.json_response({"error": "invalid_profile"}, status=400)
     home = resolve_profile_home(raw)
     return (db() if home is None else db_for_home(home)), None
@@ -107,7 +106,7 @@ async def list_sessions(request: web.Request) -> web.Response:
     limit = coerce_int_arg(request.query.get("limit"), 50, lo=1, hi=5000)
     offset = coerce_int_arg(request.query.get("offset"), 0, lo=0, hi=1_000_000)
     source = request.query.get("source") or None
-    if source is not None and not _KNOWN_SOURCE_PREFIX_RE.match(source):
+    if source is not None and not _SOURCE_TOKEN_RE.match(source):
         return web.json_response({"error": "invalid_source"}, status=400)
 
     order_by_last_active = (request.query.get("sort") or "started_at") == "last_active"

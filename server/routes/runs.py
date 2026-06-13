@@ -12,16 +12,12 @@ from pathlib import Path
 from aiohttp import web
 
 from server import runs
-from server.lib.route_helpers import SESSION_ID_RE
+from server.lib.route_helpers import SESSION_ID_RE, PROFILE_ID_RE
 from server.routes.upload import uploads_root
 from server.ws import WSConnection
 from server.ws_dispatch import register
 
 logger = logging.getLogger(__name__)
-
-# Mirrors hermes_cli.profiles validation (also in routes/profiles.py,
-# routes/lifecycle.py) — keep in sync if upstream widens the charset.
-_PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
 @register("run.stop")
@@ -173,7 +169,7 @@ async def create_run(request: web.Request) -> web.Response:
         return web.json_response({"error": "invalid_reasoning_effort"}, status=400)
     if provider is not None and not isinstance(provider, str):
         return web.json_response({"error": "invalid_provider"}, status=400)
-    if profile is not None and (not isinstance(profile, str) or not _PROFILE_ID_RE.match(profile)):
+    if profile is not None and (not isinstance(profile, str) or not PROFILE_ID_RE.match(profile)):
         return web.json_response({"error": "invalid_profile"}, status=400)
 
     history = body.get("conversation_history") or []

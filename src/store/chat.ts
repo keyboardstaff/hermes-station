@@ -468,13 +468,9 @@ export const useChatStore = create<ChatState>()(
   setHistoryPending: (v) => set({ isHistoryPending: v }),
   setPendingApproval: (p) => set({ pendingApproval: p }),
   setProvisionalTitle: (sessionId, title) =>
-    set((s) => {
-      const next: Record<string, string> = { ...s.provisionalTitles, [sessionId]: title };
-      // Bound the map (persisted): keep the most-recently-inserted ~60.
-      const keys = Object.keys(next);
-      if (keys.length > 60) for (const k of keys.slice(0, keys.length - 60)) delete next[k];
-      return { provisionalTitles: next };
-    }),
+    set((s) => ({
+      provisionalTitles: trimMap({ ...s.provisionalTitles, [sessionId]: title }, 60),
+    })),
   setPendingRegenerate: (v) => set({ pendingRegenerate: v }),
   setPendingBranchGroup: (g) => set({ pendingBranchGroup: g }),
   supersedeTurn: (userIndex) =>

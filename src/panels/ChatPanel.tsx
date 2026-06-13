@@ -108,9 +108,7 @@ export default function ChatPanel() {
       return next;
     });
   }, []);
-  const isTransitioningOut = false;
-
-  const onPanelDragOver = useCallback((e: React.DragEvent) => {
+const onPanelDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.some((t) => t === "Files")) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
@@ -295,7 +293,6 @@ export default function ChatPanel() {
             <ChatStream
               messages={messages}
               isLoadingHistory={isHistoryPending}
-              isTransitioningOut={isTransitioningOut}
             />
           </AssistantRuntimeProvider>
 

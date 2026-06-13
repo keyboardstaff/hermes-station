@@ -8,14 +8,13 @@ import HermesMark from "@/components/ui/HermesMark";
 interface ChatStreamProps {
   messages: ChatMessage[];
   isLoadingHistory?: boolean;
-  isTransitioningOut?: boolean;
 }
 
 // ChatStream owns its own full-height loading / empty / transition states (with
 // spinner + session-switch animations); the bubble-present branch delegates to
 // AssistantThread (assistant-ui runtime) for the transcript itself.
 
-export default function ChatStream({ messages, isLoadingHistory, isTransitioningOut }: ChatStreamProps) {
+export default function ChatStream({ messages, isLoadingHistory }: ChatStreamProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
@@ -127,16 +126,11 @@ export default function ChatStream({ messages, isLoadingHistory, isTransitioning
     return () => window.clearTimeout(timer);
   }, [pendingScrollMessageId, messages, setPendingScrollMessageId]);
 
-  const showLoading = Boolean(isLoadingHistory) || isTransitioningOut;
+  const showLoading = Boolean(isLoadingHistory);
   const showEmpty = !showLoading && messages.length === 0;
-  
-  // Determine animation class based on transition state
-  let containerClassName = "animate-contentUp";
-  if (isTransitioningOut) {
-    containerClassName = "animate-sessionFadeOut";
-  } else if (!showLoading && messages.length > 0) {
-    containerClassName = "animate-sessionFadeIn";
-  }
+  const containerClassName = showLoading || messages.length === 0
+    ? "animate-contentUp"
+    : "animate-sessionFadeIn";
 
   return (
     <div className={`hms-chat-stream ${containerClassName}`}>
