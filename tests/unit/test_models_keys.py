@@ -457,7 +457,12 @@ async def test_get_fallback_chain(app_server) -> None:
         {"provider": "openrouter", "model": "anthropic/claude-sonnet-4"},
         {"provider": "openai", "model": "gpt-4o"},
     ]}
-    with patch.object(models_mod.shim.models, "load_config", lambda: dict(cfg)):
+    # Patch BOTH shim functions the route uses — `fallback_chain` is None when
+    # hermes-agent isn't installed (CI), which would short-circuit to an empty
+    # chain. The stub mirrors upstream: read the modern `fallback_providers` key.
+    with patch.object(models_mod.shim.models, "load_config", lambda: dict(cfg)), \
+         patch.object(models_mod.shim.models, "fallback_chain",
+                      lambda c: c.get("fallback_providers") or []):
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"{app_server}/api/models/fallback") as r:
                 assert r.status == 200

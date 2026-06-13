@@ -171,7 +171,6 @@ function ProfileRow({
         padding: "6px 8px",
         background: selected ? "var(--hms-border)" : "transparent",
         border: "1px solid transparent",
-        borderLeft: `3px solid ${profile.is_default ? "var(--hms-accent)" : "var(--hms-muted)"}`,
         borderRadius: 6,
         cursor: "pointer",
         color: "var(--hms-text)",

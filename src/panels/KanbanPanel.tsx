@@ -119,6 +119,10 @@ export default function KanbanPanel() {
             <Button size="sm" onClick={() => nudge.mutate()} disabled={nudge.isPending}>
               <Zap size={12} />{k?.nudge ?? "Nudge dispatcher"}
             </Button>
+            {/* New board sits right of Nudge (not in the topbar). */}
+            <Button size="sm" variant="primary" onClick={onNewBoard}>
+              <Plus size={12} />{k?.newBoard ?? "New board"}
+            </Button>
             {(query || tenant !== "all" || assignee !== "all") && (
               <Button size="sm" onClick={clearFilters}><X size={11} />{k?.clearFilters ?? "Clear filters"}</Button>
             )}
@@ -127,12 +131,6 @@ export default function KanbanPanel() {
       />
 
       <div style={{ flex: 1, overflow: "auto", padding: "var(--hms-space-4)" }}>
-        {/* New board lives in the content (not the topbar) — a board-level action. */}
-        <div style={{ marginBottom: "var(--hms-space-3)" }}>
-          <Button size="sm" variant="primary" onClick={onNewBoard}>
-            <Plus size={12} />{k?.newBoard ?? "New board"}
-          </Button>
-        </div>
         {tasksQuery.isError ? (
           <div style={{ padding: "var(--hms-space-6)", color: "var(--hms-error-text)", fontSize: "var(--hms-text-sm)" }}>
             {k?.errorLoading ?? "Failed to load board."}

@@ -167,25 +167,25 @@ export default function CronPanel() {
         title={t.nav.cron}
         showProfileScope
         context={
-          <div className="hms-cron-search">
-            <Search size={13} className="hms-cron-search-icon" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={c?.searchPlaceholder ?? "Search jobs…"}
-              className="hms-cron-search-input"
-            />
+          <div className="hms-cron-toolbar">
+            <div className="hms-cron-search">
+              <Search size={13} className="hms-cron-search-icon" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={c?.searchPlaceholder ?? "Search jobs…"}
+                className="hms-cron-search-input"
+              />
+            </div>
+            {/* New job sits right of the search (not in the topbar). */}
+            <Button size="sm" variant="primary" onClick={openBlank}>
+              <Plus size={13} />{c?.newJob ?? "New job"}
+            </Button>
           </div>
         }
       />
       <CronInfoBar />
-      {/* New job lives in the content (not the topbar). */}
-      <div className="hms-cron-newjob">
-        <Button size="sm" variant="primary" onClick={openBlank}>
-          <Plus size={13} />{c?.newJob ?? "New job"}
-        </Button>
-      </div>
       <div className="hms-cron-list">
         {isLoading && (
           <div className="hms-cron-msg">{c?.loading ?? "Loading…"}</div>

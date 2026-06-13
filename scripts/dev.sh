@@ -93,15 +93,26 @@ EOF
 fi
 echo "→ Dev backend socket: $HMS_DEV_SOCK"
 
-echo "→ Starting Vite (port 3131)…"
-pnpm dev:client &
-PIDS+=($!)
-
+# Start the backend FIRST and wait for it to bind the socket, then start Vite —
+# otherwise Vite proxies the first /api/* requests into a socket nothing is
+# listening on yet (the transient "ECONNREFUSED .../station-dev.sock" errors).
 echo "→ Starting Python dev backend (Unix socket)…"
 # HMS_ENV=dev enables permissive localhost CORS so Vite can talk to aiohttp.
 # Entry point is the `dev` subcommand of the `server` package CLI
 # (server/cli.py); there is no standalone `server.dev_server` module.
 HMS_ENV=dev "$PY" -m server dev --reload &
+PIDS+=($!)
+
+echo "→ Waiting for the dev backend to accept connections…"
+for _ in $(seq 1 100); do  # up to ~10s (100 × 0.1s)
+    if [[ -S "$HMS_DEV_SOCK" ]] && "$PY" -c "import socket,sys; s=socket.socket(socket.AF_UNIX); sys.exit(0 if s.connect_ex('$HMS_DEV_SOCK')==0 else 1)" 2>/dev/null; then
+        break
+    fi
+    sleep 0.1
+done
+
+echo "→ Starting Vite (port 3131)…"
+pnpm dev:client &
 PIDS+=($!)
 
 wait

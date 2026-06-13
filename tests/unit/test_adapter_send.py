@@ -6,6 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+# server.adapter imports `gateway.config` (upstream's Platform type), only
+# present with hermes-agent installed — skip in the bare CI env.
+pytest.importorskip("gateway", reason="requires upstream hermes-agent (gateway.config)")
+
 
 @pytest.mark.asyncio
 async def test_send_broadcasts_platform_notice(quiet_hms_env) -> None:
