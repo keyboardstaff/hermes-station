@@ -381,20 +381,17 @@ export interface Translations {
   };
 
   agents: {
+    title: string;
     subtitle: string;
-    addAgent: string;
-    clearRoom: string;
-    rooms: string;
-    newRoom: string;
-    deleteRoom: string;
-    renameRoomPrompt: string;
-    noMembers: string;
-    noMembersHint: string;
-    respondsLabel: string;
-    placeholder: string;
-    remove: string;
-    loading: string;
-    errorLoading: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    files: string;
+    ageNow: string;
+    updatedPrefix: string;
+    agentsLabel: string;
+    activeLabel: string;
+    failedLabel: string;
+    toolsLabel: string;
   };
 
   artifacts: {

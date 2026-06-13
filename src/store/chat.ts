@@ -22,7 +22,6 @@ interface ChatState {
   /** Transient: a DB message_id the chat view should scroll to (from search). */
   pendingScrollMessageId: number | null;
   /** Agents room: runId → the profile-agent that turn was routed to (attribution). */
-  agentByRun: Record<string, string>;
   /** sessionId → cumulative token usage from that session's last completed
    *  run — feeds the Composer context ring. Persisted (bounded) so the ring
    *  survives refresh and session switches. */
@@ -101,7 +100,6 @@ interface ChatState {
   setSelectedProvider: (p: string | null) => void;
   setReasoningEffort: (v: string | null) => void;
   setPendingScrollMessageId: (id: number | null) => void;
-  setAgentForRun: (runId: string, agent: string) => void;
   setUsageForSession: (sessionId: string, u: ChatState["usageBySession"][string]) => void;
   setRunStartedAt: (runId: string, ms: number) => void;
   setHistoryPending: (v: boolean) => void;
@@ -167,7 +165,6 @@ export const useChatStore = create<ChatState>()(
   selectedProvider: null,
   reasoningEffort: null,
   pendingScrollMessageId: null,
-  agentByRun: {},
   usageBySession: {},
   runStartedAt: {},
   approvalNotices: {},
@@ -217,7 +214,6 @@ export const useChatStore = create<ChatState>()(
           role: "assistant",
           content: "",
           segments: [{ type: "text", content: delta }],
-          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
@@ -255,7 +251,6 @@ export const useChatStore = create<ChatState>()(
           role: "assistant",
           content: "",
           segments: [{ type: "reasoning", content: text }],
-          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
@@ -288,7 +283,6 @@ export const useChatStore = create<ChatState>()(
           role: "assistant",
           content: "",
           segments: [toolSeg],
-          ...(s.agentByRun[s.activeTurnId ?? ""] ? { agent: s.agentByRun[s.activeTurnId ?? ""] } : {}),
           ...(s.pendingBranchGroup ? { branchGroupId: s.pendingBranchGroup } : {}),
           createdAt: Date.now(),
           streaming: true,
@@ -467,7 +461,6 @@ export const useChatStore = create<ChatState>()(
   setSelectedProvider: (p) => set({ selectedProvider: p }),
   setReasoningEffort: (v) => set({ reasoningEffort: v }),
   setPendingScrollMessageId: (id) => set({ pendingScrollMessageId: id }),
-  setAgentForRun: (runId, agent) => set((s) => ({ agentByRun: { ...s.agentByRun, [runId]: agent } })),
   setUsageForSession: (sessionId, u) =>
     set((s) => ({ usageBySession: trimMap({ ...s.usageBySession, [sessionId]: u }, 60) })),
   setRunStartedAt: (runId, ms) =>

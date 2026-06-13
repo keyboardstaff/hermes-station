@@ -1,30 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ChevronDown, ChevronRight, XCircle, Copy, Check,
   AlertTriangle, Clock, MinusCircle,
 } from "lucide-react";
 import type { ToolCall } from "@/lib/hermes-types";
+import BrailleSpinner from "@/components/ui/BrailleSpinner";
 import { toolMeta } from "@/lib/tool-meta";
 import { useEnterAnimation } from "@/hooks/useEnterAnimation";
 import { useElapsedSeconds, formatElapsed } from "@/hooks/useElapsedSeconds";
 import { useToolViewStore } from "@/store/app";
 
-// Braille spinner frames — mirrors desktop's BrailleSpinner (which mirrors the
-// Ink TUI) so the running state reads the same across surfaces.
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-function BrailleSpinner() {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), 80);
-    return () => window.clearInterval(id);
-  }, []);
-  return (
-    <span role="status" aria-label="Running" className="hms-tool-spinner">
-      {SPINNER_FRAMES[frame]}
-    </span>
-  );
-}
 
 /** Leading glyph, desktop-style: running → spinner; failure states announce
  *  themselves; success is silent — the tool's own icon in a quiet tone. */

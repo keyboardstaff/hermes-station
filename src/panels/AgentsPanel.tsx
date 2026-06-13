@@ -1,217 +1,214 @@
-import { useEffect, useRef, useState } from "react";
-import { Users, Plus, X, Trash2, MessageSquare } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { useAgentRoomStore, currentRoom } from "@/store/agentRoom";
-import { useAgentRoomStream } from "@/hooks/useAgentRoomStream";
-import { useProfiles } from "@/hooks/useProfiles";
-import ChatStream from "@/components/chat/ChatStream";
-import Composer from "@/components/chat/Composer";
-import PageTopBar from "@/components/layout/PageTopBar";
-import Button from "@/components/ui/Button";
-import IconButton from "@/components/ui/IconButton";
-import Card from "@/components/ui/Card";
+import { useChatStore } from "@/store/chat";
+import {
+  useSubagents, buildSubagentTree,
+  type SubagentNode, type SubagentStatus, type SubagentStreamEntry,
+} from "@/store/subagents";
+import BrailleSpinner from "@/components/ui/BrailleSpinner";
+import { useEnterAnimation } from "@/hooks/useEnterAnimation";
+import { useElapsedSeconds, formatElapsed } from "@/hooks/useElapsedSeconds";
 
 /**
- * AgentsPanel — a list of ISOLATED, persisted multi-agent rooms.
- *
- * Left: the room list (create / select / rename / delete). Right: the current
- * room — its roster + transcript + the shared /chat Composer. Each room is fully
- * decoupled from /chat: its conversation lives in `useAgentRoomStore` (persisted)
- * and streams via `useAgentRoomStream` (each turn fans out to the @mentioned
- * members under their profiles, with the room's prior turns as
- * conversation_history). Route a turn with `@member` mentions or the responder.
+ * AgentsPanel — subagent observability for the active session (desktop
+ * parity). The agent's delegated subagents stream lifecycle/progress events
+ * (relayed from delegate_tool through the parent's tool-progress callback,
+ * broadcast on the run channel by runs.py); this renders them as a live tree.
  */
+
+type ML = NonNullable<ReturnType<typeof useI18n>["t"]["agents"]>;
+
+function StatusGlyph({ status }: { status: SubagentStatus }) {
+  if (status === "running" || status === "queued") {
+    return <BrailleSpinner className="hms-subagent-spinner" />;
+  }
+  if (status === "failed" || status === "interrupted") {
+    return <AlertCircle size={14} className="hms-subagent-glyph" data-tone="error" />;
+  }
+  return <CheckCircle2 size={14} className="hms-subagent-glyph" data-tone="ok" />;
+}
+
 export default function AgentsPanel() {
   const { t } = useI18n();
-  const g = t.agents;
-  const rooms = useAgentRoomStore((s) => s.rooms);
-  const currentRoomId = useAgentRoomStore((s) => s.currentRoomId);
-  const room = useAgentRoomStore(currentRoom);
-  const {
-    addMember, removeMember, setResponder, clearConversation,
-    createRoom, deleteRoom, renameRoom, selectRoom,
-  } = useAgentRoomStore();
-  const { send, stop } = useAgentRoomStream();
-  const profilesQuery = useProfiles();
-  const profileNames: string[] = (profilesQuery.data?.profiles ?? []).map((p) => p.name);
+  const a = t.agents;
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const bySession = useSubagents((s) => s.bySession);
 
-  const { members, responder, messages, activeRunId, sessionIds } = room;
-  const addable = profileNames.filter((n) => !members.includes(n));
-  const running = activeRunId != null;
-  const target = responder ?? members[0] ?? null;
+  const items = useMemo(
+    () => (activeSessionId ? bySession[activeSessionId] ?? [] : []),
+    [activeSessionId, bySession],
+  );
+  const tree = useMemo(() => buildSubagentTree(items), [items]);
 
-  const [addOpen, setAddOpen] = useState(false);
-  const addRef = useRef<HTMLDivElement>(null);
+  const flat = useMemo(() => {
+    const out: SubagentNode[] = [];
+    const walk = (nodes: SubagentNode[]) => nodes.forEach((n) => { out.push(n); walk(n.children); });
+    walk(tree);
+    return out;
+  }, [tree]);
 
+  const active = flat.filter((n) => n.status === "running" || n.status === "queued").length;
+
+  // Tick the relative "updated ago" labels while anything is live.
+  const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    if (!addOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (addRef.current && !addRef.current.contains(e.target as Node)) setAddOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [addOpen]);
-
-  const handleClearRoom = () => {
-    for (const sid of sessionIds) {
-      void fetch(`/api/dashboard/sessions/${encodeURIComponent(sid)}`, {
-        method: "DELETE",
-        headers: { "X-HMS-CSRF": "1" },
-      }).catch(() => { /* best-effort */ });
-    }
-    clearConversation();
-  };
-
-  const handleRename = (id: string, name: string) => {
-    const next = window.prompt(g.renameRoomPrompt, name);
-    if (next != null && next.trim()) renameRoom(id, next.trim());
-  };
+    if (active <= 0) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
 
   return (
-    <div className="hms-agents-root">
-      <PageTopBar
-        title={t.nav.agents}
-        subtitle={g.subtitle}
-        actions={
+    <div className="hms-subagents-root">
+      <div className="hms-subagents-body">
+        <header className="hms-subagents-head">
+          <h2 className="hms-subagents-title">{a.title}</h2>
+          <p className="hms-subagents-subtitle">{a.subtitle}</p>
+        </header>
+
+        {tree.length === 0 ? (
+          <div className="hms-subagents-empty">
+            <Sparkles size={24} className="hms-subagents-empty-icon" />
+            <p className="hms-subagents-empty-title">{a.emptyTitle}</p>
+            <p className="hms-subagents-empty-desc">{a.emptyDesc}</p>
+          </div>
+        ) : (
           <>
-            {messages.length > 0 && (
-              <Button type="button" size="sm" onClick={handleClearRoom} title={g.clearRoom}>
-                <Trash2 size={13} /> {g.clearRoom}
-              </Button>
-            )}
-            <div ref={addRef} className="hms-agents-addwrap">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setAddOpen((o) => !o)}
-                disabled={addable.length === 0}
-              >
-                <Plus size={13} /> {g.addAgent}
-              </Button>
-              {addOpen && addable.length > 0 && (
-                <div className="hms-agents-addmenu">
-                  {addable.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => { addMember(name); setAddOpen(false); }}
-                      className="hms-sidebar-row hms-agents-additem"
-                    >
-                      <Users size={13} className="hms-agents-icon-accent" /> {name}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <p className="hms-subagents-summary">{summaryLine(flat, a)}</p>
+            <div className="hms-subagents-tree">
+              {tree.map((node) => (
+                <SubagentRow key={node.id} node={node} depth={0} nowMs={nowMs} a={a} />
+              ))}
             </div>
           </>
-        }
-      />
-
-      <div className="hms-agents-body">
-        {/* Room list */}
-        <Card padding={false} className="hms-agents-roomlist">
-          <div className="hms-agents-roomlist-head">
-            {g.rooms}
-            <IconButton type="button" size="sm" onClick={() => createRoom()} title={g.newRoom} aria-label={g.newRoom}>
-              <Plus size={14} />
-            </IconButton>
-          </div>
-          <div className="hms-agents-roomlist-scroll">
-            {rooms.map((r) => {
-              const active = r.id === currentRoomId;
-              return (
-                <div
-                  key={r.id}
-                  onClick={() => selectRoom(r.id)}
-                  onDoubleClick={() => handleRename(r.id, r.name)}
-                  className="hms-sidebar-row hms-agents-room"
-                  data-active={active}
-                >
-                  <MessageSquare size={13} className="hms-agents-room-icon" />
-                  <span className="hms-agents-room-name">{r.name}</span>
-                  {r.activeRunId && <span className="hms-agents-dot hms-agents-dot--sm" />}
-                  {rooms.length > 1 && (
-                    <IconButton
-                      type="button"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); deleteRoom(r.id); }}
-                      title={g.deleteRoom}
-                    >
-                      <X size={12} />
-                    </IconButton>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Current room */}
-        <Card padding={false} className="hms-agents-room-card">
-          <div className="hms-agents-room-head">
-            <div className="hms-agents-room-title-wrap">
-              <MessageSquare size={14} className="hms-agents-icon-accent" />
-              <div className="hms-agents-room-title">{room.name}</div>
-            </div>
-            <div className="hms-agents-room-meta">
-              {target && (
-                <span className="hms-agents-responds">
-                  {g.respondsLabel}: <span className="hms-agents-responds-target">@{target}</span>
-                </span>
-              )}
-              {running && <span className="hms-agents-dot" />}
-            </div>
-          </div>
-
-          {/* Roster — members as chips; click to set the responder. */}
-          {members.length > 0 && (
-            <div className="hms-agents-roster">
-              <span className="hms-agents-roster-label">{g.respondsLabel}:</span>
-              {members.map((name) => {
-                const isResp = target === name;
-                return (
-                  <span key={name} className="hms-agents-chip" data-resp={isResp || undefined}>
-                    <button
-                      type="button"
-                      onClick={() => setResponder(name)}
-                      className="hms-agents-chip-button"
-                    >
-                      @{name}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeMember(name)}
-                      title={g.remove}
-                      className="hms-agents-chip-remove"
-                    >
-                      <X size={11} />
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {members.length === 0 ? (
-            <div className="hms-agents-empty">
-              <Users size={36} className="hms-agents-icon-muted" />
-              <div className="hms-agents-empty-title">{g.noMembers}</div>
-              <div className="hms-agents-empty-hint">{g.noMembersHint}</div>
-            </div>
-          ) : (
-            <>
-              <ChatStream messages={messages} />
-              <Composer
-                onSend={(text, attachments) => void send(text, attachments)}
-                onStop={() => void stop()}
-                running={running}
-                sessionId={null}
-                mentionNames={members}
-              />
-            </>
-          )}
-        </Card>
+        )}
       </div>
+    </div>
+  );
+}
+
+function summaryLine(flat: SubagentNode[], a: ML): string {
+  const active = flat.filter((n) => n.status === "running" || n.status === "queued").length;
+  const failed = flat.filter((n) => n.status === "failed" || n.status === "interrupted").length;
+  const tools = flat.reduce((s, n) => s + (n.toolCount ?? 0), 0);
+  const tokens = flat.reduce((s, n) => s + (n.inputTokens ?? 0) + (n.outputTokens ?? 0), 0);
+  const cost = flat.reduce((s, n) => s + (n.costUsd ?? 0), 0);
+  return [
+    `${flat.length} ${a.agentsLabel}`,
+    active > 0 ? `${active} ${a.activeLabel}` : "",
+    failed > 0 ? `${failed} ${a.failedLabel}` : "",
+    tools > 0 ? `${tools} ${a.toolsLabel}` : "",
+    tokens > 0 ? fmtTokens(tokens) : "",
+    cost > 0 ? `$${cost.toFixed(2)}` : "",
+  ].filter(Boolean).join(" · ");
+}
+
+function fmtTokens(value: number): string {
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}K` : String(value);
+}
+
+function fmtAge(updatedAt: number, nowMs: number, a: ML): string {
+  const s = Math.max(0, Math.round((nowMs - updatedAt) / 1000));
+  if (s < 2) return a.ageNow;
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h`;
+}
+
+const STREAM_TONE: Record<SubagentStreamEntry["kind"], string> = {
+  progress: "muted",
+  summary: "ok",
+  thinking: "muted",
+  tool: "default",
+};
+
+function SubagentRow({
+  node, depth, nowMs, a,
+}: {
+  node: SubagentNode;
+  depth: number;
+  nowMs: number;
+  a: ML;
+}) {
+  const running = node.status === "running" || node.status === "queued";
+  const elapsed = useElapsedSeconds(running, `subagent:${node.id}`);
+  const enterRef = useEnterAnimation(true, `subagent-row:${node.id}`);
+  const [open, setOpen] = useState(() => running || depth < 2);
+
+  useEffect(() => { if (running) setOpen(true); }, [running]);
+
+  const duration = typeof node.durationSeconds === "number"
+    ? Math.max(0, Math.round(node.durationSeconds))
+    : elapsed;
+  const tokens = (node.inputTokens ?? 0) + (node.outputTokens ?? 0);
+  const subtitle = [
+    node.model,
+    duration > 0 ? formatElapsed(duration) : "",
+    node.toolCount ? `${node.toolCount} ${a.toolsLabel}` : "",
+    tokens > 0 ? fmtTokens(tokens) : "",
+    `${a.updatedPrefix} ${fmtAge(node.updatedAt, nowMs, a)}`,
+  ].filter(Boolean).join(" · ");
+
+  const visibleRows = open ? node.stream.slice(-10) : node.stream.slice(-2);
+  const fileLines = [
+    ...node.filesWritten.map((p) => `+ ${p}`),
+    ...node.filesRead.map((p) => `· ${p}`),
+  ];
+
+  return (
+    <div ref={enterRef} className="hms-subagent-row" data-depth={depth > 0 ? "nested" : undefined}>
+      <button
+        type="button"
+        className="hms-subagent-head"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="hms-subagent-status"><StatusGlyph status={node.status} /></span>
+        <span className="hms-subagent-main">
+          <span className="hms-subagent-goal" data-running={running || undefined}>{node.goal}</span>
+          {subtitle && <span className="hms-subagent-subtitle">{subtitle}</span>}
+        </span>
+        {running && <span className="hms-subagent-timer">{formatElapsed(duration)}</span>}
+      </button>
+
+      {visibleRows.length > 0 && (
+        <div className="hms-subagent-stream">
+          {visibleRows.map((entry, i) => (
+            <div
+              key={`${entry.kind}:${entry.at}:${i}`}
+              className="hms-subagent-stream-line"
+              data-tone={entry.isError ? "error" : STREAM_TONE[entry.kind]}
+              data-mono={entry.kind === "tool" || undefined}
+            >
+              <span className="hms-subagent-stream-glyph" aria-hidden>
+                {entry.isError ? "!" : entry.kind === "summary" ? "✓" : entry.kind === "thinking" ? "…" : "·"}
+              </span>
+              <span className="hms-subagent-stream-text">{entry.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && fileLines.length > 0 && (
+        <div className="hms-subagent-files">
+          <p className="hms-subagent-files-label">{a.files}</p>
+          {fileLines.slice(0, 8).map((line) => (
+            <p key={line} className="hms-subagent-file">{line}</p>
+          ))}
+          {fileLines.length > 8 && (
+            <p className="hms-subagent-file" data-muted>{`+${fileLines.length - 8}`}</p>
+          )}
+        </div>
+      )}
+
+      {node.children.length > 0 && (
+        <div className="hms-subagent-children">
+          {node.children.map((child) => (
+            <SubagentRow key={child.id} node={child} depth={depth + 1} nowMs={nowMs} a={a} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

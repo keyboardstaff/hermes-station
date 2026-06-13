@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { toolResultsById, profileQuery } from "@/lib/load-session";
 import { resolveRunProfile } from "@/lib/run-profile";
 import { useProfileScope, effectiveScopeName } from "@/store/profile-scope";
+import { useSubagents, SUBAGENT_EVENT_TYPES, SUBAGENT_CREATE_EVENTS } from "@/store/subagents";
 import type { SessionSummary } from "@/lib/hermes-types";
 import type { MessageRow } from "@/lib/session-messages";
 import { shouldApplyFrame, toolCallId, mapToolStatus } from "@/lib/run-events";
@@ -28,7 +29,6 @@ export function useRunsStream() {
     clearRunningForSession,
     renameMessageId,
     updateActiveSessionId,
-    setAgentForRun,
     selectedModel,
     selectedProvider,
     reasoningEffort,
@@ -185,6 +185,20 @@ export function useRunsStream() {
         const seqCheck = shouldApplyFrame(msg.seq, lastSeqRef.current);
         if (!seqCheck.apply) return;
         lastSeqRef.current = seqCheck.lastSeq;
+        // Subagent lifecycle/progress frames → the /agents tree (keyed by the
+        // session the frame names; the whole frame doubles as the payload).
+        if (msg.event && SUBAGENT_EVENT_TYPES.has(msg.event)) {
+          const sid = msg.session_id ?? useChatStore.getState().activeSessionId;
+          if (sid) {
+            useSubagents.getState().upsert(
+              sid,
+              msg as unknown as Record<string, unknown>,
+              SUBAGENT_CREATE_EVENTS.has(msg.event),
+              msg.event,
+            );
+          }
+          return;
+        }
         switch (msg.event) {
           case "message.delta":
             if (msg.delta) appendDelta(msg.delta);
@@ -394,7 +408,6 @@ export function useRunsStream() {
       input: string,
       attachments?: ComposerAttachment[],
       opts?: {
-        profileOverride?: string;
         truncateBeforeUserOrdinal?: number;
         /** In-session regenerate: supersedeTurn kept the producing user bubble
          *  in the transcript — don't append a duplicate optimistic one. An
@@ -424,7 +437,6 @@ export function useRunsStream() {
             name: a.name, content: a.content,
             isImage: a.isImage, isAudio: a.isAudio, isVideo: a.isVideo,
           })),
-          ...(opts?.profileOverride ? { agent: opts.profileOverride } : {}),
           createdAt: Date.now(),
         });
       }
@@ -463,7 +475,7 @@ export function useRunsStream() {
             .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
             ?.sessions.find((sx) => sx.session_id === currentSessionId)?.profile
         : undefined;
-      const runProfile = resolveRunProfile(opts?.profileOverride, sessionProfile, currentProfile);
+      const runProfile = resolveRunProfile(undefined, sessionProfile, currentProfile);
 
       const body: RunInput = {
         input: runInput,
@@ -497,9 +509,6 @@ export function useRunsStream() {
         }
         const data = await res.json();
         runId = data.run_id;
-        // Agents room: remember which agent this run belongs to so the streaming
-        // assistant bubble (turn-<runId>-assistant) gets attributed.
-        if (opts?.profileOverride) setAgentForRun(runId, opts.profileOverride);
       } catch (err) {
         appendMessage({
           id: `error-${Date.now()}`,
@@ -554,7 +563,7 @@ export function useRunsStream() {
       attachRun(runId);
     },
     [appendMessage, renameMessageId, setRunningForSession, updateActiveSessionId, queryClient,
-      selectedModel, selectedProvider, reasoningEffort, setActiveRunId, attachRun, setAgentForRun]
+      selectedModel, selectedProvider, reasoningEffort, setActiveRunId, attachRun]
   );
 
   const stopRun = useCallback(async () => {

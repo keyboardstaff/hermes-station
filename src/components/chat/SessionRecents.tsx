@@ -5,7 +5,6 @@ import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
-import { useAgentRoomStore } from "@/store/agentRoom";
 import { useProfileScope, filterSessionsByScope } from "@/store/profile-scope";
 import { useSidebarSearch } from "@/store/sidebar-search";
 import { useActiveProfile } from "@/hooks/useProfiles";
@@ -239,10 +238,6 @@ export default function SessionRecents({
   // is actually open). Elsewhere (e.g. the isolated /agents room) a stale active
   // highlight is misleading.
   const activeOnChat = useLocation().pathname === "/chat";
-  // Select the stable rooms array (a fresh flatMap()/Set each render would make
-  // zustand re-render forever); derive the id set with useMemo.
-  const agentRooms = useAgentRoomStore((s) => s.rooms);
-  const roomSessionIds = useMemo(() => new Set(agentRooms.flatMap((r) => r.sessionIds)), [agentRooms]);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -405,8 +400,6 @@ export default function SessionRecents({
   const sessions = (() => {
     const seen = new Set<string>();
     return [...inflightRows, ...dbSessions]
-      // Hide the isolated /agents room's own run sessions from /chat Recents.
-      .filter((s) => !roomSessionIds.has(s.session_id))
       .map((s) => (s.title?.trim() ? s : { ...s, title: provisionalTitles[s.session_id] }))
       .filter((s) => {
         if (seen.has(s.session_id)) return false;

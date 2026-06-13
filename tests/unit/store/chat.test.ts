@@ -45,23 +45,6 @@ describe("chat store", () => {
     if (seg?.type === "text") expect(seg.content).toBe("Hello world");
   });
 
-  it("stamps the streaming assistant bubble with the run's agent (agents room)", () => {
-    const s = useChatStore.getState();
-    s.setActiveTurn("run1");
-    s.setAgentForRun("run1", "coder");
-    s.appendDelta("hi");
-    const msg = useChatStore.getState().messages.find((m) => m.role === "assistant");
-    expect(msg?.agent).toBe("coder");
-  });
-
-  it("leaves the assistant bubble unattributed when no agent is set", () => {
-    const s = useChatStore.getState();
-    s.setActiveTurn("run2");
-    s.appendDelta("hi");
-    const msg = useChatStore.getState().messages.find((m) => m.role === "assistant");
-    expect(msg?.agent).toBeUndefined();
-  });
-
   it("clearMessages empties messages", () => {
     const { appendMessage, clearMessages } = useChatStore.getState();
     appendMessage({ id: "1", role: "user", content: "test", createdAt: 0 });

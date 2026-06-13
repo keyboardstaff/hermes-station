@@ -343,21 +343,6 @@
   padding: 4px 0;
 }
 
-.hms-chat-bubble-agent-note {
-  display: block;
-  margin-bottom: 4px;
-  font-size: var(--hms-text-xs);
-}
-
-.hms-chat-bubble-agent-note--user {
-  color: var(--hms-text-muted);
-}
-
-.hms-chat-bubble-agent-note--assistant {
-  color: var(--hms-accent);
-  font-weight: var(--hms-fw-semibold);
-}
-
 .hms-chat-bubble-actions {
   display: flex;
   gap: var(--hms-space-1);
@@ -1697,4 +1682,231 @@
 .hms-attach-snippet-desc {
   font-size: var(--hms-text-xs);
   color: var(--hms-text-muted);
+}
+
+/* ── Subagent observability tree (/agents) ─────────────────────────── */
+
+.hms-subagents-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.hms-subagents-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--hms-space-6);
+  max-width: 820px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hms-subagents-head {
+  margin-bottom: var(--hms-space-3);
+}
+
+.hms-subagents-title {
+  margin: 0;
+  font-size: var(--hms-text-body);
+  font-weight: 600;
+  color: var(--hms-text);
+}
+
+.hms-subagents-subtitle {
+  margin: 2px 0 0;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-subagents-summary {
+  margin: 0 0 var(--hms-space-4);
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-subagents-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--hms-space-3);
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.hms-subagents-empty-icon {
+  color: var(--hms-text-muted);
+  opacity: 0.6;
+}
+
+.hms-subagents-empty-title {
+  margin: 0;
+  font-size: var(--hms-text-sm);
+  font-weight: 600;
+  color: var(--hms-text);
+}
+
+.hms-subagents-empty-desc {
+  margin: 0;
+  max-width: 28rem;
+  font-size: var(--hms-text-xs);
+  line-height: 1.6;
+  color: var(--hms-text-muted);
+}
+
+.hms-subagents-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-5);
+}
+
+.hms-subagent-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  min-width: 0;
+}
+
+.hms-subagent-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hms-space-2);
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hms-subagent-status {
+  display: inline-flex;
+  align-items: center;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+.hms-subagent-spinner {
+  font-size: 0.95rem;
+  color: var(--hms-text-muted);
+  line-height: 1;
+}
+
+.hms-subagent-glyph[data-tone="error"] {
+  color: var(--hms-error-text);
+}
+
+.hms-subagent-glyph[data-tone="ok"] {
+  color: var(--hms-success);
+}
+
+.hms-subagent-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hms-subagent-goal {
+  font-size: var(--hms-text-sm);
+  font-weight: 500;
+  color: var(--hms-text);
+  overflow-wrap: anywhere;
+}
+
+.hms-subagent-goal[data-running] {
+  color: var(--hms-text-muted);
+}
+
+.hms-subagent-subtitle {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+}
+
+.hms-subagent-timer {
+  flex-shrink: 0;
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.hms-subagent-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 22px;
+}
+
+.hms-subagent-stream-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hms-space-2);
+  font-size: var(--hms-text-caption);
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.hms-subagent-stream-glyph {
+  flex-shrink: 0;
+  width: 0.8rem;
+  text-align: center;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-xs);
+}
+
+.hms-subagent-stream-text {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: var(--hms-text-muted);
+}
+
+.hms-subagent-stream-line[data-tone="default"] .hms-subagent-stream-text,
+.hms-subagent-stream-line[data-tone="ok"] .hms-subagent-stream-text {
+  color: var(--hms-text);
+}
+
+.hms-subagent-stream-line[data-tone="error"] .hms-subagent-stream-text,
+.hms-subagent-stream-line[data-tone="error"] .hms-subagent-stream-glyph {
+  color: var(--hms-error-text);
+}
+
+.hms-subagent-stream-line[data-mono] .hms-subagent-stream-text {
+  font-family: monospace;
+  font-size: var(--hms-text-xs);
+}
+
+.hms-subagent-files {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 22px;
+}
+
+.hms-subagent-files-label {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hms-text-muted);
+}
+
+.hms-subagent-file {
+  margin: 0;
+  font-family: monospace;
+  font-size: var(--hms-text-xs);
+  line-height: 1.5;
+  color: var(--hms-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.hms-subagent-children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-3);
+  padding-left: 22px;
 }

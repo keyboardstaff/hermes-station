@@ -33,22 +33,10 @@ export default function ChatBubble({ msg }: { msg: ChatMessage }) {
 
       <div className="hms-chat-bubble" data-role={isUser ? "user" : "assistant"}>
         {isUser ? (
-          <>
-            {msg.agent ? (
-              <span className="hms-chat-bubble-agent-note hms-chat-bubble-agent-note--user">
-                → @{msg.agent}
-              </span>
-            ) : null}
-            <UserMessageContent msg={msg} />
-          </>
+          <UserMessageContent msg={msg} />
         ) : (
           /* Assistant: segments-based; content fallback for system notices. */
           <>
-            {msg.agent ? (
-              <span className="hms-chat-bubble-agent-note hms-chat-bubble-agent-note--assistant">
-                @{msg.agent}
-              </span>
-            ) : null}
             {msg.segments && msg.segments.length > 0
               ? msg.segments.map((seg, i) =>
                   seg.type === "text"

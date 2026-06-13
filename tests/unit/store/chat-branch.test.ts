@@ -12,7 +12,6 @@ beforeEach(() => {
     messages: [],
     activeTurnId: null,
     pendingBranchGroup: null,
-    agentByRun: {},
   });
 });
 

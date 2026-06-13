@@ -118,14 +118,6 @@ function HmsBubble() {
         {!isUser && <div className="hms-chat-bubble-role">Assistant</div>}
 
         <div className="hms-chat-bubble" data-role={isUser ? "user" : "assistant"}>
-          {hms.agent ? (
-            <span
-              className={`hms-chat-bubble-agent-note hms-chat-bubble-agent-note--${isUser ? "user" : "assistant"}`}
-            >
-              {isUser ? `→ @${hms.agent}` : `@${hms.agent}`}
-            </span>
-          ) : null}
-
           {isUser ? (
             <UserMessageContent msg={hms} />
           ) : (

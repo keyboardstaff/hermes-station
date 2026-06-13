@@ -884,6 +884,58 @@ def _build_agent(
             "timestamp": time.time(),
         }))
 
+    # delegate_tool relays subagent lifecycle/progress into the parent agent's
+    # tool_progress_callback (event_type "subagent.start" / ".tool" /
+    # ".progress" / ".thinking" / ".complete" + identity kwargs). Mirror of the
+    # tui_gateway server's packaging so the SPA's subagent tree gets the same
+    # wire shape as upstream desktop.
+    def _on_tool_progress(
+        event_type: Any, name: str | None = None, preview: str | None = None,
+        args: Any = None, **kwargs: Any,
+    ) -> None:
+        del args
+        if _cancelled() or not isinstance(event_type, str):
+            return
+        if not event_type.startswith("subagent."):
+            return
+        payload: dict[str, Any] = {
+            "type": "run.event",
+            "run_id": run_id,
+            "event": event_type,
+            "session_id": session_id,
+            "goal": str(kwargs.get("goal") or ""),
+            "task_count": int(kwargs.get("task_count") or 1),
+            "task_index": int(kwargs.get("task_index") or 0),
+            "timestamp": time.time(),
+        }
+        for str_key in ("subagent_id", "parent_id", "model", "status", "summary"):
+            if kwargs.get(str_key):
+                payload[str_key] = str(kwargs[str_key])
+        for int_key in ("depth", "tool_count", "input_tokens", "output_tokens"):
+            if kwargs.get(int_key) is not None:
+                try:
+                    payload[int_key] = int(kwargs[int_key])
+                except (TypeError, ValueError):
+                    pass
+        for float_key in ("cost_usd", "duration_seconds"):
+            if kwargs.get(float_key) is not None:
+                try:
+                    payload[float_key] = float(kwargs[float_key])
+                except (TypeError, ValueError):
+                    pass
+        for list_key in ("files_read", "files_written"):
+            if kwargs.get(list_key):
+                payload[list_key] = [str(p) for p in kwargs[list_key]]
+        if kwargs.get("output_tail"):
+            payload["output_tail"] = list(kwargs["output_tail"])
+        if name:
+            payload["tool_name"] = str(name)
+        if preview:
+            payload["text"] = str(preview)
+            if event_type == "subagent.tool":
+                payload["tool_preview"] = str(preview)
+        ws.broadcast_threadsafe(channel, handle.stamp(payload))
+
     # persist this run's sessions to the *active profile's*
     # own state.db, not the default home's. A SessionDB captures its path at
     # construction, so the HERMES_HOME override can't redirect an already-built
@@ -903,6 +955,7 @@ def _build_agent(
         stream_delta_callback=_on_delta,
         tool_start_callback=_on_tool_start,
         tool_complete_callback=_on_tool_complete,
+        tool_progress_callback=_on_tool_progress,
         reasoning_callback=_on_reasoning,
         session_db=db() if profile_home is None else db_for_home(profile_home),
         fallback_model=fallback_model,

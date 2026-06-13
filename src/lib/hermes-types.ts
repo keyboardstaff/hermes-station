@@ -96,8 +96,6 @@ export interface ChatMessage {
   kind?: "approval_notice" | "platform_notice";
   approvalCommand?: string;
   approvalChoice?: string;
-  /** Agents room: the profile-agent this turn was routed to (@mention). */
-  agent?: string;
   /** In-memory branch grouping: assistant answers regenerated from the same user
    *  turn share a `branchGroupId` so the runtime presents them as branches
    *  (BranchPicker 1/2). Not persisted — a superseded answer survives only for
