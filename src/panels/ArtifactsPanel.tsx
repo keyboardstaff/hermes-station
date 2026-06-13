@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   FileText, Link2, ExternalLink, FolderOpen, ImageOff, GitBranch, FilePen,
-  ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Layers,
+  ChevronLeft, ChevronRight, Copy, Check, Layers,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api";
@@ -20,7 +20,6 @@ import type { MessageRow } from "@/lib/session-messages";
 import { profileQuery } from "@/lib/load-session";
 import PageTopBar from "@/components/layout/PageTopBar";
 import SearchInput from "@/components/ui/SearchInput";
-import IconButton from "@/components/ui/IconButton";
 import ImageLightbox, { type LightboxImage } from "@/components/ui/ImageLightbox";
 import DocPreview from "@/components/files/DocPreview";
 
@@ -95,7 +94,7 @@ export default function ArtifactsPanel() {
   const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
   const setFileSelection = useFilesSelection((s) => s.setSelected);
 
-  const { data: artifacts, isLoading, isFetching, refetch } = useQuery({
+  const { data: artifacts, isLoading } = useQuery({
     queryKey: ["artifacts-index"],
     queryFn: buildArtifactIndex,
     staleTime: 30_000,
@@ -192,17 +191,7 @@ export default function ArtifactsPanel() {
     <div className="hms-artifacts-root">
       <PageTopBar
         title={t.nav.artifacts}
-        actions={
-          <IconButton
-            size="sm"
-            onClick={() => void refetch()}
-            disabled={isFetching}
-            title={isFetching ? a.refreshing : a.refresh}
-            aria-label={isFetching ? a.refreshing : a.refresh}
-          >
-            <RefreshCw size={14} className={isFetching ? "hms-spin" : undefined} />
-          </IconButton>
-        }
+        showProfileScope
         context={
           <div className="hms-artifacts-toolbar">
             <div className="hms-artifacts-filters">

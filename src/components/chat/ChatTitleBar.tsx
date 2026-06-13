@@ -70,6 +70,9 @@ export default function ChatTitleBar({
   const activeAgents = useSubagents((s) =>
     activeSubagentCount(activeSessionId ? s.bySession[activeSessionId] ?? [] : []),
   );
+  // Breathe the Agents glyph while a run is in flight, so the topbar signals
+  // "working" even before subagents register.
+  const isRunning = useChatStore((s) => s.activeRunId != null);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
@@ -162,7 +165,7 @@ export default function ChatTitleBar({
               aria-label={t.nav.agents}
               title={t.nav.agents}
             >
-              <Workflow size={16} />
+              <Workflow size={16} className={isRunning ? "hms-breathe" : undefined} />
             </IconButton>
             {activeAgents > 0 && (
               <span className="hms-agents-badge" aria-label={`${activeAgents} active`}>

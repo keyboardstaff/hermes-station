@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import {
   Plus,
   Search,
-  RefreshCw,
   PauseCircle,
   AlertCircle,
   CheckCircle2,
@@ -16,7 +15,6 @@ import {
 import { useI18n } from "@/i18n";
 import PageTopBar from "@/components/layout/PageTopBar";
 import Button from "@/components/ui/Button";
-import IconButton from "@/components/ui/IconButton";
 import { useCronJobs, type CronJob } from "@/hooks/useCron";
 import CronJobDetail from "@/components/cron/CronJobDetail";
 import CronCreateDialog from "@/components/cron/CronCreateDialog";
@@ -88,7 +86,7 @@ function CronJobCard({ job, expanded, onToggle, onDeleted, detailLabels }: CardP
 export default function CronPanel() {
   const { t } = useI18n();
   const c = t.cron;
-  const { data: jobs, isLoading, isError, refetch } = useCronJobs();
+  const { data: jobs, isLoading, isError } = useCronJobs();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -169,14 +167,9 @@ export default function CronPanel() {
         title={t.nav.cron}
         showProfileScope
         actions={
-          <>
-            <Button size="sm" variant="primary" onClick={openBlank}>
-              <Plus size={13} />{c?.newJob ?? "New job"}
-            </Button>
-            <IconButton title="Refresh" onClick={() => refetch()}>
-              <RefreshCw size={14} />
-            </IconButton>
-          </>
+          <Button size="sm" variant="primary" onClick={openBlank}>
+            <Plus size={13} />{c?.newJob ?? "New job"}
+          </Button>
         }
         context={
           <div className="hms-cron-search">

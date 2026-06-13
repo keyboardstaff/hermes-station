@@ -48,30 +48,41 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  padding: 3px 10px 4px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 8px 8px 0 0;
+  padding: 4px 11px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: transparent;
   color: var(--hms-text-muted);
   font-size: var(--hms-text-caption);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition: background 0.12s, color 0.12s;
 }
 
 .hms-profile-tab:hover {
-  background: var(--hms-hover-bg);
   color: var(--hms-text);
 }
 
-/* Active = tinted with the profile's OWN color + a matching underline, so the
-   selected state reads as that profile's identity rather than a neutral grey. */
+/* Active = a soft pill tinted with the profile's OWN color (a faint matching
+   ring), so the selection reads as that profile's identity — calm, no underline
+   or tab corners. */
 .hms-profile-tab[data-active] {
-  background: color-mix(in srgb, var(--tab-color) 14%, transparent);
-  border-bottom-color: var(--tab-color);
+  background: color-mix(in srgb, var(--tab-color) 13%, transparent);
+  border-color: color-mix(in srgb, var(--tab-color) 30%, transparent);
   color: var(--hms-text);
   font-weight: 600;
+}
+
+/* Brighten the dot only on the active pill; dim it slightly when inactive so
+   the active profile's color pops. */
+.hms-profile-tab .hms-profile-tab-dot {
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+
+.hms-profile-tab:hover .hms-profile-tab-dot,
+.hms-profile-tab[data-active] .hms-profile-tab-dot {
+  opacity: 1;
 }
 
 .hms-profile-tab-dot {

@@ -2185,3 +2185,33 @@ button.hms-artifacts-title {
   line-height: 1.6;
   color: var(--hms-text-muted);
 }
+
+/* Kanban board — 4-column grid so the 8 status columns form two rows of four
+   (the optional 9th "archived" column wraps to a short third row). */
+.hms-kanban-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--hms-space-3);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .hms-kanban-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Breathing pulse — the Agents glyph while a run is in flight. */
+@keyframes hms-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50%      { opacity: 1;    transform: scale(1.06); }
+}
+
+.hms-breathe {
+  animation: hms-breathe 1.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hms-breathe { animation: none; }
+}

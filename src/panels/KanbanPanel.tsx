@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Zap, X } from "lucide-react";
+import { Plus, Zap, X } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   KANBAN_COLUMNS,
@@ -87,11 +87,12 @@ export default function KanbanPanel() {
         title={t.nav.kanban}
         actions={
           <>
+            {/* Profile (assignee) selector top-right, matching Cron/Artifacts. */}
+            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} style={selectStyle} aria-label={k?.assignee ?? "Assignee"}>
+              <option value="all">{k?.allAssignees ?? "All profiles"}</option>
+              {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
             <Button size="sm" variant="primary" onClick={onNewBoard}><Plus size={12} />{k?.newBoard ?? "New board"}</Button>
-            <Button size="sm" onClick={() => nudge.mutate()} disabled={nudge.isPending}>
-              <Zap size={12} />{k?.nudge ?? "Nudge dispatcher"}
-            </Button>
-            <IconButton title={k?.refresh ?? "Refresh"} onClick={() => tasksQuery.refetch()}><RefreshCw size={14} /></IconButton>
           </>
         }
         context={
@@ -113,14 +114,14 @@ export default function KanbanPanel() {
               <option value="all">{k?.allTenants ?? "All tenants"}</option>
               {tenants.map((tn) => <option key={tn} value={tn}>{tn}</option>)}
             </select>
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} style={selectStyle} aria-label={k?.assignee ?? "Assignee"}>
-              <option value="all">{k?.allAssignees ?? "All profiles"}</option>
-              {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
             <label style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)", fontSize: "var(--hms-text-caption)", color: "var(--hms-text-muted)", cursor: "pointer" }}>
               <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
               {k?.showArchived ?? "Show archived"}
             </label>
+            <div style={{ flex: 1 }} />
+            <Button size="sm" onClick={() => nudge.mutate()} disabled={nudge.isPending}>
+              <Zap size={12} />{k?.nudge ?? "Nudge dispatcher"}
+            </Button>
             {(query || tenant !== "all" || assignee !== "all") && (
               <Button size="sm" onClick={clearFilters}><X size={11} />{k?.clearFilters ?? "Clear filters"}</Button>
             )}
@@ -134,7 +135,9 @@ export default function KanbanPanel() {
             {k?.errorLoading ?? "Failed to load board."}
           </div>
         ) : (
-          <div style={{ display: "flex", gap: "var(--hms-space-3)", minHeight: 0, alignItems: "flex-start" }}>
+          // 4-column grid → the 8 status columns lay out as two rows of four
+          // (a 9th "archived" column wraps to a short third row).
+          <div className="hms-kanban-grid">
             {(showArchived ? [...KANBAN_COLUMNS, "archived" as KanbanStatus] : KANBAN_COLUMNS).map((status) => (
               <Column
                 key={status}
@@ -188,8 +191,8 @@ function Column({
       onDragLeave={() => setOver(false)}
       onDrop={() => { setOver(false); onDrop(); }}
       style={{
-        width: 260,
-        flexShrink: 0,
+        width: "100%",
+        minWidth: 0,
         display: "flex",
         flexDirection: "column",
         gap: "var(--hms-space-2)",
