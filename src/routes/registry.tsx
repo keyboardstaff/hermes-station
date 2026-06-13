@@ -10,7 +10,7 @@
 import { lazy } from "react";
 import type { LazyExoticComponent, ComponentType } from "react";
 import {
-  MessageSquare, LayoutList, Users, Kanban, Clock,
+  MessageSquare, LayoutList, Workflow, Kanban, Clock,
   Sparkles, Puzzle, Cpu,
   BarChart3, Globe, FileText, FolderOpen, Files,
 } from "lucide-react";
@@ -44,8 +44,8 @@ export const ROUTES: RouteRecord[] = [
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",      labelKey: "chat",      icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),   order: 99, hidden: true },
   // /agents = the active session's subagent tree — opened as a modal from the
-  // chat topbar (Users button), not a sidebar destination. Routed for deep links.
-  { path: "/agents",    labelKey: "agents",    icon: Users,         panel: lazy(() => import("@/panels/AgentsPanel")), order: 99, hidden: true },
+  // chat topbar (Workflow button), not a sidebar destination. Routed for deep links.
+  { path: "/agents",    labelKey: "agents",    icon: Workflow,      panel: lazy(() => import("@/panels/AgentsPanel")), order: 99, hidden: true },
 
   // ── Folded into the Settings modal (Capabilities) ─────────────────
   // Routed (deep-link / palette compat) but hidden from the sidebar — the

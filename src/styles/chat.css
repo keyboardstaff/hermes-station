@@ -293,19 +293,25 @@
   z-index: 3;
 }
 
-/* Clamp the pinned prompt to ~2 lines (soft, lifts on hover/focus) so a long
-   question doesn't dominate the viewport while the answer streams. */
-.hms-chat-bubble-row[data-role="user"] .hms-user-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* Clamp the pinned prompt to ~2 lines so a long question doesn't dominate the
+   viewport while the answer streams. Desktop-faithful: a soft bottom FADE
+   (not an abrupt cut) marks the clamp, and it lifts on CLICK only — never on
+   hover, which made the sticky bubble jump as the pointer crossed it. The fade
+   + pointer cursor apply only when the text actually overflows (data-clamped /
+   data-expandable, set by measurement in UserText). */
+.hms-user-text {
+  white-space: pre-wrap;
 }
 
-.hms-chat-bubble-row[data-role="user"]:hover .hms-user-text,
-.hms-chat-bubble-row[data-role="user"]:focus-within .hms-user-text {
-  -webkit-line-clamp: unset;
-  display: block;
+.hms-user-text[data-expandable] {
+  cursor: pointer;
+}
+
+.hms-user-text[data-clamped] {
+  max-height: calc(2 * 1.6em + 0.15rem);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
 }
 
 .hms-chat-bubble-row[data-role="assistant"] {

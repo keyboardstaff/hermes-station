@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Copy, Check, Brain, ChevronDown, ChevronRight, ShieldCheck, ShieldX,
   GitFork, ImageOff, Volume2, Square, RotateCcw, Clock, Bell,
@@ -178,6 +178,44 @@ export function MarkdownText({ content }: { content: string }) {
   );
 }
 
+/**
+ * User prompt text — clamps to ~2 lines with a soft bottom fade so a long
+ * pinned (sticky) prompt doesn't dominate the viewport. Desktop-faithful: the
+ * clamp lifts on CLICK, never on hover (hover-expand made the sticky bubble jump
+ * as the pointer passed over it). `data-clamped` is set only when the content
+ * actually overflows, so short prompts get no fade and no pointer cursor.
+ */
+function UserText({ text }: { text: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Measure against the clamped box; re-measure when text changes / resizes.
+    const measure = () => setOverflowing(el.scrollHeight - el.clientHeight > 2);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [text]);
+
+  const clamped = overflowing && !expanded;
+  return (
+    <div
+      ref={ref}
+      className="hms-user-text"
+      data-clamped={clamped || undefined}
+      data-expandable={overflowing || undefined}
+      onClick={overflowing ? () => setExpanded((v) => !v) : undefined}
+      title={clamped ? undefined : undefined}
+    >
+      {text}
+    </div>
+  );
+}
+
 /** Renders the text + image thumbnails for a user message, with lightbox support. */
 export function UserMessageContent({ msg }: { msg: ChatMessage }) {
   const images = (msg.attachments ?? []).filter((a) => a.isImage && a.content);
@@ -185,7 +223,7 @@ export function UserMessageContent({ msg }: { msg: ChatMessage }) {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   return (
     <div>
-      {msg.content && <div className="hms-user-text" style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>}
+      {msg.content && <UserText text={msg.content} />}
       {msg.attachments && msg.attachments.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 'var(--hms-space-2)', marginTop: msg.content ? 8 : 0 }}>
           {msg.attachments.map((att, i) => {

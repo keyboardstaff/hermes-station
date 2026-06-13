@@ -1,4 +1,4 @@
-import { PanelRight, Users } from "lucide-react";
+import { PanelRight, Workflow } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useOverlays } from "@/store/overlays";
 import { useChatStore } from "@/store/chat";
@@ -160,7 +160,7 @@ export default function ChatTitleBar({
             aria-label={t.nav.agents}
             title={t.nav.agents}
           >
-            <Users size={16} />
+            <Workflow size={16} />
           </IconButton>
           <IconButton
             active={workspacesOpen}

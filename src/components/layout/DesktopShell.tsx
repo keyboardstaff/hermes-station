@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { ROUTES, DEFAULT_ROUTE } from "@/routes/registry";
+import ChatLanding from "@/components/layout/ChatLanding";
 
 /**
  * Desktop shell. Just the Sidebar + the routed main pane — the legacy
@@ -24,7 +25,8 @@ export default function DesktopShell() {
         <Backdrop />
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+            {/* Default destination: the most recent conversation in /chat. */}
+            <Route path="/" element={<ChatLanding />} />
             {/* Back-compat: the Agents page moved from /group → /agents. */}
             <Route path="/group" element={<Navigate to="/agents" replace />} />
             {ROUTES.map(({ path, labelKey, panel: Panel }) => (

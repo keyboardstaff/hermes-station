@@ -8,26 +8,32 @@ import { mockReadyBackend, mockLoginRequired, mockDegradedBackend } from "./mock
 // later against a live or richer-mocked backend.
 
 test.describe("boot & shell", () => {
-  test("loopback-trusted boot lands on the Sessions shell", async ({ page }) => {
+  test("loopback-trusted boot lands on the chat shell", async ({ page }) => {
     await mockReadyBackend(page);
     await page.goto("/");
 
     // The shell rendered (not the "Initializing…" / error gate).
     await expect(page.locator('aside[aria-label="Sidebar"]')).toBeVisible();
-    // Default route → /sessions; its page title shows.
+    // Default destination → /chat (most recent conversation, or the intro).
+    await expect(page).toHaveURL(/\/chat$/);
+  });
+
+  test("sidebar nav reaches the Sessions page", async ({ page }) => {
+    await mockReadyBackend(page);
+    await page.goto("/sessions");
     await expect(page.getByRole("heading", { name: "Sessions" })).toBeVisible();
     await expect(page).toHaveURL(/\/sessions$/);
   });
 
-  test("More disclosure reveals secondary nav (click navigates)", async ({ page }) => {
+  test("More flyout reveals secondary nav (hover + click navigates)", async ({ page }) => {
     await mockReadyBackend(page);
-    await page.goto("/");
+    await page.goto("/sessions");
     await expect(page.getByRole("heading", { name: "Sessions" })).toBeVisible();
 
-    // Cron is not pinned by default — it lives under "More".
-    await page.getByRole("button", { name: "More" }).first().click();
-    await page.getByRole("link", { name: "Cron" }).click();
-    await expect(page).toHaveURL(/\/cron$/);
+    // Kanban is not pinned by default — it lives under the "More" hover flyout.
+    await page.getByRole("button", { name: "More" }).first().hover();
+    await page.getByRole("link", { name: "Kanban" }).click();
+    await expect(page).toHaveURL(/\/kanban$/);
   });
 });
 

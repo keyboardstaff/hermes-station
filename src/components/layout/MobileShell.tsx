@@ -7,6 +7,7 @@ import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useEdgeSwipe } from "@/hooks/useEdgeSwipe";
 import { ROUTES, DEFAULT_ROUTE } from "@/routes/registry";
+import ChatLanding from "@/components/layout/ChatLanding";
 import { useI18n } from "@/i18n";
 import { Menu } from "lucide-react";
 
@@ -54,7 +55,8 @@ export default function MobileShell({
         <Backdrop />
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+            {/* Default destination: the most recent conversation in /chat. */}
+            <Route path="/" element={<ChatLanding />} />
             {/* Back-compat: the Agents page moved from /group → /agents. */}
             <Route path="/group" element={<Navigate to="/agents" replace />} />
             {ROUTES.map(({ path, labelKey, panel: Panel }) => (
