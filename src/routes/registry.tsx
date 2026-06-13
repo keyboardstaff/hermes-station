@@ -30,16 +30,18 @@ export interface RouteRecord {
 }
 
 export const ROUTES: RouteRecord[] = [
-  // ── Sidebar nav (pinned by default, or under "More") ──────────────
+  // Sidebar nav, ordered work → ops: core conversation, then the agent's work
+  // materials, then background/observability (Cron/Analytics/Logs).
   { path: "/sessions",  labelKey: "sessions",  icon: LayoutList,  panel: lazy(() => import("@/panels/SessionsPanel")),  order: 1 },
   // "Tools" = the agent's skills + toolsets + MCP (labelKey `skills`, relabeled).
-  { path: "/skills",    labelKey: "skills",    icon: Sparkles,    panel: lazy(() => import("@/panels/SkillsPanel")),    order: 3 },
-  { path: "/artifacts", labelKey: "artifacts", icon: Files,       panel: lazy(() => import("@/panels/ArtifactsPanel")), order: 4 },
-  { path: "/cron",      labelKey: "cron",      icon: Clock,       panel: lazy(() => import("@/panels/CronPanel")),      order: 5 },
-  { path: "/kanban",    labelKey: "kanban",    icon: Kanban,      panel: lazy(() => import("@/panels/KanbanPanel")),    order: 6 },
-  { path: "/files",     labelKey: "files",     icon: FolderOpen,  panel: lazy(() => import("@/panels/FilesPanel")),     order: 7 },
-  { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), order: 8 },
-  { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      order: 9 },
+  { path: "/skills",    labelKey: "skills",    icon: Sparkles,    panel: lazy(() => import("@/panels/SkillsPanel")),    order: 2 },
+  { path: "/artifacts", labelKey: "artifacts", icon: Files,       panel: lazy(() => import("@/panels/ArtifactsPanel")), order: 3 },
+  { path: "/files",     labelKey: "files",     icon: FolderOpen,  panel: lazy(() => import("@/panels/FilesPanel")),     order: 4 },
+  { path: "/kanban",    labelKey: "kanban",    icon: Kanban,      panel: lazy(() => import("@/panels/KanbanPanel")),    order: 5 },
+  // ── ops / observability (divider before this group in the More flyout) ──
+  { path: "/cron",      labelKey: "cron",      icon: Clock,       panel: lazy(() => import("@/panels/CronPanel")),      order: 6 },
+  { path: "/analytics", labelKey: "analytics", icon: BarChart3,   panel: lazy(() => import("@/panels/AnalyticsPanel")), order: 7 },
+  { path: "/logs",      labelKey: "logs",      icon: FileText,    panel: lazy(() => import("@/panels/LogsPanel")),      order: 8 },
 
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",      labelKey: "chat",      icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),   order: 99, hidden: true },
@@ -66,7 +68,12 @@ export const NAV_ROUTES: RouteRecord[] = ROUTES
   .sort((a, b) => a.order - b.order);
 
 /** Paths pinned to the sidebar out of the box; the rest live under "More".
- *  Users override the set in Settings → Preferences → Sidebar. */
+ *  The everyday core — a short pinned list keeps the rail calm. Users override
+ *  the set in Settings → Preferences → Sidebar. */
 export const DEFAULT_PINNED: readonly string[] = [
-  "/sessions", "/skills", "/artifacts", "/cron",
+  "/sessions", "/skills", "/artifacts",
 ];
+
+/** Background / observability routes — the More flyout draws a divider before
+ *  this group to separate them from the work surfaces. */
+export const OPS_ROUTES: readonly string[] = ["/cron", "/analytics", "/logs"];

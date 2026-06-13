@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n";
 import SearchInput from "@/components/ui/SearchInput";
 import { useSidebarSearch } from "@/store/sidebar-search";
 import { useChatStore } from "@/store/chat";
-import { NAV_ROUTES } from "@/routes/registry";
+import { NAV_ROUTES, OPS_ROUTES } from "@/routes/registry";
 import { useSidebarNav, effectivePinned } from "@/store/sidebar-nav";
 import Tooltip from "@/components/ui/Tooltip";
 import ConnectionDot from "./ConnectionDot";
@@ -320,17 +320,24 @@ function MoreFlyout({
           onMouseEnter={open}
           onMouseLeave={scheduleClose}
         >
-          {routes.map(({ path, labelKey, icon: Icon }) => (
-            <NavLink
-              key={path}
-              to={path}
-              onClick={() => { setPos(null); onNavigate?.(); }}
-              className={({ isActive }) => "hms-sidebar-more-item" + (isActive ? " active" : "")}
-            >
-              <Icon size={15} />
-              <span>{labelFor(labelKey)}</span>
-            </NavLink>
-          ))}
+          {routes.map(({ path, labelKey, icon: Icon }, i) => {
+            // Divider before the first ops/observability route (Cron/Analytics/
+            // Logs) when work surfaces precede it in the flyout.
+            const opsStart = OPS_ROUTES.includes(path) && i > 0 && !OPS_ROUTES.includes(routes[i - 1].path);
+            return (
+              <div key={path} style={{ display: "contents" }}>
+                {opsStart && <div className="hms-sidebar-more-divider" aria-hidden />}
+                <NavLink
+                  to={path}
+                  onClick={() => { setPos(null); onNavigate?.(); }}
+                  className={({ isActive }) => "hms-sidebar-more-item" + (isActive ? " active" : "")}
+                >
+                  <Icon size={15} />
+                  <span>{labelFor(labelKey)}</span>
+                </NavLink>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

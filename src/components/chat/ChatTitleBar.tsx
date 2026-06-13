@@ -1,6 +1,7 @@
 import { PanelRight, Workflow } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useOverlays } from "@/store/overlays";
+import { useSubagents, activeSubagentCount } from "@/store/subagents";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { useActiveSessionTitle } from "@/hooks/useActiveSessionTitle";
@@ -64,6 +65,11 @@ export default function ChatTitleBar({
   const queryClient = useQueryClient();
   const { pinnedIds, toggle } = usePinnedSessions();
   const openAgents = useOverlays((s) => s.openAgents);
+  // Live subagent count for the active session → a badge on the Agents button
+  // so there's a signal that something's worth opening.
+  const activeAgents = useSubagents((s) =>
+    activeSubagentCount(activeSessionId ? s.bySession[activeSessionId] ?? [] : []),
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
@@ -150,13 +156,20 @@ export default function ChatTitleBar({
       }
       actions={
         <>
-          <IconButton
-            onClick={openAgents}
-            aria-label={t.nav.agents}
-            title={t.nav.agents}
-          >
-            <Workflow size={16} />
-          </IconButton>
+          <span className="hms-agents-btn-wrap">
+            <IconButton
+              onClick={openAgents}
+              aria-label={t.nav.agents}
+              title={t.nav.agents}
+            >
+              <Workflow size={16} />
+            </IconButton>
+            {activeAgents > 0 && (
+              <span className="hms-agents-badge" aria-label={`${activeAgents} active`}>
+                {activeAgents > 9 ? "9+" : activeAgents}
+              </span>
+            )}
+          </span>
           <IconButton
             active={workspacesOpen}
             onClick={onToggleWorkspaces}

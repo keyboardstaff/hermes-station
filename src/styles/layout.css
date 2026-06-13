@@ -255,6 +255,12 @@
   background: var(--hms-selected-bg);
 }
 
+.hms-sidebar-more-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--hms-border);
+}
+
 
 /* ChatLanding — brief centered spinner before redirecting to /chat. */
 .hms-landing-loading {

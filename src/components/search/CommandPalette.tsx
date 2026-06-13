@@ -40,6 +40,7 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
   const setTheme = useThemeStore((s) => s.setTheme);
   const openProfile = useOverlays((s) => s.openProfile);
   const openSettings = useOverlays((s) => s.openSettings);
+  const openAgents = useOverlays((s) => s.openAgents);
 
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<MessageHit[]>([]);
@@ -100,6 +101,11 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
       id: "act:reasoning", label: t.palette.toggleReasoning, group: "action",
       keywords: "tool detail product technical reasoning thinking trace",
       run: () => setToolView(toolView === "technical" ? "product" : "technical"),
+    },
+    {
+      id: "act:agents", label: t.nav.agents, group: "action",
+      keywords: "agents subagents delegate tree tasks",
+      run: () => openAgents(),
     },
     {
       id: "act:profile", label: t.nav.profile, group: "action",

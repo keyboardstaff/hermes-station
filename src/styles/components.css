@@ -1522,12 +1522,6 @@ button.hms-artifacts-title {
   overflow: hidden;
 }
 
-.hms-sessions-empty {
-  padding: var(--hms-space-6);
-  font-size: var(--hms-text-sm);
-  color: var(--hms-text-muted);
-}
-
 .hms-sessions-table {
   width: 100%;
   border-collapse: collapse;
@@ -2125,4 +2119,69 @@ button.hms-artifacts-title {
 .hms-profile-color-swatch[data-active] {
   border-color: var(--hms-text);
   box-shadow: 0 0 0 1px var(--hms-bg) inset;
+}
+
+/* Agents topbar button — live active-subagent count badge. */
+.hms-agents-btn-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.hms-agents-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--hms-accent);
+  color: var(--hms-accent-contrast, #fff);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--hms-bg);
+}
+
+/* ── Shared loading / empty states ─────────────────────────────────── */
+.hms-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hms-space-2);
+  padding: var(--hms-space-6);
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-sm);
+}
+
+.hms-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hms-space-2);
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.hms-empty-state-icon {
+  color: var(--hms-text-muted);
+  opacity: 0.55;
+}
+
+.hms-empty-state-title {
+  margin: 0;
+  font-size: var(--hms-text-sm);
+  font-weight: var(--hms-fw-semibold);
+  color: var(--hms-text);
+}
+
+.hms-empty-state-hint {
+  margin: 0;
+  max-width: 28rem;
+  font-size: var(--hms-text-xs);
+  line-height: 1.6;
+  color: var(--hms-text-muted);
 }

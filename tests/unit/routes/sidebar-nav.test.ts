@@ -11,10 +11,10 @@ beforeEach(() => {
 });
 
 describe("NAV_ROUTES", () => {
-  it("lists exactly the visible routes in canonical order", () => {
+  it("lists exactly the visible routes in canonical order (work → ops)", () => {
     expect(NAV_ROUTES.map((r) => r.path)).toEqual([
-      "/sessions", "/skills", "/artifacts",
-      "/cron", "/kanban", "/files", "/analytics", "/logs",
+      "/sessions", "/skills", "/artifacts", "/files", "/kanban",
+      "/cron", "/analytics", "/logs",
     ]);
   });
 
@@ -27,10 +27,10 @@ describe("NAV_ROUTES", () => {
     }
   });
 
-  it("default-pins the primary set; the rest fall under More", () => {
-    expect([...DEFAULT_PINNED]).toEqual(["/sessions", "/skills", "/artifacts", "/cron"]);
+  it("default-pins the core trio; the rest fall under More", () => {
+    expect([...DEFAULT_PINNED]).toEqual(["/sessions", "/skills", "/artifacts"]);
     const more = NAV_ROUTES.filter((r) => !DEFAULT_PINNED.includes(r.path)).map((r) => r.path);
-    expect(more).toEqual(["/kanban", "/files", "/analytics", "/logs"]);
+    expect(more).toEqual(["/files", "/kanban", "/cron", "/analytics", "/logs"]);
   });
 });
 
@@ -42,13 +42,13 @@ describe("useSidebarNav", () => {
   it("first toggle materializes the defaults, then applies the change", () => {
     useSidebarNav.getState().togglePinned("/kanban");
     expect(useSidebarNav.getState().pinnedPaths).toEqual([
-      "/sessions", "/skills", "/artifacts", "/cron", "/kanban",
+      "/sessions", "/skills", "/artifacts", "/kanban",
     ]);
   });
 
   it("toggling a pinned route unpins it (it moves under More)", () => {
     useSidebarNav.getState().togglePinned("/skills");
-    expect(useSidebarNav.getState().pinnedPaths).toEqual(["/sessions", "/artifacts", "/cron"]);
+    expect(useSidebarNav.getState().pinnedPaths).toEqual(["/sessions", "/artifacts"]);
   });
 
   it("reset returns to the default set", () => {

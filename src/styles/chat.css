@@ -41,18 +41,23 @@
 }
 
 .hms-profile-tab {
+  /* --tab-color = this profile's identity color (the "All" tab leaves it
+     unset → falls back to the accent). */
+  --tab-color: var(--hms-accent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  padding: 3px 10px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  padding: 3px 10px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
   background: transparent;
   color: var(--hms-text-muted);
   font-size: var(--hms-text-caption);
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .hms-profile-tab:hover {
@@ -60,9 +65,11 @@
   color: var(--hms-text);
 }
 
+/* Active = tinted with the profile's OWN color + a matching underline, so the
+   selected state reads as that profile's identity rather than a neutral grey. */
 .hms-profile-tab[data-active] {
-  background: var(--hms-selected-bg);
-  border-color: var(--hms-border);
+  background: color-mix(in srgb, var(--tab-color) 14%, transparent);
+  border-bottom-color: var(--tab-color);
   color: var(--hms-text);
   font-weight: 600;
 }
@@ -1170,6 +1177,116 @@
 }
 .hms-approval-drawer {
   animation: hms-drawer-up 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  margin: 0 16px;
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hms-warning-border);
+  background: var(--hms-warning-weak);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-2);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.hms-approval-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hms-space-2);
+}
+
+.hms-approval-warn-icon {
+  color: var(--hms-warning);
+  flex-shrink: 0;
+}
+
+.hms-approval-title {
+  font-size: var(--hms-text-caption);
+  font-weight: 600;
+}
+
+.hms-approval-pattern {
+  font-size: 0.625rem;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--hms-warning-weak);
+  color: var(--hms-warning-text);
+}
+
+.hms-approval-spacer {
+  flex: 1;
+}
+
+.hms-approval-dismiss {
+  border: none;
+  background: transparent;
+  color: var(--hms-text-muted);
+  cursor: pointer;
+  display: flex;
+  padding: 2px;
+}
+
+.hms-approval-command {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--hms-bg);
+  border: 1px solid var(--hms-border);
+  border-radius: 6px;
+  font-family: "Fira Code", Consolas, monospace;
+  font-size: var(--hms-text-caption);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 120px;
+  overflow-y: auto;
+  color: var(--hms-text);
+}
+
+.hms-approval-desc {
+  font-size: var(--hms-text-xs);
+  color: var(--hms-text-muted);
+  line-height: 1.5;
+}
+
+.hms-approval-actions {
+  display: flex;
+  gap: var(--hms-space-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.hms-approval-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hms-space-1);
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--hms-warning-border);
+  background: var(--hms-warning-weak);
+  color: var(--hms-warning-text);
+  font-size: var(--hms-text-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Deny / Once read as neutral; only the amber-filled "Always" is loud. */
+.hms-approval-btn:first-child,
+.hms-approval-btn:nth-child(2) {
+  border-color: var(--hms-border);
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  font-weight: 400;
+}
+
+.hms-approval-btn[data-strong] {
+  border: none;
+  background: var(--hms-warning);
+  color: var(--hms-warning-on, #0a0a0a);
+}
+
+.hms-approval-freeform {
+  font-size: 0.625rem;
+  color: var(--hms-text-muted);
 }
 
 @keyframes fadeIn {

@@ -15,6 +15,8 @@ import { ChatThread } from "@/components/chat/ChatThread";
 import type { ChatMessage, SessionSummary } from "@/lib/hermes-types";
 import { api } from "@/lib/api";
 import { deleteSession as deleteSessionMut, setSessionArchived } from "@/lib/session-mutations";
+import LoadingState from "@/components/ui/LoadingState";
+import EmptyState from "@/components/ui/EmptyState";
 
 import type { MessageRow } from "@/lib/session-messages";
 import { historyToChatMessages } from "@/lib/session-messages";
@@ -211,11 +213,12 @@ export default function SessionsPanel() {
       <div className="hms-sessions-body">
         <div className="hms-sessions-table-wrap">
           <div className="hms-sessions-table-shell">
-            {isLoading && (
-              <div className="hms-sessions-empty">{t.sessions.loading}</div>
-            )}
+            {isLoading && <LoadingState label={t.sessions.loading} />}
             {!isLoading && sessions.length === 0 && (
-              <div className="hms-sessions-empty">{t.sessions.empty}</div>
+              <EmptyState
+                icon={<MessageSquare size={24} />}
+                title={archivedView ? t.sessions.viewArchived : t.sessions.empty}
+              />
             )}
             {!isLoading && sessions.length > 0 && (
               <table className="hms-sessions-table">

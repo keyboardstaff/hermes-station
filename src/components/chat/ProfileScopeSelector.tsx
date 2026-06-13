@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { List } from "lucide-react";
 import { PopupSelect, type PopupSelectOption } from "@/components/ui/PopupSelect";
 import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
@@ -51,23 +52,26 @@ export default function ProfileScopeSelector({
           <List size={13} />
           <span className="hms-profile-tab-label">{t.sessions.allShort}</span>
         </button>
-        {profiles.map((p) => (
-          <button
-            key={p.name}
-            type="button"
-            role="tab"
-            aria-selected={current === p.name}
-            className="hms-profile-tab"
-            data-active={current === p.name || undefined}
-            onClick={() => setScope(p.name)}
-          >
-            <span
-              className="hms-profile-tab-dot"
-              style={{ background: profileColor(p.name, colors) }}
-            />
-            <span className="hms-profile-tab-label">{p.name}</span>
-          </button>
-        ))}
+        {profiles.map((p) => {
+          const color = profileColor(p.name, colors);
+          return (
+            <button
+              key={p.name}
+              type="button"
+              role="tab"
+              aria-selected={current === p.name}
+              className="hms-profile-tab"
+              data-active={current === p.name || undefined}
+              // The active tab tints with the profile's OWN color (see CSS) so
+              // the selection state carries the profile's identity.
+              style={{ "--tab-color": color } as CSSProperties}
+              onClick={() => setScope(p.name)}
+            >
+              <span className="hms-profile-tab-dot" style={{ background: color }} />
+              <span className="hms-profile-tab-label">{p.name}</span>
+            </button>
+          );
+        })}
       </div>
     );
   }
