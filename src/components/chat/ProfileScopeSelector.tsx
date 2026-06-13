@@ -1,4 +1,4 @@
-import { Asterisk } from "lucide-react";
+import { List } from "lucide-react";
 import { PopupSelect, type PopupSelectOption } from "@/components/ui/PopupSelect";
 import { useProfiles, useActiveProfile } from "@/hooks/useProfiles";
 import { useProfileScope, ALL_PROFILES } from "@/store/profile-scope";
@@ -48,7 +48,7 @@ export default function ProfileScopeSelector({
           data-active={current === ALL_PROFILES || undefined}
           onClick={() => setScope(ALL_PROFILES)}
         >
-          <Asterisk size={13} />
+          <List size={13} />
           <span className="hms-profile-tab-label">{t.sessions.allShort}</span>
         </button>
         {profiles.map((p) => (
@@ -81,7 +81,7 @@ export default function ProfileScopeSelector({
   return (
     <div className={fullWidth ? "hms-scope-switcher" : undefined}>
       <PopupSelect
-        icon={<Asterisk size={15} />}
+        icon={<List size={15} />}
         label={label}
         value={current}
         options={options}

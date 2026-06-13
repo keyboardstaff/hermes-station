@@ -12,6 +12,7 @@ import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { usePinnedSessions } from "@/hooks/usePinnedSessions";
 import SessionActionsMenu from "@/components/chat/SessionActionsMenu";
 import { clearSessionMessages } from "@/lib/session-actions";
+import { setSessionArchived, deleteSession, renameSession } from "@/lib/session-mutations";
 
 async function exportSession(sessionId: string, format: "json" | "markdown") {
   const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`);
@@ -67,14 +68,16 @@ export default function ChatTitleBar({
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
 
+  // The active session's owning profile (from the shared cache) so mutations
+  // hit that profile's state.db, not just the default home.
+  const activeProfile = (): string | undefined =>
+    queryClient
+      .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
+      ?.sessions.find((s) => s.session_id === activeSessionId)?.profile;
+
   const handleRenameSubmit = (next: string) => {
     if (!activeSessionId) return;
-    fetch(`/api/sessions/${encodeURIComponent(activeSessionId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-      body: JSON.stringify({ title: next }),
-    }).then((res) => {
-      if (!res.ok) return;
+    void renameSession(activeSessionId, next, activeProfile()).then(() => {
       queryClient.setQueryData<{ sessions: SessionSummary[] }>(
         ["sessions-table-all"],
         (old) =>
@@ -88,16 +91,12 @@ export default function ChatTitleBar({
             : old,
       );
       invalidate();
-    });
+    }).catch(() => { /* surfaced via react-query elsewhere; no-op */ });
   };
 
   const handleArchive = () => {
     if (!activeSessionId) return;
-    fetch(`/api/dashboard/sessions/${encodeURIComponent(activeSessionId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-      body: JSON.stringify({ archived: true }),
-    }).then(() => {
+    void setSessionArchived(activeSessionId, true, activeProfile()).then(() => {
       invalidate();
       setActiveSession(null);
     });
@@ -105,11 +104,7 @@ export default function ChatTitleBar({
 
   const handleDelete = () => {
     if (!activeSessionId) return;
-    fetch(`/api/dashboard/sessions/${encodeURIComponent(activeSessionId)}`, {
-      method: "DELETE",
-      headers: { "X-HMS-CSRF": "1" },
-    }).then((res) => {
-      if (!res.ok) return;
+    void deleteSession(activeSessionId, activeProfile()).then(() => {
       invalidate();
       setActiveSession(null);
     });

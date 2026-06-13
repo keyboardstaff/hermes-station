@@ -7,6 +7,7 @@ import { exportSessionsToPdf } from "@/lib/export-pdf";
 import { buildSessionActions, clearSessionMessages } from "@/lib/session-actions";
 import { useProfileScope, filterSessionsByScope } from "@/store/profile-scope";
 import { useProfileColors, profileColor } from "@/store/profile-colors";
+import { setSessionArchived, deleteSession as deleteSessionMut, renameSession as renameSessionMut } from "@/lib/session-mutations";
 import { useSidebarSearch } from "@/store/sidebar-search";
 import { useActiveProfile } from "@/hooks/useProfiles";
 import ProfileScopeSelector from "@/components/chat/ProfileScopeSelector";
@@ -255,14 +256,18 @@ export default function SessionRecents({
   const [shiftHeld, setShiftHeld] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Resolve the session's owning profile from the shared cache so the mutation
+  // hits THAT profile's state.db (the dashboard proxy only saw the default home).
+  const profileOf = useCallback((sessionId: string): string | undefined =>
+    queryClient
+      .getQueryData<{ sessions: SessionSummary[] }>(["sessions-table-all"])
+      ?.sessions.find((s) => s.session_id === sessionId)?.profile,
+  [queryClient]);
+
   const archiveSession = useCallback(async (sessionId: string) => {
-    await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-      body: JSON.stringify({ archived: true }),
-    });
+    await setSessionArchived(sessionId, true, profileOf(sessionId));
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
-  }, [queryClient]);
+  }, [queryClient, profileOf]);
 
   const clearContext = useCallback((sessionId: string) => {
     // Clearing only affects the locally-rendered view of this session; the
@@ -301,17 +306,15 @@ export default function SessionRecents({
   }, []);
 
   const deleteSession = useCallback(async (sessionId: string) => {
-    const res = await fetch(`/api/dashboard/sessions/${encodeURIComponent(sessionId)}`, {
-      method: "DELETE",
-      headers: { "X-HMS-CSRF": "1" },
-    });
-    if (!res.ok) {
-      console.error(`Failed to delete session: ${res.status}`);
+    try {
+      await deleteSessionMut(sessionId, profileOf(sessionId));
+    } catch (err) {
+      console.error(`Failed to delete session: ${(err as Error).message}`);
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
     if (activeSessionId === sessionId) setActiveSession(null);
-  }, [activeSessionId, queryClient, setActiveSession]);
+  }, [activeSessionId, queryClient, setActiveSession, profileOf]);
 
   // Opening a new session: clear active selection. ChatPanel header takes over
   // the "New conversation" affordance; no list-row placeholder is rendered.
@@ -320,21 +323,16 @@ export default function SessionRecents({
   }, [setActiveSession]);
 
   const renameSession = useCallback(async (sessionId: string, title: string) => {
-    // Python backend is RESTful: PATCH /api/sessions/{id} with {title}.
-    // (The old Node proxy bundled session_id into the body via POST.)
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-HMS-CSRF": "1" },
-      body: JSON.stringify({ title: title.trim() || "Untitled" }),
-    });
-    if (!res.ok) {
-      console.error(`Failed to rename session: ${res.status}`);
+    try {
+      await renameSessionMut(sessionId, title.trim() || "Untitled", profileOf(sessionId));
+    } catch (err) {
+      console.error(`Failed to rename session: ${(err as Error).message}`);
       setRenamingId(null);
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
     setRenamingId(null);
-  }, [queryClient]);
+  }, [queryClient, profileOf]);
 
   // Shared cache with /sessions (``SessionsFilters``, ``SessionsPanel``).
   // limit=1000 is the same upper bound the sessions table uses so the

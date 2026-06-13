@@ -14,6 +14,7 @@ import PageTopBar from "@/components/layout/PageTopBar";
 import { ChatThread } from "@/components/chat/ChatThread";
 import type { ChatMessage, SessionSummary } from "@/lib/hermes-types";
 import { api } from "@/lib/api";
+import { deleteSession as deleteSessionMut, setSessionArchived } from "@/lib/session-mutations";
 
 import type { MessageRow } from "@/lib/session-messages";
 import { historyToChatMessages } from "@/lib/session-messages";
@@ -105,16 +106,7 @@ export default function SessionsPanel() {
   const { mutate: setArchivedBulk, isPending: archiving } = useMutation({
     mutationFn: async ({ ids, archived }: { ids: string[]; archived: boolean }) => {
       const byId = new Map((allData?.sessions ?? []).map((s) => [s.session_id, s.profile]));
-      await Promise.all(
-        ids.map((id) => {
-          // First (only) query param ⇒ `?profile=`. profileQuery() yields the
-          // `&`-prefixed form for appending to an existing query string, which
-          // would malform `/api/sessions/{id}` (no `?`) → wrong db.
-          const prof = byId.get(id);
-          const q = prof && prof !== "default" ? `?profile=${encodeURIComponent(prof)}` : "";
-          return api.json<unknown>(`/api/sessions/${encodeURIComponent(id)}${q}`, "PATCH", { archived });
-        }),
-      );
+      await Promise.all(ids.map((id) => setSessionArchived(id, archived, byId.get(id))));
     },
     onSuccess: () => { setSelected(new Set()); invalidateSessions(); },
   });
@@ -147,21 +139,14 @@ export default function SessionsPanel() {
 
   const { mutate: deleteSelected, isPending: deleting } = useMutation({
     mutationFn: async (ids: string[]) => {
-      // ``api.json`` attaches the CSRF header automatically, so this
-      // matches the wrapper conventions instead of re-implementing
-      // ``X-HMS-CSRF: 1`` inline at the call site.
-      await Promise.all(
-        ids.map((id) =>
-          api.json<unknown>(
-            `/api/dashboard/sessions/${encodeURIComponent(id)}`,
-            "DELETE",
-          ),
-        ),
-      );
+      // Profile-aware delete through Station's own route (the dashboard proxy
+      // only saw the default home, so non-default-profile rows wouldn't delete).
+      const byId = new Map((allData?.sessions ?? []).map((s) => [s.session_id, s.profile]));
+      await Promise.all(ids.map((id) => deleteSessionMut(id, byId.get(id))));
     },
     onSuccess: () => {
       setSelected(new Set());
-      queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
+      invalidateSessions();
     },
   });
 
