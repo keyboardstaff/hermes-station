@@ -52,6 +52,7 @@ def build_app(*, adapter: StationAdapter | None = None):
         logs,
         mcp,
         memory,
+        onboarding,
         password,
         plugins,
         preferences,
@@ -79,6 +80,7 @@ def build_app(*, adapter: StationAdapter | None = None):
     allowlist.attach(app)
     settings_route.attach(app)
     password.attach(app)
+    onboarding.attach(app)
     profiles_route.attach(app)
     config_route.attach(app)
     logs.attach(app)

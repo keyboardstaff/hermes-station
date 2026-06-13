@@ -3,6 +3,7 @@ import { AlertTriangle, PackageX, ExternalLink } from "lucide-react";
 import { useCapabilityStore, useCapabilitiesPolling } from "@/store/capabilities";
 import { useI18n } from "@/i18n";
 import LoginScreen from "./LoginScreen";
+import OnboardingWizard from "./OnboardingWizard";
 import type { ReactNode } from "react";
 
 const DISMISSED_KEY = "hms_degraded_dismissed";
@@ -11,6 +12,8 @@ interface AuthStatus {
   requiresLogin: boolean;
   loggedIn: boolean;
   localhost: boolean;
+  needsOnboarding?: boolean;
+  userName?: string;
 }
 
 export default function SetupGuard({ children }: { children: ReactNode }) {
@@ -99,6 +102,12 @@ export default function SetupGuard({ children }: { children: ReactNode }) {
 
   if (auth.requiresLogin && !auth.loggedIn) {
     return <LoginScreen onSuccess={() => { refreshAuth(); fetchCaps(); }} />;
+  }
+
+  // First-run setup wizard — only shown to a trusted viewer (the backend gates
+  // needsOnboarding on no-login/localhost or a valid session).
+  if (auth.needsOnboarding) {
+    return <OnboardingWizard onDone={() => { refreshAuth(); fetchCaps(); }} />;
   }
 
   if (!caps) {

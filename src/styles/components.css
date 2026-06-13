@@ -2223,3 +2223,150 @@ button.hms-artifacts-title {
 @media (prefers-reduced-motion: reduce) {
   .hms-breathe { animation: none; }
 }
+
+/* ── First-run onboarding wizard ───────────────────────────────────── */
+.hms-onboard-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--hms-space-6);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--hms-accent) 10%, transparent), transparent 34%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--hms-info) 10%, transparent), transparent 30%),
+    var(--hms-bg);
+}
+
+.hms-onboard-card {
+  width: min(100%, 460px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-4);
+  padding: 28px;
+  border-radius: var(--hms-radius-lg);
+  border: 1px solid var(--hms-border);
+  background: var(--hms-surface);
+  box-shadow: var(--hms-shadow-card);
+}
+
+.hms-onboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--hms-accent);
+}
+
+.hms-onboard-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.hms-onboard-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hms-border);
+}
+
+.hms-onboard-dot[data-done] {
+  background: color-mix(in srgb, var(--hms-accent) 50%, var(--hms-border));
+}
+
+.hms-onboard-dot[data-active] {
+  background: var(--hms-accent);
+}
+
+.hms-onboard-body {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hms-onboard-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hms-space-3);
+}
+
+.hms-onboard-title {
+  margin: 0;
+  font-size: var(--hms-text-lg);
+  font-weight: 700;
+  color: var(--hms-text);
+}
+
+.hms-onboard-text {
+  margin: 0;
+  font-size: var(--hms-text-sm);
+  line-height: 1.6;
+  color: var(--hms-text-muted);
+}
+
+.hms-onboard-label {
+  font-size: var(--hms-text-caption);
+  font-weight: 600;
+  color: var(--hms-text-muted);
+}
+
+.hms-onboard-optional {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.hms-onboard-hint {
+  margin: 0;
+  font-size: var(--hms-text-xs);
+  line-height: 1.5;
+  color: var(--hms-text-muted);
+}
+
+.hms-onboard-themes {
+  display: flex;
+  gap: var(--hms-space-2);
+  flex-wrap: wrap;
+}
+
+.hms-onboard-theme {
+  padding: 6px 14px;
+  border-radius: var(--hms-radius-md);
+  border: 1px solid var(--hms-border);
+  background: var(--hms-bg);
+  color: var(--hms-text);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+}
+
+.hms-onboard-theme[data-active] {
+  border-color: var(--hms-accent);
+  background: var(--hms-accent-weak);
+  color: var(--hms-accent);
+}
+
+.hms-onboard-error {
+  margin-top: var(--hms-space-2);
+  padding: 6px 10px;
+  border-radius: var(--hms-radius-md);
+  background: var(--hms-error-weak);
+  border: 1px solid var(--hms-error-border);
+  font-size: var(--hms-text-caption);
+  color: var(--hms-error-dark);
+}
+
+.hms-onboard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hms-onboard-skip {
+  border: none;
+  background: transparent;
+  color: var(--hms-text-muted);
+  font-size: var(--hms-text-caption);
+  cursor: pointer;
+}
+
+.hms-onboard-nav {
+  display: flex;
+  gap: var(--hms-space-2);
+}

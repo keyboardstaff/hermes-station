@@ -68,16 +68,29 @@ class AuthStatus(TypedDict):
     requiresLogin: bool
     loggedIn: bool
     localhost: bool
+    needsOnboarding: bool
+    userName: str
 
 
 async def auth_status(request: web.Request) -> AuthStatus:
     local = is_localhost(request)
     has_password = bool(config_reader.hms_password_hash())
+    # First-run wizard: only ever shown to a trusted (no-login) viewer, so a
+    # locked-out LAN client never sees it.
+    needs_onboarding = not config_reader.hms_onboarded()
+    user_name = config_reader.hms_user_name()
     if not has_password or local:
-        return {"requiresLogin": False, "loggedIn": True, "localhost": local}
+        return {
+            "requiresLogin": False, "loggedIn": True, "localhost": local,
+            "needsOnboarding": needs_onboarding, "userName": user_name,
+        }
     token = _cookie_token(request)
     is_valid = bool(token) and await get_default_store().is_valid(token)
-    return {"requiresLogin": True, "loggedIn": is_valid, "localhost": local}
+    return {
+        "requiresLogin": True, "loggedIn": is_valid, "localhost": local,
+        # Onboarding requires a trusted session; gate it on being logged in.
+        "needsOnboarding": needs_onboarding and is_valid, "userName": user_name,
+    }
 
 
 def build_session_cookie_header(request: web.Request, token: str) -> str:

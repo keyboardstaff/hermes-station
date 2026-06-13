@@ -20,7 +20,11 @@ _ALLOWED_KEYS = frozenset({
     "max_concurrent_runs",
     "max_upload_bytes",
     "upload_retention_days",
+    "user_name",
+    "onboarded",
 })
+
+_MAX_USER_NAME_LEN = 64
 
 _MIB = 1024 * 1024
 
@@ -98,6 +102,17 @@ def _validate(updates: Mapping[str, Any]) -> dict[str, Any]:
             if not 1 <= ival <= 365:
                 raise SettingsError("invalid_value:upload_retention_days")
             out[key] = ival
+        elif key == "user_name":
+            if not isinstance(value, str):
+                raise SettingsError("invalid_value:user_name")
+            name = value.strip()
+            if len(name) > _MAX_USER_NAME_LEN:
+                raise SettingsError("invalid_value:user_name")
+            out[key] = name
+        elif key == "onboarded":
+            if not isinstance(value, bool):
+                raise SettingsError("invalid_value:onboarded")
+            out[key] = value
     return out
 
 

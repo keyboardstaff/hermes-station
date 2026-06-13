@@ -292,11 +292,38 @@ export interface Translations {
   login: {
     title: string;
     subtitle: string;
+    username: string;
     password: string;
     signIn: string;
     signingIn: string;
     invalidPassword: string;
     rateLimited: string;
+  };
+
+  /** First-run setup wizard. */
+  onboarding: {
+    stepWelcome: string;
+    stepAccount: string;
+    stepAppearance: string;
+    stepLanguage: string;
+    welcomeTitle: string;
+    welcomeBody: string;
+    accountTitle: string;
+    loginName: string;
+    loginNamePlaceholder: string;
+    password: string;
+    optional: string;
+    passwordPlaceholder: string;
+    confirmPlaceholder: string;
+    passwordHint: string;
+    pwTooShort: string;
+    pwMismatch: string;
+    appearanceTitle: string;
+    languageTitle: string;
+    skip: string;
+    back: string;
+    next: string;
+    finish: string;
   };
 
   /** Slash descriptions keyed by upstream command name; missing falls back to

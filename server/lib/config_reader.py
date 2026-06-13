@@ -110,6 +110,17 @@ def hms_password_hash() -> str:
     return val.strip() if isinstance(val, str) else ""
 
 
+def hms_user_name() -> str:
+    """The configured login/display name (empty when unset)."""
+    val = _cached_extra().get("user_name")
+    return val.strip() if isinstance(val, str) else ""
+
+
+def hms_onboarded() -> bool:
+    """Whether the first-run setup wizard has been completed or skipped."""
+    return bool(_cached_extra().get("onboarded"))
+
+
 def hms_session_ttl_seconds() -> int:
     return _coerce_int(
         os.getenv("HMS_SESSION_TTL")

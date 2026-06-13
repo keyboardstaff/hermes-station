@@ -12,6 +12,7 @@ import HermesMark from "@/components/ui/HermesMark";
  */
 export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   const { t } = useI18n();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,7 +23,7 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
     setBusy(true);
     setError("");
     try {
-      await api.json("/api/login", "POST", { password });
+      await api.json("/api/login", "POST", { username: username.trim(), password });
       onSuccess();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -84,25 +85,28 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
         <div>
           <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
+            {t.login.username}
+          </div>
+          <input
+            type="text"
+            autoFocus
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            style={loginInputStyle}
+          />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 'var(--hms-text-caption)', color: "var(--hms-text-muted)", marginBottom: 4 }}>
             {t.login.password}
           </div>
           <input
             type="password"
-            autoFocus
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--hms-border)",
-              background: "var(--hms-bg)",
-              color: "var(--hms-text)",
-              fontSize: 'var(--hms-text-body)',
-              outline: "none",
-              boxSizing: "border-box",
-            }}
+            style={loginInputStyle}
           />
         </div>
 
@@ -127,4 +131,16 @@ export default function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
       </form>
     </div>
   );
+}
+
+const loginInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: 6,
+  border: "1px solid var(--hms-border)",
+  background: "var(--hms-bg)",
+  color: "var(--hms-text)",
+  fontSize: 'var(--hms-text-body)',
+  outline: "none",
+  boxSizing: "border-box",
 }

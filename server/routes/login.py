@@ -74,9 +74,18 @@ async def handle_login(request: web.Request) -> web.Response:
     if not isinstance(pw, str) or not pw:
         return web.json_response({"error": "missing_password"}, status=400)
 
-    if not verify_password(password_hash, pw):
+    # When a login name is configured it's a required credential: both the
+    # username and the password must match. Constant-ish — we still verify the
+    # password even on a username miss to avoid a trivial username oracle.
+    configured_user = config_reader.hms_user_name()
+    submitted_user = body.get("username") if isinstance(body, dict) else None
+    pw_ok = verify_password(password_hash, pw)
+    user_ok = (not configured_user) or (
+        isinstance(submitted_user, str) and submitted_user.strip() == configured_user
+    )
+    if not (pw_ok and user_ok):
         logger.warning("[hms.login] login failed from %s", caller)
-        return web.json_response({"error": "invalid_password"}, status=401)
+        return web.json_response({"error": "invalid_credentials"}, status=401)
 
     logger.info("[hms.login] login ok from %s", caller)
     token = await get_default_store().create(
