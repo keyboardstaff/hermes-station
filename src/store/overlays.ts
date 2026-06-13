@@ -7,7 +7,7 @@ import { create } from "zustand";
  * link, the connection dot) opens them through this single store.
  */
 
-export type OverlayModal = "profile" | "settings" | null;
+export type OverlayModal = "profile" | "settings" | "agents" | null;
 
 interface OverlaysState {
   modal: OverlayModal;
@@ -15,6 +15,7 @@ interface OverlaysState {
   settingsTab: string | null;
   openProfile: () => void;
   openSettings: (tab?: string) => void;
+  openAgents: () => void;
   close: () => void;
 }
 
@@ -23,5 +24,6 @@ export const useOverlays = create<OverlaysState>((set) => ({
   settingsTab: null,
   openProfile: () => set({ modal: "profile", settingsTab: null }),
   openSettings: (tab) => set({ modal: "settings", settingsTab: tab ?? null }),
+  openAgents: () => set({ modal: "agents", settingsTab: null }),
   close: () => set({ modal: null }),
 }));

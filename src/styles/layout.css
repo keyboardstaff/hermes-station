@@ -188,7 +188,23 @@
   padding: 4px 12px;
 }
 
-/* ── Sidebar "More" disclosure ────────────────────────────────────── */
+/* ── Sidebar "New session" shortcut hint — reveal on row hover ─────── */
+.hms-shortcut-hint {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.hms-sidebar-row:hover .hms-shortcut-hint,
+.hms-sidebar-row:focus-visible .hms-shortcut-hint {
+  opacity: 1;
+}
+
+/* ── Sidebar "More" hover flyout (opens to the right) ──────────────── */
+.hms-sidebar-more-wrap {
+  position: relative;
+  display: flex;
+}
+
 .hms-sidebar-more {
   display: flex;
   align-items: center;
@@ -204,12 +220,38 @@
   text-align: left;
 }
 
-.hms-sidebar-more-chevron {
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
+.hms-sidebar-more-flyout {
+  position: fixed;
+  z-index: 60;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--hms-surface);
+  border: 1px solid var(--hms-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
-.hms-sidebar-more[data-open] .hms-sidebar-more-chevron {
-  transform: rotate(90deg);
+.hms-sidebar-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--hms-text-muted);
+  text-decoration: none;
+  font-size: var(--hms-text-sm);
+}
+
+.hms-sidebar-more-item:hover {
+  background: var(--hms-hover-bg);
+  color: var(--hms-text);
+}
+
+.hms-sidebar-more-item.active {
+  color: var(--hms-text);
+  background: var(--hms-selected-bg);
 }
 

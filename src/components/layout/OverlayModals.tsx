@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/useBreakpoint";
 
 const ProfilePanel = lazy(() => import("@/panels/ProfilePanel"));
 const SettingsPanel = lazy(() => import("@/panels/SettingsPanel"));
+const AgentsPanel = lazy(() => import("@/panels/AgentsPanel"));
 
 /**
  * OverlayModals — renders the Profile / Settings modals from the global overlay
@@ -33,7 +34,9 @@ export default function OverlayModals() {
     // Settings now hosts the embedded capability panels (Models / Plugins /
     // Channels) in a two-column layout, so it gets a wider frame than Profile.
     : {
-        width: modal === "settings" ? "min(1120px, 95vw)" : "min(960px, 94vw)",
+        width: modal === "settings" ? "min(1120px, 95vw)"
+          : modal === "agents" ? "min(820px, 92vw)"
+          : "min(960px, 94vw)",
         height: "min(88vh, 920px)",
       };
 
@@ -75,7 +78,9 @@ export default function OverlayModals() {
           <X size={18} />
         </button>
         <Suspense fallback={null}>
-          {modal === "profile" ? <ProfilePanel /> : <SettingsPanel initialTab={settingsTab ?? undefined} />}
+          {modal === "profile" ? <ProfilePanel />
+            : modal === "agents" ? <AgentsPanel />
+            : <SettingsPanel initialTab={settingsTab ?? undefined} />}
         </Suspense>
       </div>
     </div>,

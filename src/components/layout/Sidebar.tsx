@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { PanelLeftClose, PanelLeftOpen, Plus, ChevronRight, MoreHorizontal } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { PanelLeftClose, PanelLeftOpen, Plus, MoreHorizontal } from "lucide-react";
 import { useI18n } from "@/i18n";
 import SearchInput from "@/components/ui/SearchInput";
 import { useSidebarSearch } from "@/store/sidebar-search";
@@ -44,7 +44,6 @@ export default function Sidebar({
 }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const location = useLocation();
   const search = useSidebarSearch((s) => s.query);
   const setSearch = useSidebarSearch((s) => s.setQuery);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
@@ -58,12 +57,6 @@ export default function Sidebar({
   const moreRoutes = useMemo(
     () => NAV_ROUTES.filter((r) => !pinned.includes(r.path)),
     [pinned],
-  );
-
-  // Open the disclosure when the current page lives under it, so the active
-  // row isn't invisible on load.
-  const [moreOpen, setMoreOpen] = useState<boolean>(() =>
-    moreRoutes.some((r) => location.pathname.startsWith(r.path)),
   );
 
   const onNewChat = () => {
@@ -213,53 +206,13 @@ export default function Sidebar({
         ))}
 
         {moreRoutes.length > 0 && (
-          <>
-            {collapsed ? (
-              <Tooltip label={t.nav.more} placement="right">
-                <button
-                  type="button"
-                  onClick={() => setMoreOpen((v) => !v)}
-                  aria-expanded={moreOpen}
-                  aria-label={t.nav.more}
-                  className="hms-sidebar-row"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 36,
-                    height: 36,
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    color: "var(--hms-text-muted)",
-                  }}
-                >
-                  <MoreHorizontal size={16} />
-                </button>
-              </Tooltip>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMoreOpen((v) => !v)}
-                aria-expanded={moreOpen}
-                className="hms-sidebar-row hms-sidebar-more"
-                data-open={moreOpen || undefined}
-              >
-                <ChevronRight size={14} className="hms-sidebar-more-chevron" />
-                <span>{t.nav.more}</span>
-              </button>
-            )}
-            {moreOpen && moreRoutes.map(({ path, labelKey, icon: Icon }) => (
-              <SidebarLink
-                key={path}
-                to={path}
-                label={t.nav[labelKey] ?? labelKey}
-                icon={<Icon size={ICON_SIZE} />}
-                collapsed={collapsed}
-                onClick={onNavigate}
-              />
-            ))}
-          </>
+          <MoreFlyout
+            routes={moreRoutes}
+            collapsed={collapsed}
+            label={t.nav.more}
+            labelFor={(k) => t.nav[k] ?? k}
+            onNavigate={onNavigate}
+          />
         )}
       </nav>
 
@@ -312,6 +265,79 @@ export default function Sidebar({
     </aside>
   );
 }
+
+// ── More flyout ───────────────────────────────────────────────────
+// Hovering "More" opens a panel to the RIGHT of the trigger (fixed-positioned
+// so no ancestor overflow clips it). A short close delay lets the cursor
+// travel from the trigger into the panel without it collapsing.
+function MoreFlyout({
+  routes, collapsed, label, labelFor, onNavigate,
+}: {
+  routes: typeof NAV_ROUTES;
+  collapsed: boolean;
+  label: string;
+  labelFor: (k: NAV_LABEL) => string;
+  onNavigate?: () => void;
+}) {
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
+
+  const open = () => {
+    window.clearTimeout(closeTimer.current);
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setPos({ left: r.right + 4, top: r.top });
+  };
+  const scheduleClose = () => {
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setPos(null), 140);
+  };
+
+  return (
+    <div
+      className="hms-sidebar-more-wrap"
+      onMouseEnter={open}
+      onMouseLeave={scheduleClose}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="hms-sidebar-row hms-sidebar-more"
+        aria-haspopup="menu"
+        aria-expanded={pos !== null}
+        onClick={open}
+        style={collapsed ? { justifyContent: "center", width: 36, height: 36 } : undefined}
+      >
+        <MoreHorizontal size={collapsed ? 16 : ICON_SIZE} />
+        {!collapsed && <span>{label}</span>}
+      </button>
+
+      {pos && (
+        <div
+          className="hms-sidebar-more-flyout"
+          role="menu"
+          style={{ left: pos.left, top: pos.top }}
+          onMouseEnter={open}
+          onMouseLeave={scheduleClose}
+        >
+          {routes.map(({ path, labelKey, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={() => { setPos(null); onNavigate?.(); }}
+              className={({ isActive }) => "hms-sidebar-more-item" + (isActive ? " active" : "")}
+            >
+              <Icon size={15} />
+              <span>{labelFor(labelKey)}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type NAV_LABEL = (typeof NAV_ROUTES)[number]["labelKey"];
 
 // ── SidebarLink ───────────────────────────────────────────────────
 

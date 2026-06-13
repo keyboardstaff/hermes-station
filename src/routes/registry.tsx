@@ -32,7 +32,6 @@ export interface RouteRecord {
 export const ROUTES: RouteRecord[] = [
   // ── Sidebar nav (pinned by default, or under "More") ──────────────
   { path: "/sessions",  labelKey: "sessions",  icon: LayoutList,  panel: lazy(() => import("@/panels/SessionsPanel")),  order: 1 },
-  { path: "/agents",    labelKey: "agents",    icon: Users,       panel: lazy(() => import("@/panels/AgentsPanel")),    order: 2 },
   // "Tools" = the agent's skills + toolsets + MCP (labelKey `skills`, relabeled).
   { path: "/skills",    labelKey: "skills",    icon: Sparkles,    panel: lazy(() => import("@/panels/SkillsPanel")),    order: 3 },
   { path: "/artifacts", labelKey: "artifacts", icon: Files,       panel: lazy(() => import("@/panels/ArtifactsPanel")), order: 4 },
@@ -44,6 +43,9 @@ export const ROUTES: RouteRecord[] = [
 
   // /chat is reachable via Sidebar's "New session" button + Recents.
   { path: "/chat",      labelKey: "chat",      icon: MessageSquare, panel: lazy(() => import("@/panels/ChatPanel")),   order: 99, hidden: true },
+  // /agents = the active session's subagent tree — opened as a modal from the
+  // chat topbar (Users button), not a sidebar destination. Routed for deep links.
+  { path: "/agents",    labelKey: "agents",    icon: Users,         panel: lazy(() => import("@/panels/AgentsPanel")), order: 99, hidden: true },
 
   // ── Folded into the Settings modal (Capabilities) ─────────────────
   // Routed (deep-link / palette compat) but hidden from the sidebar — the
@@ -66,5 +68,5 @@ export const NAV_ROUTES: RouteRecord[] = ROUTES
 /** Paths pinned to the sidebar out of the box; the rest live under "More".
  *  Users override the set in Settings → Preferences → Sidebar. */
 export const DEFAULT_PINNED: readonly string[] = [
-  "/sessions", "/agents", "/skills", "/artifacts",
+  "/sessions", "/skills", "/artifacts", "/cron",
 ];

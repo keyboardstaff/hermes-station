@@ -13,23 +13,24 @@ beforeEach(() => {
 describe("NAV_ROUTES", () => {
   it("lists exactly the visible routes in canonical order", () => {
     expect(NAV_ROUTES.map((r) => r.path)).toEqual([
-      "/sessions", "/agents", "/skills", "/artifacts",
+      "/sessions", "/skills", "/artifacts",
       "/cron", "/kanban", "/files", "/analytics", "/logs",
     ]);
   });
 
-  it("keeps chat/settings-embedded routes routed but unlisted", () => {
+  it("keeps chat/agents/settings-embedded routes routed but unlisted", () => {
     const listed = new Set(NAV_ROUTES.map((r) => r.path));
-    for (const path of ["/chat", "/models", "/plugins", "/channels"]) {
+    // /agents is opened as a modal from the chat topbar, not a sidebar item.
+    for (const path of ["/chat", "/agents", "/models", "/plugins", "/channels"]) {
       expect(listed.has(path)).toBe(false);
       expect(ROUTES.some((r) => r.path === path)).toBe(true);
     }
   });
 
   it("default-pins the primary set; the rest fall under More", () => {
-    expect([...DEFAULT_PINNED]).toEqual(["/sessions", "/agents", "/skills", "/artifacts"]);
+    expect([...DEFAULT_PINNED]).toEqual(["/sessions", "/skills", "/artifacts", "/cron"]);
     const more = NAV_ROUTES.filter((r) => !DEFAULT_PINNED.includes(r.path)).map((r) => r.path);
-    expect(more).toEqual(["/cron", "/kanban", "/files", "/analytics", "/logs"]);
+    expect(more).toEqual(["/kanban", "/files", "/analytics", "/logs"]);
   });
 });
 
@@ -39,15 +40,15 @@ describe("useSidebarNav", () => {
   });
 
   it("first toggle materializes the defaults, then applies the change", () => {
-    useSidebarNav.getState().togglePinned("/cron");
+    useSidebarNav.getState().togglePinned("/kanban");
     expect(useSidebarNav.getState().pinnedPaths).toEqual([
-      "/sessions", "/agents", "/skills", "/artifacts", "/cron",
+      "/sessions", "/skills", "/artifacts", "/cron", "/kanban",
     ]);
   });
 
   it("toggling a pinned route unpins it (it moves under More)", () => {
-    useSidebarNav.getState().togglePinned("/agents");
-    expect(useSidebarNav.getState().pinnedPaths).toEqual(["/sessions", "/skills", "/artifacts"]);
+    useSidebarNav.getState().togglePinned("/skills");
+    expect(useSidebarNav.getState().pinnedPaths).toEqual(["/sessions", "/artifacts", "/cron"]);
   });
 
   it("reset returns to the default set", () => {

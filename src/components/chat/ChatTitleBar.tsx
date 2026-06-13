@@ -1,5 +1,6 @@
-import { PanelRight } from "lucide-react";
+import { PanelRight, Users } from "lucide-react";
 import { useI18n } from "@/i18n";
+import { useOverlays } from "@/store/overlays";
 import { useChatStore } from "@/store/chat";
 import { formatSessionTitle } from "@/lib/session-title";
 import { useActiveSessionTitle } from "@/hooks/useActiveSessionTitle";
@@ -61,6 +62,7 @@ export default function ChatTitleBar({
   const activeSessionTitle = useActiveSessionTitle();
   const queryClient = useQueryClient();
   const { pinnedIds, toggle } = usePinnedSessions();
+  const openAgents = useOverlays((s) => s.openAgents);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["sessions-table-all"] });
@@ -152,14 +154,23 @@ export default function ChatTitleBar({
         )
       }
       actions={
-        <IconButton
-          active={workspacesOpen}
-          onClick={onToggleWorkspaces}
-          aria-label={t.nav.workspacesDrawer}
-          aria-pressed={workspacesOpen}
-        >
-          <PanelRight size={16} />
-        </IconButton>
+        <>
+          <IconButton
+            onClick={openAgents}
+            aria-label={t.nav.agents}
+            title={t.nav.agents}
+          >
+            <Users size={16} />
+          </IconButton>
+          <IconButton
+            active={workspacesOpen}
+            onClick={onToggleWorkspaces}
+            aria-label={t.nav.workspacesDrawer}
+            aria-pressed={workspacesOpen}
+          >
+            <PanelRight size={16} />
+          </IconButton>
+        </>
       }
     />
   );
