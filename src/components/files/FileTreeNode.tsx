@@ -179,13 +179,13 @@ function TreeEntry({
           <button
             onClick={() => onToggle(`${root}/${childPath}`)}
             className="hms-tree-row-btn"
-            style={{ paddingLeft: depth * 12 + 4 }}
+            style={{ paddingLeft: depth * 12 + 6 }}
           >
-            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             {isExpanded ? (
-              <FolderOpen size={11} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
+              <FolderOpen size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
             ) : (
-              <Folder size={11} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
+              <Folder size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
             )}
             <span className="hms-tree-row-name">{entry.name}</span>
           </button>
@@ -196,21 +196,21 @@ function TreeEntry({
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "file"); }}
                 className="hms-tree-icon-btn"
               >
-                <FilePlus size={10} />
+                <FilePlus size={12} />
               </button>
               <button
                 title={f?.newFolder ?? "New folder"}
                 onClick={(e) => { e.stopPropagation(); createProps.onCreateStart(childPath, "dir"); }}
                 className="hms-tree-icon-btn"
               >
-                <FolderPlus size={10} />
+                <FolderPlus size={12} />
               </button>
               <button
                 title={f?.delete ?? "Delete"}
                 onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "dir"); }}
                 className="hms-tree-icon-btn"
               >
-                <Trash2 size={10} />
+                <Trash2 size={12} />
               </button>
             </>
           )}
@@ -236,9 +236,9 @@ function TreeEntry({
       <button
         onClick={() => onSelectFile(childPath)}
         className="hms-tree-row-btn hms-tree-row-btn--file"
-        style={{ paddingLeft: depth * 12 + 17 }}
+        style={{ paddingLeft: depth * 12 + 20 }}
       >
-        <FileIcon size={11} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+        <FileIcon size={14} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
         <span className="hms-tree-row-name">{entry.name}</span>
       </button>
       {hovered && (
@@ -247,7 +247,7 @@ function TreeEntry({
           onClick={(e) => { e.stopPropagation(); createProps.onDelete(childPath, "file"); }}
           className="hms-tree-icon-btn"
         >
-          <Trash2 size={10} />
+          <Trash2 size={12} />
         </button>
       )}
     </div>
@@ -282,11 +282,11 @@ function NewItemRow({
   };
 
   return (
-    <div className="hms-tree-new-item" style={{ paddingLeft: depth * 12 + 4 }}>
+    <div className="hms-tree-new-item" style={{ paddingLeft: depth * 12 + 6 }}>
       {kind === "dir" ? (
-        <FolderPlus size={11} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
+        <FolderPlus size={14} style={{ color: "var(--hms-accent)", flexShrink: 0 }} />
       ) : (
-        <FilePlus size={11} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
+        <FilePlus size={14} style={{ color: "var(--hms-text-muted)", flexShrink: 0 }} />
       )}
       <input
         ref={inputRef}

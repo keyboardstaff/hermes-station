@@ -949,6 +949,11 @@ button.hms-artifacts-title {
   color: var(--hms-text);
 }
 
+.hms-cron-newjob {
+  padding: 8px 10px 0;
+  flex-shrink: 0;
+}
+
 .hms-cron-list {
   flex: 1;
   overflow-y: auto;

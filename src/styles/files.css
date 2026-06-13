@@ -5,12 +5,17 @@
   gap: var(--hms-space-2);
   height: 100%;
   box-sizing: border-box;
+  /* No horizontal padding on the container — the scroll body bleeds to the
+     edge so the scrollbar sits flush and rows use the full width (header keeps
+     its own inset). */
+  padding: var(--hms-space-2) 0;
 }
 
 .hms-files-side-tree-header {
   display: flex;
   align-items: center;
   gap: var(--hms-space-1);
+  padding: 0 var(--hms-space-2);
 }
 
 .hms-files-side-tree-git {
@@ -26,8 +31,11 @@
 
 .hms-files-side-tree-body {
   flex: 1;
-  overflow: auto;
-  padding: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Flush to the edges — no horizontal padding, so the scrollbar hugs the
+     right edge and rows span the full column width. */
+  padding: 2px 0;
 }
 
 
@@ -237,17 +245,17 @@
 .hms-tree-row-btn {
   display: flex;
   align-items: center;
-  gap: var(--hms-space-1);
-  padding-right: 4px;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  gap: var(--hms-space-2);
+  padding-right: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
   border: none;
   background: transparent;
   cursor: pointer;
   flex: 1;
   text-align: left;
   color: var(--hms-text);
-  font-size: var(--hms-text-xs);
+  font-size: var(--hms-text-sm);
   min-width: 0;
 }
 

@@ -9,6 +9,8 @@ import { useI18n } from "@/i18n";
 import { api } from "@/lib/api";
 import { useChatStore } from "@/store/chat";
 import { useFilesSelection } from "@/store/panel-selection";
+import { useProfileScope, filterSessionsByScope, effectiveScopeName, ALL_PROFILES } from "@/store/profile-scope";
+import { useActiveProfile } from "@/hooks/useProfiles";
 import { formatSessionTitle } from "@/lib/session-title";
 import {
   collectArtifactsForSession,
@@ -55,13 +57,19 @@ function recencyOf(s: SessionSummary): number {
   return s.last_active ?? s.updated_at ?? s.started_at ?? 0;
 }
 
-async function buildArtifactIndex(): Promise<ArtifactRecord[]> {
+async function buildArtifactIndex(
+  scope: string | null,
+  activeProfile: string | null | undefined,
+): Promise<ArtifactRecord[]> {
   // The server orders by last activity when asked — grab the most-recently-active
   // sessions (the index spans them, like upstream desktop's `listSessions(30)`).
   const { sessions } = await api.get<{ sessions: SessionSummary[] }>(
     `/api/sessions?sort=last_active&limit=${RECENT_SESSIONS}`,
   );
-  const recent = [...sessions].sort((x, y) => recencyOf(y) - recencyOf(x)).slice(0, RECENT_SESSIONS);
+  // Honor the profile view-scope (the topbar selector) — index only the scoped
+  // profile's sessions, else the selector would be inert.
+  const scoped = filterSessionsByScope(sessions, scope, activeProfile);
+  const recent = [...scoped].sort((x, y) => recencyOf(y) - recencyOf(x)).slice(0, RECENT_SESSIONS);
 
   const results = await Promise.allSettled(
     // Each row carries its owning profile (cross-home list) — read its messages
@@ -94,9 +102,13 @@ export default function ArtifactsPanel() {
   const setPendingScrollMessageId = useChatStore((s) => s.setPendingScrollMessageId);
   const setFileSelection = useFilesSelection((s) => s.setSelected);
 
+  const scope = useProfileScope((s) => s.scope);
+  const { data: activeProfile } = useActiveProfile();
+  const scopeKey = scope === ALL_PROFILES ? "__all__" : (effectiveScopeName(scope, activeProfile?.current) ?? "default");
+
   const { data: artifacts, isLoading } = useQuery({
-    queryKey: ["artifacts-index"],
-    queryFn: buildArtifactIndex,
+    queryKey: ["artifacts-index", scopeKey],
+    queryFn: () => buildArtifactIndex(scope, activeProfile?.current),
     staleTime: 30_000,
   });
 

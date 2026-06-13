@@ -85,17 +85,10 @@ export default function KanbanPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <PageTopBar
         title={t.nav.kanban}
-        actions={
-          <>
-            {/* Profile (assignee) selector top-right, matching Cron/Artifacts. */}
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} style={selectStyle} aria-label={k?.assignee ?? "Assignee"}>
-              <option value="all">{k?.allAssignees ?? "All profiles"}</option>
-              {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
-            <Button size="sm" variant="primary" onClick={onNewBoard}><Plus size={12} />{k?.newBoard ?? "New board"}</Button>
-          </>
-        }
         context={
+          // The kanban board is shared across profiles by upstream design, so
+          // there's NO profile scope selector here — `assignee` is a card filter
+          // (which agent owns a card), placed with the other filters.
           <div style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-3)", flexWrap: "wrap" }}>
             <select
               value={board ?? ""}
@@ -114,6 +107,10 @@ export default function KanbanPanel() {
               <option value="all">{k?.allTenants ?? "All tenants"}</option>
               {tenants.map((tn) => <option key={tn} value={tn}>{tn}</option>)}
             </select>
+            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} style={selectStyle} aria-label={k?.assignee ?? "Assignee"}>
+              <option value="all">{k?.allAssignees ?? "All profiles"}</option>
+              {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
             <label style={{ display: "flex", alignItems: "center", gap: "var(--hms-space-1)", fontSize: "var(--hms-text-caption)", color: "var(--hms-text-muted)", cursor: "pointer" }}>
               <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
               {k?.showArchived ?? "Show archived"}
@@ -130,6 +127,12 @@ export default function KanbanPanel() {
       />
 
       <div style={{ flex: 1, overflow: "auto", padding: "var(--hms-space-4)" }}>
+        {/* New board lives in the content (not the topbar) — a board-level action. */}
+        <div style={{ marginBottom: "var(--hms-space-3)" }}>
+          <Button size="sm" variant="primary" onClick={onNewBoard}>
+            <Plus size={12} />{k?.newBoard ?? "New board"}
+          </Button>
+        </div>
         {tasksQuery.isError ? (
           <div style={{ padding: "var(--hms-space-6)", color: "var(--hms-error-text)", fontSize: "var(--hms-text-sm)" }}>
             {k?.errorLoading ?? "Failed to load board."}

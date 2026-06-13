@@ -135,7 +135,7 @@ export default function FilesSideTree({ embedded = false }: { embedded?: boolean
   return (
     <div
       className="hms-files-side-tree"
-      style={{ padding: embedded ? "var(--hms-space-2)" : "var(--hms-space-3)" }}
+      data-embedded={embedded || undefined}
     >
       {/* Single header row: root switch (hermes / workspace) on the left,
           git badge + file action icons on the right — keeps everything on
