@@ -369,6 +369,6 @@ def _register_station_platform_hint() -> None:
                 source="plugin",
             )
         )
-        logger.debug("[hms.app] registered 'station' in platform_registry")
+        logger.info("[hms.app] 'station' registered in platform_registry — LLM will see Station context")
     except Exception:
         logger.debug("[hms.app] station platform_hint registration failed", exc_info=True)
