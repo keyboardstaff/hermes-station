@@ -24,10 +24,45 @@ def _configure_logging(verbose: bool) -> None:
     logging.basicConfig(level=level, format=LOG_FORMAT, datefmt="%H:%M:%S")
 
 
+def _patch_unix_keepalive() -> None:
+    """Silence SO_KEEPALIVE errors on Unix-domain sockets.
+
+    aiohttp unconditionally calls tcp_keepalive() in connection_made(), but
+    macOS does not support SO_KEEPALIVE on AF_UNIX sockets and raises
+    OSError: [Errno 22] Invalid argument for every incoming connection.
+    This patches aiohttp.tcp_helpers at runtime to skip the setsockopt call
+    when the socket is AF_UNIX, leaving TCP sockets unaffected.
+    """
+    import socket as _socket
+
+    try:
+        import aiohttp.tcp_helpers as _th
+    except ImportError:
+        return
+
+    if getattr(_th, "_unix_keepalive_patched", False):
+        return
+
+    _orig = _th.tcp_keepalive
+
+    def _patched(transport: Any) -> None:
+        sock = transport.get_extra_info("socket")
+        if sock is not None and getattr(sock, "family", None) == _socket.AF_UNIX:
+            return  # SO_KEEPALIVE is not supported on Unix domain sockets (macOS)
+        _orig(transport)
+
+    _th.tcp_keepalive = _patched
+    _th._unix_keepalive_patched = True  # type: ignore[attr-defined]
+
+
 def _run_once(bind: dict[str, Any]) -> None:
     from aiohttp import web
 
     from server.app import build_app
+
+    if "path" in bind:
+        # macOS raises EINVAL when aiohttp sets SO_KEEPALIVE on a Unix socket.
+        _patch_unix_keepalive()
 
     app = build_app(adapter=None)
     if "path" in bind:
