@@ -147,6 +147,16 @@ class _Gateway:
         default_factory=lambda: _try_import("gateway.config", "Platform")
     )
 
+    # plugin platform registry — lets Station self-register with a platform_hint
+    # so the LLM system-prompt builder appends Station-specific context guidance.
+    # Both are public, non-underscore symbols; low churn risk.
+    platform_registry: Any | None = field(
+        default_factory=lambda: _try_import("gateway.platform_registry", "platform_registry")
+    )
+    PlatformEntry: type | None = field(
+        default_factory=lambda: _try_import("gateway.platform_registry", "PlatformEntry")
+    )
+
     def base_platform_adapter(self) -> type | None:
         """Late-bound: deferred past module load since upstream base pulls full agent runtime."""
         return _try_import("gateway.platforms.base", "BasePlatformAdapter")

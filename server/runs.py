@@ -581,11 +581,15 @@ async def _run_to_completion(
             token = bridge.bind_session_key(handle.session_id)
             # Set platform/session_key vars so upstream tools (kanban notifier, cron
             # auto-deliver, runtime footer) see this run instead of stale values.
+            # chat_name="Hermes Station" identifies the surface for routing context;
+            # session_id is the formal per-session identifier distinct from session_key.
             session_tokens = (
                 set_vars(
                     platform="station",
                     session_key=handle.session_id,
+                    session_id=handle.session_id,
                     chat_id=handle.session_id,
+                    chat_name="Hermes Station",
                     user_id="hms",
                     user_name="Station",
                 )

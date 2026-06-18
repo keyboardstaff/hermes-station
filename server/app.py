@@ -106,6 +106,11 @@ def build_app(*, adapter: StationAdapter | None = None):
     app.on_startup.append(_on_startup)
     app.on_cleanup.append(_on_cleanup)
 
+    # Register Station in the gateway's platform_registry so the LLM system-prompt
+    # builder appends the Station-specific platform hint for every run.
+    # Best-effort: called in both dev (build_app(adapter=None)) and production.
+    _register_station_platform_hint()
+
     return app
 
 
@@ -311,3 +316,62 @@ def _shim_flags_payload() -> dict:
     if not shim._probed:  # type: ignore[attr-defined]
         shim.probe()
     return shim.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Platform hint registration
+# ---------------------------------------------------------------------------
+
+# Injected into the LLM system-prompt by upstream's build_stable_parts() when
+# it finds platform_registry.get("station").platform_hint.  Tells the model
+# what markdown / math / diagram rendering is available in Station.
+_STATION_PLATFORM_HINT = (
+    "You are running in Hermes Station, a web interface for Hermes Agent. "
+    "Full Markdown renders natively: headings, **bold**, *italic*, tables, "
+    "~~strikethrough~~, task lists (`- [ ]` / `- [x]`), fenced code blocks "
+    "with syntax highlighting, and blockquotes. "
+    "Math: use $...$ for inline and $$...$$ for display equations — KaTeX "
+    "renders them. Diagrams: ```mermaid code blocks render as interactive "
+    "diagrams. "
+    "File delivery: there is no attachment channel — reference created or "
+    "changed files by their absolute path; the user can open them in "
+    "Station's built-in file browser."
+)
+
+
+def _register_station_platform_hint() -> None:
+    """Register 'station' in upstream's platform_registry with a platform_hint.
+
+    upstream's agent/system_prompt.py appends the hint to the LLM system prompt
+    when AIAgent.platform == 'station' and a matching registry entry exists.
+    Called from build_app() so it fires in both dev and production modes.
+
+    Best-effort: if gateway.platform_registry is absent (older agent host or
+    degraded mode) we log at DEBUG and skip silently — the LLM will have no
+    Station-specific platform context, same as before this change.
+    """
+    try:
+        from server.lib.upstream_shim import shim
+        registry = shim.gateway.platform_registry
+        PlatformEntry = shim.gateway.PlatformEntry  # noqa: N806
+        if registry is None or PlatformEntry is None:
+            logger.debug("[hms.app] platform_registry unavailable — skipping station hint")
+            return
+        if registry.get("station") is not None:
+            return  # already registered (idempotent)
+        registry.register(
+            PlatformEntry(
+                name="station",
+                label="Station",
+                emoji="🌐",
+                # adapter_factory is required but irrelevant here — Station's
+                # adapter is managed separately via adapter.py's connect().
+                adapter_factory=lambda cfg: None,
+                check_fn=lambda: True,
+                platform_hint=_STATION_PLATFORM_HINT,
+                source="plugin",
+            )
+        )
+        logger.debug("[hms.app] registered 'station' in platform_registry")
+    except Exception:
+        logger.debug("[hms.app] station platform_hint registration failed", exc_info=True)
