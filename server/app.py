@@ -337,38 +337,58 @@ _STATION_PLATFORM_HINT = (
 
 
 def _register_station_platform_hint() -> None:
-    """Register 'station' in upstream's platform_registry with a platform_hint.
+    """Inject the Station platform hint into the LLM system prompt.
 
-    upstream's agent/system_prompt.py appends the hint to the LLM system prompt
-    when AIAgent.platform == 'station' and a matching registry entry exists.
+    Two parallel paths — whichever succeeds first wins:
+    1. platform_registry (the "proper" plugin extension point in newer
+       upstream versions): upstream's build_stable_parts() checks
+       platform_registry.get("station").platform_hint.
+    2. PLATFORM_HINTS dict (direct injection, works on older upstream):
+       build_stable_parts() checks PLATFORM_HINTS["station"] first, before
+       the registry lookup.
+
     Called from build_app() so it fires in both dev and production modes.
-
-    Best-effort: if gateway.platform_registry is absent (older agent host or
-    degraded mode) we log at DEBUG and skip silently — the LLM will have no
-    Station-specific platform context, same as before this change.
     """
+    hint_injected = False
+
+    # ── Path 1: platform_registry ─────────────────────────────────────────
     try:
         from server.lib.upstream_shim import shim
         registry = shim.gateway.platform_registry
         PlatformEntry = shim.gateway.PlatformEntry  # noqa: N806
-        if registry is None or PlatformEntry is None:
-            logger.debug("[hms.app] platform_registry unavailable — skipping station hint")
-            return
-        if registry.get("station") is not None:
-            return  # already registered (idempotent)
-        registry.register(
-            PlatformEntry(
-                name="station",
-                label="Station",
-                emoji="🌐",
-                # adapter_factory is required but irrelevant here — Station's
-                # adapter is managed separately via adapter.py's connect().
-                adapter_factory=lambda cfg: None,
-                check_fn=lambda: True,
-                platform_hint=_STATION_PLATFORM_HINT,
-                source="plugin",
-            )
-        )
-        logger.info("[hms.app] 'station' registered in platform_registry — LLM will see Station context")
+        if registry is not None and PlatformEntry is not None:
+            if registry.get("station") is None:
+                registry.register(
+                    PlatformEntry(
+                        name="station",
+                        label="Station",
+                        emoji="🌐",
+                        adapter_factory=lambda cfg: None,
+                        check_fn=lambda: True,
+                        platform_hint=_STATION_PLATFORM_HINT,
+                        source="plugin",
+                    )
+                )
+            hint_injected = True
     except Exception:
-        logger.debug("[hms.app] station platform_hint registration failed", exc_info=True)
+        logger.debug("[hms.app] platform_registry path failed", exc_info=True)
+
+    # ── Path 2: PLATFORM_HINTS dict (fallback) ────────────────────────────
+    # Works on upstream versions that have PLATFORM_HINTS but not a plugin
+    # platform_registry, or when platform_registry import fails.
+    if not hint_injected:
+        try:
+            from agent.prompt_builder import PLATFORM_HINTS  # hms-allow-hardcoding
+            if "station" not in PLATFORM_HINTS:
+                PLATFORM_HINTS["station"] = _STATION_PLATFORM_HINT
+            hint_injected = True
+        except Exception:
+            logger.debug("[hms.app] PLATFORM_HINTS fallback failed", exc_info=True)
+
+    if hint_injected:
+        logger.info("[hms.app] station platform hint injected — LLM will see Station context")
+    else:
+        logger.warning(
+            "[hms.app] could not inject station platform hint "
+            "(both platform_registry and PLATFORM_HINTS paths failed)"
+        )
