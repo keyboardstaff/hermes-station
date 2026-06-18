@@ -117,10 +117,37 @@ fi
 echo "→ hms install"
 "$VENV/bin/hms" install
 
+# ── 4. Symlink hms into PATH ──────────────────────────────────────────────────
+# Try /usr/local/bin first (on PATH everywhere, writable on macOS + most Linux).
+# Fall back to ~/.local/bin (XDG user-bin; always writable, may need PATH edit).
+HMS_CMD="$VENV/bin/hms"
+_HMS_LINK_CREATED=0
+for _ldir in "/usr/local/bin" "$HOME/.local/bin"; do
+    [[ "$_ldir" == "$HOME/.local/bin" ]] && mkdir -p "$_ldir"
+    if [[ -d "$_ldir" ]] && ln -sf "$VENV/bin/hms" "$_ldir/hms" 2>/dev/null; then
+        echo "→ hms symlinked → $_ldir/hms"
+        HMS_CMD="hms"
+        _HMS_LINK_CREATED=1
+        # Warn if ~/.local/bin was used but isn't in PATH yet (bare system).
+        if [[ "$_ldir" == "$HOME/.local/bin" && ":${PATH}:" != *":$HOME/.local/bin:"* ]]; then
+            echo "  ⚠  ~/.local/bin is not in your PATH yet."
+            echo "     Add to ~/.zshrc (zsh) or ~/.bash_profile (bash):"
+            echo "       export PATH=\"\$HOME/.local/bin:\$PATH\""
+            echo "     Then restart your shell or: source ~/.zshrc"
+        fi
+        break
+    fi
+done
+if [[ "$_HMS_LINK_CREATED" == 0 ]]; then
+    echo "! Could not write to /usr/local/bin or ~/.local/bin — no hms symlink created." >&2
+    echo "  To use hms from anywhere, add $VENV/bin to your PATH, or:" >&2
+    echo "    sudo ln -sf $VENV/bin/hms /usr/local/bin/hms" >&2
+fi
+
 echo
 echo "✓ Hermes Station installed."
 echo
 echo "If this is the first install, enable gateway autostart:"
 echo "    hermes gateway install"
 echo "If the gateway is already running, reload it to pick up the plugin:"
-echo "    $VENV/bin/hms restart"
+echo "    $HMS_CMD restart"

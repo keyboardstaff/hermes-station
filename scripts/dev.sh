@@ -111,8 +111,47 @@ for _ in $(seq 1 100); do  # up to ~10s (100 × 0.1s)
     sleep 0.1
 done
 
+# Discover pnpm — mirrors install.sh; duplicated here so dev.sh stays
+# self-contained (no sourced helper). Resolution order: PATH → PNPM_HOME →
+# corepack → npx.
+probe_ok() { "$@" --version >/dev/null 2>&1; }
+PNPM=()
+if command -v pnpm >/dev/null 2>&1 && probe_ok pnpm; then
+    PNPM=(pnpm)
+else
+    for pnpm_dir in "${PNPM_HOME:-}" "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
+        if [[ -n "$pnpm_dir" && -x "$pnpm_dir/pnpm" ]] && probe_ok "$pnpm_dir/pnpm"; then
+            PNPM=("$pnpm_dir/pnpm")
+            break
+        fi
+    done
+fi
+if [[ ${#PNPM[@]} -eq 0 ]] && command -v corepack >/dev/null 2>&1; then
+    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+    if probe_ok corepack pnpm; then
+        PNPM=(corepack pnpm)
+    fi
+fi
+if [[ ${#PNPM[@]} -eq 0 ]] && command -v npx >/dev/null 2>&1; then
+    PNPM_PIN="$(sed -n 's/^[[:space:]]*"packageManager":[[:space:]]*"\([^"]*\)".*/\1/p' "$REPO_ROOT/package.json")"
+    if probe_ok npx -y "${PNPM_PIN:-pnpm}"; then
+        PNPM=(npx -y "${PNPM_PIN:-pnpm}")
+    fi
+fi
+if [[ ${#PNPM[@]} -eq 0 ]]; then
+    cat >&2 <<'EOF'
+✗ pnpm not found (tried PATH, PNPM_HOME, corepack, npx).
+  Install Node.js ≥ 18 first, then install pnpm via one of:
+    npm install -g pnpm
+    corepack enable
+  If you used pnpm's standalone installer, open a NEW terminal so PNPM_HOME
+  is on your PATH, or: export PATH="$HOME/Library/pnpm:$PATH"  (macOS)
+EOF
+    exit 1
+fi
+
 echo "→ Starting Vite (port 3131)…"
-pnpm dev:client &
+"${PNPM[@]}" dev:client &
 PIDS+=($!)
 
 wait
