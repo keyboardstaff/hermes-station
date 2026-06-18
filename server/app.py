@@ -326,16 +326,13 @@ def _shim_flags_payload() -> dict:
 # it finds platform_registry.get("station").platform_hint.  Tells the model
 # what markdown / math / diagram rendering is available in Station.
 _STATION_PLATFORM_HINT = (
-    "You are running in Hermes Station, a web interface for Hermes Agent. "
-    "Full Markdown renders natively: headings, **bold**, *italic*, tables, "
-    "~~strikethrough~~, task lists (`- [ ]` / `- [x]`), fenced code blocks "
-    "with syntax highlighting, and blockquotes. "
-    "Math: use $...$ for inline and $$...$$ for display equations — KaTeX "
-    "renders them. Diagrams: ```mermaid code blocks render as interactive "
-    "diagrams. "
-    "File delivery: there is no attachment channel — reference created or "
-    "changed files by their absolute path; the user can open them in "
-    "Station's built-in file browser."
+    "You are in Hermes Station, a web chat interface. "
+    "Markdown renders natively: headings, bold, tables, code blocks with "
+    "syntax highlighting, task lists. "
+    "Math: $...$ (inline) and $$...$$ (display) render with KaTeX. "
+    "Diagrams: ```mermaid blocks render as interactive diagrams. "
+    "Files: no attachment channel — use absolute paths; "
+    "the user opens them in the file browser."
 )
 
 
